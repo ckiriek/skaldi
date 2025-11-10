@@ -87,10 +87,40 @@ export async function POST(request: Request) {
     try {
       const fdaClient = new OpenFDAClient()
       
-      // Extract drug name from title (simplified)
-      const drugName = project.title.split(' ')[0] // First word as drug name
+      // Try to find safety data for similar approved drugs
+      // For investigational drugs, search by drug class or indication
       
-      const adverseEvents = await fdaClient.searchAdverseEvents(drugName, 10)
+      // Strategy 1: Try exact compound name (for approved drugs)
+      let adverseEvents = await fdaClient.searchAdverseEvents(project.title.split(' ')[0], 10)
+      
+      // Strategy 2: If no results, try searching by indication keywords
+      if (adverseEvents.length === 0 && project.indication) {
+        // Map indication to common drug classes
+        const drugClassMap: Record<string, string[]> = {
+          'diabetes': ['metformin', 'insulin', 'glipizide'],
+          'hypertension': ['lisinopril', 'amlodipine', 'losartan'],
+          'depression': ['sertraline', 'fluoxetine', 'escitalopram'],
+          'pain': ['ibuprofen', 'acetaminophen', 'naproxen'],
+        }
+        
+        // Find matching drug class
+        const indicationLower = project.indication.toLowerCase()
+        for (const [condition, drugs] of Object.entries(drugClassMap)) {
+          if (indicationLower.includes(condition)) {
+            // Try first drug in class
+            adverseEvents = await fdaClient.searchAdverseEvents(drugs[0], 10)
+            if (adverseEvents.length > 0) {
+              // Add note that this is class-based data
+              adverseEvents = adverseEvents.map(event => ({
+                ...event,
+                note: `Data from ${drugs[0]} (similar drug class for ${project.indication})`
+              }))
+              break
+            }
+          }
+        }
+      }
+      
       results.safetyData = adverseEvents
 
       // Save to evidence_sources
@@ -98,7 +128,7 @@ export async function POST(request: Request) {
         await supabase.from('evidence_sources').insert({
           project_id: projectId,
           source: 'openFDA',
-          external_id: `${drugName}-${event.receiptDate}`,
+          external_id: `${event.drugName}-${event.receiptDate}`,
           payload_json: event
         })
       }
