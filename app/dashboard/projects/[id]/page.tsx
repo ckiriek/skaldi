@@ -4,7 +4,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Calendar, MapPin, Database } from 'lucide-react'
+import { FileText, Plus, Calendar, MapPin, Database, CheckCircle, AlertCircle } from 'lucide-react'
 import { GenerateDocumentButton } from '@/components/generate-document-button'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { FileUpload } from '@/components/file-upload'
@@ -53,6 +53,12 @@ export default async function ProjectPage({ params }: { params: { id: string } }
     .order('uploaded_at', { ascending: false })
 
   const designJson = project.design_json as any
+  
+  // Check workflow status
+  const hasExternalData = evidenceSources && evidenceSources.length > 0
+  const clinicalTrialsCount = evidenceSources?.filter(e => e.source === 'ClinicalTrials.gov').length || 0
+  const publicationsCount = evidenceSources?.filter(e => e.source === 'PubMed').length || 0
+  const safetyReportsCount = evidenceSources?.filter(e => e.source === 'openFDA').length || 0
 
   return (
     <div className="space-y-6">
@@ -66,12 +72,51 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               <span className="text-gray-600">{project.indication}</span>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <FetchExternalDataButton projectId={project.id} />
-            <GenerateDocumentButton projectId={project.id} />
-          </div>
         </div>
       </div>
+
+      {/* Smart Workflow Banner */}
+      {!hasExternalData ? (
+        <Card className="bg-amber-50 border-amber-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-medium text-amber-900">
+                  📊 Next Step: Fetch External Data
+                </h3>
+                <p className="text-sm text-amber-700 mt-1">
+                  Before generating documents, fetch external evidence from ClinicalTrials.gov, PubMed, and openFDA. 
+                  This ensures your documents contain accurate safety data, clinical context, and published research.
+                </p>
+                <div className="mt-3">
+                  <FetchExternalDataButton projectId={project.id} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="bg-green-50 border-green-200">
+          <CardContent className="pt-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <h3 className="font-medium text-green-900">
+                  ✅ External Data Ready
+                </h3>
+                <p className="text-sm text-green-700 mt-1">
+                  {evidenceSources.length} evidence sources fetched: {clinicalTrialsCount} clinical trials, {publicationsCount} publications, {safetyReportsCount} safety reports.
+                  You can now generate documents with complete data.
+                </p>
+                <div className="mt-3">
+                  <GenerateDocumentButton projectId={project.id} />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Project Details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
