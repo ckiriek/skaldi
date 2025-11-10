@@ -26,9 +26,43 @@ export interface DrugLabel {
 export class OpenFDAClient {
   private baseUrl = 'https://api.fda.gov'
   private apiKey?: string
+  private lastRequestTime = 0
+  private minRequestInterval = 250 // 250ms = 240 req/min (conservative)
 
   constructor(apiKey?: string) {
     this.apiKey = apiKey
+    if (!apiKey) {
+      console.warn('⚠️ openFDA: No API key provided. Limited to 240 requests/minute and 1000 requests/day.')
+    } else {
+      console.log('✅ openFDA: API key configured. Limit: 240 requests/minute, 120,000 requests/day.')
+    }
+  }
+
+  /**
+   * Rate-limited fetch with retry logic
+   */
+  private async fetchWithRateLimit(url: string): Promise<Response> {
+    // Wait if needed to respect rate limit
+    const now = Date.now()
+    const timeSinceLastRequest = now - this.lastRequestTime
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => 
+        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+      )
+    }
+    
+    this.lastRequestTime = Date.now()
+    
+    const response = await fetch(url)
+    
+    // Handle rate limit errors
+    if (response.status === 429) {
+      console.warn('openFDA rate limit exceeded, waiting 60 seconds...')
+      await new Promise(resolve => setTimeout(resolve, 60000))
+      return this.fetchWithRateLimit(url) // Retry
+    }
+    
+    return response
   }
 
   /**
@@ -45,7 +79,7 @@ export class OpenFDAClient {
         params.append('api_key', this.apiKey)
       }
 
-      const response = await fetch(`${this.baseUrl}/drug/event.json?${params}`)
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/drug/event.json?${params}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -76,7 +110,7 @@ export class OpenFDAClient {
         params.append('api_key', this.apiKey)
       }
 
-      const response = await fetch(`${this.baseUrl}/drug/label.json?${params}`)
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/drug/label.json?${params}`)
       
       if (!response.ok) {
         if (response.status === 404) {
@@ -100,7 +134,7 @@ export class OpenFDAClient {
   }
 
   /**
-   * Get safety information summary
+   * Get safety information summary using count API
    */
   async getSafetySummary(drugName: string): Promise<{
     totalEvents: number
@@ -118,7 +152,7 @@ export class OpenFDAClient {
         params.append('api_key', this.apiKey)
       }
 
-      const response = await fetch(`${this.baseUrl}/drug/event.json?${params}`)
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/drug/event.json?${params}`)
       
       if (!response.ok) {
         return { totalEvents: 0, seriousEvents: 0, commonReactions: [] }

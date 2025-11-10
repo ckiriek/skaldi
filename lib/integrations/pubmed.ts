@@ -18,6 +18,44 @@ export class PubMedClient {
   private baseUrl = 'https://eutils.ncbi.nlm.nih.gov/entrez/eutils'
   private email = 'asetria@example.com' // Required by NCBI
   private tool = 'asetria'
+  private apiKey?: string
+  private lastRequestTime = 0
+  private minRequestInterval = 100 // 100ms = 10 req/sec with API key
+
+  constructor(apiKey?: string) {
+    this.apiKey = apiKey
+    if (!apiKey) {
+      console.warn('⚠️ PubMed: No API key provided. Limited to 3 requests/second.')
+      this.minRequestInterval = 334 // 334ms = ~3 req/sec without key
+    }
+  }
+
+  /**
+   * Rate-limited fetch with retry logic
+   */
+  private async fetchWithRateLimit(url: string): Promise<Response> {
+    // Wait if needed to respect rate limit
+    const now = Date.now()
+    const timeSinceLastRequest = now - this.lastRequestTime
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => 
+        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+      )
+    }
+    
+    this.lastRequestTime = Date.now()
+    
+    const response = await fetch(url)
+    
+    // Handle rate limit errors
+    if (response.status === 429) {
+      console.warn('PubMed rate limit exceeded, waiting 1 second...')
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      return this.fetchWithRateLimit(url) // Retry
+    }
+    
+    return response
+  }
 
   /**
    * Search PubMed articles
@@ -33,8 +71,13 @@ export class PubMedClient {
         email: this.email,
         tool: this.tool,
       })
+      
+      // Add API key if available
+      if (this.apiKey) {
+        searchParams.append('api_key', this.apiKey)
+      }
 
-      const searchResponse = await fetch(`${this.baseUrl}/esearch.fcgi?${searchParams}`)
+      const searchResponse = await this.fetchWithRateLimit(`${this.baseUrl}/esearch.fcgi?${searchParams}`)
       
       if (!searchResponse.ok) {
         throw new Error(`PubMed search error: ${searchResponse.statusText}`)
@@ -80,8 +123,13 @@ export class PubMedClient {
         email: this.email,
         tool: this.tool,
       })
+      
+      // Add API key if available
+      if (this.apiKey) {
+        fetchParams.append('api_key', this.apiKey)
+      }
 
-      const fetchResponse = await fetch(`${this.baseUrl}/efetch.fcgi?${fetchParams}`)
+      const fetchResponse = await this.fetchWithRateLimit(`${this.baseUrl}/efetch.fcgi?${fetchParams}`)
       
       if (!fetchResponse.ok) {
         throw new Error(`PubMed fetch error: ${fetchResponse.statusText}`)
@@ -158,4 +206,5 @@ export class PubMedClient {
   }
 }
 
-export const pubMedClient = new PubMedClient()
+// Export singleton with API key from environment
+export const pubMedClient = new PubMedClient(process.env.NCBI_API_KEY)

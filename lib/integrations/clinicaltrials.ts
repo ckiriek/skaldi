@@ -21,6 +21,35 @@ export interface ClinicalTrial {
 
 export class ClinicalTrialsClient {
   private baseUrl = 'https://clinicaltrials.gov/api/v2'
+  private lastRequestTime = 0
+  private minRequestInterval = 1200 // 1.2 sec = 50 req/min
+
+  /**
+   * Rate-limited fetch with retry logic
+   */
+  private async fetchWithRateLimit(url: string): Promise<Response> {
+    // Wait if needed to respect rate limit
+    const now = Date.now()
+    const timeSinceLastRequest = now - this.lastRequestTime
+    if (timeSinceLastRequest < this.minRequestInterval) {
+      await new Promise(resolve => 
+        setTimeout(resolve, this.minRequestInterval - timeSinceLastRequest)
+      )
+    }
+    
+    this.lastRequestTime = Date.now()
+    
+    const response = await fetch(url)
+    
+    // Handle rate limit errors (HTTP 429)
+    if (response.status === 429) {
+      console.warn('ClinicalTrials.gov rate limit exceeded, waiting 60 seconds...')
+      await new Promise(resolve => setTimeout(resolve, 60000))
+      return this.fetchWithRateLimit(url) // Retry
+    }
+    
+    return response
+  }
 
   /**
    * Search clinical trials by condition/disease
@@ -58,7 +87,7 @@ export class ClinicalTrialsClient {
         'format': 'json',
       })
 
-      const response = await fetch(`${this.baseUrl}/studies?${params}`)
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/studies?${params}`)
       
       if (!response.ok) {
         throw new Error(`ClinicalTrials.gov API error: ${response.statusText}`)
@@ -77,7 +106,7 @@ export class ClinicalTrialsClient {
    */
   async getStudy(nctId: string): Promise<ClinicalTrial | null> {
     try {
-      const response = await fetch(`${this.baseUrl}/studies/${nctId}`)
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/studies/${nctId}`)
       
       if (!response.ok) {
         throw new Error(`ClinicalTrials.gov API error: ${response.statusText}`)
