@@ -42,8 +42,8 @@ export async function POST(request: Request) {
     try {
       const ctClient = new ClinicalTrialsClient()
       
-      // Search by indication
-      const trials = await ctClient.searchByCondition(project.indication, 10)
+      // Search by indication (increased from 10 to 50 for better coverage)
+      const trials = await ctClient.searchByCondition(project.indication, 50)
       results.clinicalTrials = trials
 
       // Save to evidence_sources
@@ -64,9 +64,9 @@ export async function POST(request: Request) {
     try {
       const pubmedClient = new PubMedClient()
       
-      // Search by compound name or indication
+      // Search by compound name or indication (increased from 10 to 30)
       const searchTerm = `${project.title} ${project.indication}`
-      const publications = await pubmedClient.search(searchTerm, 10)
+      const publications = await pubmedClient.search(searchTerm, 30)
       results.publications = publications
 
       // Save to evidence_sources
@@ -93,15 +93,15 @@ export async function POST(request: Request) {
       let adverseEvents: any[] = []
       let searchStrategy = ''
       
-      // Strategy 1: Use drug_class if provided (best option)
+      // Strategy 1: Use drug_class if provided (best option, increased from 10 to 100)
       if (project.drug_class) {
-        adverseEvents = await fdaClient.searchAdverseEvents(project.drug_class, 10)
+        adverseEvents = await fdaClient.searchAdverseEvents(project.drug_class, 100)
         searchStrategy = `drug_class: ${project.drug_class}`
       }
       
       // Strategy 2: Try exact compound name from title (for approved drugs)
       if (adverseEvents.length === 0) {
-        adverseEvents = await fdaClient.searchAdverseEvents(project.title.split(' ')[0], 10)
+        adverseEvents = await fdaClient.searchAdverseEvents(project.title.split(' ')[0], 100)
         searchStrategy = `compound: ${project.title.split(' ')[0]}`
       }
       
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
         for (const [condition, drugs] of Object.entries(drugClassMap)) {
           if (indicationLower.includes(condition)) {
             // Try first drug in class
-            adverseEvents = await fdaClient.searchAdverseEvents(drugs[0], 10)
+            adverseEvents = await fdaClient.searchAdverseEvents(drugs[0], 100)
             if (adverseEvents.length > 0) {
               searchStrategy = `indication fallback: ${drugs[0]} (${condition})`
               // Add note that this is class-based data

@@ -121,9 +121,22 @@ export class AzureOpenAIClient {
       },
     ]
 
+    // Token limits based on target document lengths
+    // Synopsis: ~6 pages, IB: ~120 pages, Protocol: ~224 pages, ICF: ~30 pages
+    const tokenLimits: Record<string, number> = {
+      'Synopsis': 4000,      // ~3,000 words, ~6 pages
+      'IB': 80000,           // ~60,000 words, ~120 pages  
+      'Protocol': 150000,    // ~112,000 words, ~224 pages
+      'ICF': 20000,          // ~15,000 words, ~30 pages
+    }
+
+    const maxTokens = tokenLimits[documentType] || 8000
+
+    console.log(`Generating ${documentType} with max ${maxTokens} tokens (~${Math.round(maxTokens * 0.75)} words, ~${Math.round(maxTokens * 0.75 / 500)} pages)`)
+
     const response = await this.generateCompletion(messages, {
       temperature: 0.3, // Lower temperature for more consistent regulatory documents
-      maxTokens: 8000,
+      maxTokens,
     })
 
     return response.content
