@@ -1,4 +1,4 @@
-# 🔧 Apply Migration: Add drug_class field
+# 🔧 Apply Migration: Create validation_results table
 
 ## Quick Steps
 
@@ -10,14 +10,58 @@
 
 2. **Run Migration**
    - Click "New Query"
-   - Copy-paste this SQL:
+   - Copy-paste the entire SQL from: `supabase/migrations/20250110_create_validation_results.sql`
+   - Or copy this:
 
 ```sql
--- Add drug_class field to projects table
-ALTER TABLE projects
-ADD COLUMN drug_class TEXT;
+-- Create validation_results table to store validation check results
+CREATE TABLE IF NOT EXISTS validation_results (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  document_id UUID NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+  validation_date TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  completeness_score INTEGER NOT NULL,
+  status TEXT NOT NULL CHECK (status IN ('approved', 'review', 'needs_revision')),
+  total_rules INTEGER NOT NULL,
+  passed INTEGER NOT NULL,
+  failed INTEGER NOT NULL,
+  results JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 
-COMMENT ON COLUMN projects.drug_class IS 'Drug class or active ingredient for safety data search (e.g., "DPP-4 inhibitor", "metformin", "SGLT2 inhibitor")';
+CREATE INDEX idx_validation_results_document_id ON validation_results(document_id);
+CREATE INDEX idx_validation_results_validation_date ON validation_results(validation_date DESC);
+
+ALTER TABLE validation_results ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view validation results for their documents"
+  ON validation_results FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM documents d
+      JOIN projects p ON d.project_id = p.id
+      WHERE d.id = validation_results.document_id
+      AND p.user_id = auth.uid()
+    )
+  );
+
+CREATE POLICY "Users can insert validation results for their documents"
+  ON validation_results FOR INSERT
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM documents d
+      JOIN projects p ON d.project_id = p.id
+      WHERE d.id = validation_results.document_id
+      AND p.user_id = auth.uid()
+    )
+  );
+
+CREATE TRIGGER update_validation_results_updated_at
+  BEFORE UPDATE ON validation_results
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+COMMENT ON TABLE validation_results IS 'Stores validation check results for documents';
 ```
 
 3. **Execute**
@@ -25,8 +69,8 @@ COMMENT ON COLUMN projects.drug_class IS 'Drug class or active ingredient for sa
    - ✅ Should see: "Success. No rows returned"
 
 4. **Verify**
-   - Go to: **Table Editor** → **projects**
-   - Check that `drug_class` column exists
+   - Go to: **Table Editor** → **validation_results**
+   - Check that table exists with all columns
 
 ---
 
@@ -47,27 +91,36 @@ supabase db push --include-all
 
 ## Verification
 
-### Check column exists:
+### Check table exists:
 ```sql
-SELECT column_name, data_type, is_nullable
+SELECT table_name, column_name, data_type
 FROM information_schema.columns
-WHERE table_name = 'projects' AND column_name = 'drug_class';
+WHERE table_name = 'validation_results'
+ORDER BY ordinal_position;
 ```
 
 **Expected result:**
 ```
-column_name | data_type | is_nullable
-------------|-----------|------------
-drug_class  | text      | YES
+table_name          | column_name         | data_type
+--------------------|---------------------|------------------
+validation_results  | id                  | uuid
+validation_results  | document_id         | uuid
+validation_results  | validation_date     | timestamp with time zone
+validation_results  | completeness_score  | integer
+validation_results  | status              | text
+validation_results  | total_rules         | integer
+validation_results  | passed              | integer
+validation_results  | failed              | integer
+validation_results  | results             | jsonb
+validation_results  | created_at          | timestamp with time zone
+validation_results  | updated_at          | timestamp with time zone
 ```
 
-### Test insert:
+### Check RLS policies:
 ```sql
--- Test that new projects can have drug_class
-INSERT INTO projects (title, phase, indication, drug_class, org_id)
-VALUES ('Test Project', 'Phase 2', 'Test Indication', 'metformin', 
-        (SELECT id FROM organizations LIMIT 1))
-RETURNING *;
+SELECT policyname, tablename, cmd
+FROM pg_policies
+WHERE tablename = 'validation_results';
 ```
 
 ---
@@ -75,28 +128,27 @@ RETURNING *;
 ## Rollback (if needed)
 
 ```sql
--- Remove drug_class column
-ALTER TABLE projects
-DROP COLUMN drug_class;
+-- Remove validation_results table
+DROP TABLE IF EXISTS validation_results CASCADE;
 ```
 
 ---
 
 ## Status
 
-- ✅ Migration file created: `supabase/migrations/00004_add_drug_class_to_projects.sql`
-- ✅ Code updated to use `drug_class`
-- ✅ UI form updated
+- ✅ Migration file created: `supabase/migrations/20250110_create_validation_results.sql`
+- ✅ Edge function updated to save results
+- ✅ Document page updated to display results
 - ⏳ **Need to apply migration to database**
 
 ---
 
 ## After Migration
 
-1. ✅ Create new project with drug_class field
-2. ✅ Test "Fetch External Data" with drug_class specified
-3. ✅ Verify openFDA returns results
-4. ✅ Check IB generation includes safety data
+1. ✅ Validate a document
+2. ✅ Check that validation results appear on document page
+3. ✅ Verify completeness score is displayed
+4. ✅ Verify detailed checks are shown with color coding
 
 ---
 
