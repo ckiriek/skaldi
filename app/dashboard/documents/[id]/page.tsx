@@ -57,16 +57,15 @@ export default async function DocumentPage({ params }: { params: { id: string } 
             documentId={document.id}
             documentType={document.type}
           />
-          <Button 
-            variant="outline" 
-            size="sm"
-            asChild
-          >
-            <a href={`/api/documents/${document.id}/export/docx`} download>
+          <a href={`/api/documents/${document.id}/export/docx`} download>
+            <Button 
+              variant="outline" 
+              size="sm"
+            >
               <Download className="h-4 w-4 mr-2" />
               Export DOCX
-            </a>
-          </Button>
+            </Button>
+          </a>
           <Button 
             variant="outline" 
             size="sm"
