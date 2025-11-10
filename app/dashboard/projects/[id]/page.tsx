@@ -2,9 +2,10 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Calendar, MapPin, Database, CheckCircle, AlertCircle } from 'lucide-react'
+import { FileText, Plus, Calendar, MapPin, Database, CheckCircle, AlertCircle, FlaskConical, BookOpen, Shield } from 'lucide-react'
 import { GenerateDocumentButton } from '@/components/generate-document-button'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { FileUpload } from '@/components/file-upload'
@@ -275,7 +276,7 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </CardContent>
       </Card>
 
-      {/* Evidence Sources */}
+      {/* Evidence Sources - Grouped by Type */}
       <Card>
         <CardHeader>
           <CardTitle>External Evidence</CardTitle>
@@ -285,50 +286,150 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </CardHeader>
         <CardContent>
           {evidenceSources && evidenceSources.length > 0 ? (
-            <div className="space-y-3">
-              {evidenceSources.map((evidence) => {
-                const payload = evidence.payload_json as any
-                const title = payload?.title || payload?.drugName || 'No title'
-                const preview = payload?.abstract || payload?.description || 
-                               (payload?.reactions ? payload.reactions.join(', ') : '')
-                
-                return (
-                  <div
-                    key={evidence.id}
-                    className="p-4 border rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline">{evidence.source}</Badge>
-                          {evidence.external_id && (
-                            <span className="text-xs text-gray-500">{evidence.external_id}</span>
+            <Tabs defaultValue="all" className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
+                <TabsTrigger value="all">
+                  All ({evidenceSources.length})
+                </TabsTrigger>
+                <TabsTrigger value="clinical-trials">
+                  <FlaskConical className="w-4 h-4 mr-2" />
+                  Trials ({evidenceSources.filter(e => e.source === 'ClinicalTrials.gov').length})
+                </TabsTrigger>
+                <TabsTrigger value="publications">
+                  <BookOpen className="w-4 h-4 mr-2" />
+                  Publications ({evidenceSources.filter(e => e.source === 'PubMed').length})
+                </TabsTrigger>
+                <TabsTrigger value="safety">
+                  <Shield className="w-4 h-4 mr-2" />
+                  Safety ({evidenceSources.filter(e => e.source === 'openFDA').length})
+                </TabsTrigger>
+              </TabsList>
+
+              {/* All Tab */}
+              <TabsContent value="all" className="space-y-3 mt-4">
+                {evidenceSources.map((evidence) => {
+                  const payload = evidence.payload_json as any
+                  const title = payload?.title || payload?.drugName || 'No title'
+                  const preview = payload?.abstract || payload?.description || 
+                                 (payload?.reactions ? payload.reactions.join(', ') : '')
+                  
+                  return (
+                    <div
+                      key={evidence.id}
+                      className="p-4 border rounded-lg hover:bg-gray-50 transition"
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            <Badge variant="outline">{evidence.source}</Badge>
+                            {evidence.external_id && (
+                              <span className="text-xs text-gray-500">{evidence.external_id}</span>
+                            )}
+                          </div>
+                          <p className="font-medium text-sm mb-1">{title}</p>
+                          {preview && (
+                            <p className="text-sm text-gray-600 line-clamp-2">
+                              {preview.substring(0, 200)}{preview.length > 200 ? '...' : ''}
+                            </p>
                           )}
-                        </div>
-                        <p className="font-medium text-sm mb-1">{title}</p>
-                        {preview && (
-                          <p className="text-sm text-gray-600 line-clamp-2">
-                            {preview.substring(0, 200)}{preview.length > 200 ? '...' : ''}
+                          {payload?.phase && (
+                            <span className="text-xs text-gray-500 mr-2">Phase: {payload.phase}</span>
+                          )}
+                          {payload?.status && (
+                            <span className="text-xs text-gray-500 mr-2">Status: {payload.status}</span>
+                          )}
+                          {payload?.journal && (
+                            <span className="text-xs text-gray-500 mr-2">Journal: {payload.journal}</span>
+                          )}
+                          <p className="text-xs text-gray-500 mt-2">
+                            Added {new Date(evidence.created_at).toLocaleDateString()}
                           </p>
-                        )}
-                        {payload?.phase && (
-                          <span className="text-xs text-gray-500 mr-2">Phase: {payload.phase}</span>
-                        )}
-                        {payload?.status && (
-                          <span className="text-xs text-gray-500 mr-2">Status: {payload.status}</span>
-                        )}
-                        {payload?.journal && (
-                          <span className="text-xs text-gray-500 mr-2">Journal: {payload.journal}</span>
-                        )}
-                        <p className="text-xs text-gray-500 mt-2">
-                          Added {new Date(evidence.created_at).toLocaleDateString()}
-                        </p>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                )
-              })}
-            </div>
+                  )
+                })}
+              </TabsContent>
+
+              {/* Clinical Trials Tab */}
+              <TabsContent value="clinical-trials" className="space-y-3 mt-4">
+                {evidenceSources.filter(e => e.source === 'ClinicalTrials.gov').map((evidence) => {
+                  const payload = evidence.payload_json as any
+                  return (
+                    <div key={evidence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">{evidence.external_id}</Badge>
+                        {payload?.phase && <Badge>{payload.phase}</Badge>}
+                      </div>
+                      <p className="font-medium text-sm mb-1">{payload?.title || 'No title'}</p>
+                      {payload?.status && (
+                        <span className="text-xs text-gray-500 mr-2">Status: {payload.status}</span>
+                      )}
+                      {payload?.enrollment && (
+                        <span className="text-xs text-gray-500 mr-2">Enrollment: {payload.enrollment}</span>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Added {new Date(evidence.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )
+                })}
+              </TabsContent>
+
+              {/* Publications Tab */}
+              <TabsContent value="publications" className="space-y-3 mt-4">
+                {evidenceSources.filter(e => e.source === 'PubMed').map((evidence) => {
+                  const payload = evidence.payload_json as any
+                  return (
+                    <div key={evidence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">PMID: {evidence.external_id}</Badge>
+                      </div>
+                      <p className="font-medium text-sm mb-1">{payload?.title || 'No title'}</p>
+                      {payload?.abstract && (
+                        <p className="text-sm text-gray-600 line-clamp-2 mt-2">
+                          {payload.abstract.substring(0, 200)}{payload.abstract.length > 200 ? '...' : ''}
+                        </p>
+                      )}
+                      <div className="flex gap-2 mt-2 text-xs text-gray-500">
+                        {payload?.journal && <span>Journal: {payload.journal}</span>}
+                        {payload?.year && <span>• {payload.year}</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-2">
+                        Added {new Date(evidence.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )
+                })}
+              </TabsContent>
+
+              {/* Safety Data Tab */}
+              <TabsContent value="safety" className="space-y-3 mt-4">
+                {evidenceSources.filter(e => e.source === 'openFDA').map((evidence) => {
+                  const payload = evidence.payload_json as any
+                  return (
+                    <div key={evidence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Badge variant="outline">openFDA</Badge>
+                        {payload?.seriousness && <Badge variant="destructive">Serious</Badge>}
+                      </div>
+                      <p className="font-medium text-sm mb-1">{payload?.drugName || 'No drug name'}</p>
+                      {payload?.reactions && (
+                        <p className="text-sm text-gray-600 mt-2">
+                          Reactions: {payload.reactions.join(', ')}
+                        </p>
+                      )}
+                      {payload?.receiptDate && (
+                        <span className="text-xs text-gray-500 mr-2">Report Date: {payload.receiptDate}</span>
+                      )}
+                      <p className="text-xs text-gray-500 mt-2">
+                        Added {new Date(evidence.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                  )
+                })}
+              </TabsContent>
+            </Tabs>
           ) : (
             <div className="text-center py-12">
               <Database className="mx-auto h-12 w-12 text-gray-400" />

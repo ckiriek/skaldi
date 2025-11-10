@@ -2,17 +2,15 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Plus } from 'lucide-react'
+import { FileText, Book, FileCheck, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 export function GenerateDocumentButton({ projectId }: { projectId: string }) {
   const router = useRouter()
-  const [loading, setLoading] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
+  const [loadingType, setLoadingType] = useState<string | null>(null)
 
   const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis') => {
-    setLoading(true)
-    setShowMenu(false)
+    setLoadingType(documentType)
 
     try {
       const response = await fetch('/api/generate', {
@@ -40,47 +38,58 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
       console.error('Error generating document:', error)
       alert('Failed to generate document. Please try again.')
     } finally {
-      setLoading(false)
+      setLoadingType(null)
     }
   }
 
+  const isLoading = (type: string) => loadingType === type
+
   return (
-    <div className="relative">
-      <Button onClick={() => setShowMenu(!showMenu)} disabled={loading}>
-        <Plus className="w-4 h-4 mr-2" />
-        {loading ? 'Generating...' : 'Generate Document'}
+    <div className="flex flex-wrap gap-2">
+      {/* Synopsis Button */}
+      <Button 
+        onClick={() => handleGenerate('Synopsis')}
+        disabled={loadingType !== null}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading('Synopsis') ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <FileText className="w-4 h-4 mr-2" />
+        )}
+        {isLoading('Synopsis') ? 'Generating...' : 'Generate Synopsis'}
       </Button>
 
-      {showMenu && (
-        <div className="absolute right-0 mt-2 w-56 bg-white rounded-md shadow-lg border z-10">
-          <div className="py-1">
-            <button
-              onClick={() => handleGenerate('IB')}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Investigator's Brochure (IB)
-            </button>
-            <button
-              onClick={() => handleGenerate('Protocol')}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Protocol
-            </button>
-            <button
-              onClick={() => handleGenerate('ICF')}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Informed Consent Form (ICF)
-            </button>
-            <button
-              onClick={() => handleGenerate('Synopsis')}
-              className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Protocol Synopsis
-            </button>
-          </div>
-        </div>
-      )}
+      {/* IB Button */}
+      <Button 
+        onClick={() => handleGenerate('IB')}
+        disabled={loadingType !== null}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading('IB') ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <Book className="w-4 h-4 mr-2" />
+        )}
+        {isLoading('IB') ? 'Generating...' : 'Generate IB'}
+      </Button>
+
+      {/* Protocol Button */}
+      <Button 
+        onClick={() => handleGenerate('Protocol')}
+        disabled={loadingType !== null}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading('Protocol') ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <FileCheck className="w-4 h-4 mr-2" />
+        )}
+        {isLoading('Protocol') ? 'Generating...' : 'Generate Protocol'}
+      </Button>
     </div>
   )
 }
