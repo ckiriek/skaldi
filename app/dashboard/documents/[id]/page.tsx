@@ -31,13 +31,14 @@ export default async function DocumentPage({ params }: { params: { id: string } 
   }
 
   // Fetch latest validation results
-  const { data: validationResults } = await supabase
+  const { data: validationResultsArray } = await supabase
     .from('validation_results')
     .select('*')
     .eq('document_id', params.id)
     .order('validation_date', { ascending: false })
     .limit(1)
-    .single()
+  
+  const validationResults = validationResultsArray?.[0] || null
 
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 

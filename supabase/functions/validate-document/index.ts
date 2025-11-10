@@ -73,7 +73,7 @@ serve(async (req) => {
       return a.section_ref.localeCompare(b.section_ref)
     })
 
-    await supabaseClient
+    const { error: insertError } = await supabaseClient
       .from('validation_results')
       .insert({
         document_id: documentId,
@@ -84,6 +84,11 @@ serve(async (req) => {
         failed: totalCount - passedCount,
         results: sortedResults,
       })
+    
+    if (insertError) {
+      console.error('Failed to insert validation results:', insertError)
+      throw new Error(`Failed to save validation results: ${insertError.message}`)
+    }
 
     return new Response(
       JSON.stringify({
