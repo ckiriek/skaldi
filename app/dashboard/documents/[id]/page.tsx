@@ -70,12 +70,11 @@ export default async function DocumentPage({ params }: { params: { id: string } 
           <Button 
             variant="outline" 
             size="sm"
-            asChild
+            disabled
+            title="PDF export temporarily disabled - DOCX available"
           >
-            <a href={`/api/documents/${document.id}/export/pdf`} download>
-              <Download className="h-4 w-4 mr-2" />
-              Export PDF
-            </a>
+            <Download className="h-4 w-4 mr-2" />
+            Export PDF
           </Button>
         </div>
       </div>
