@@ -29,7 +29,7 @@ CREATE POLICY "Users can view validation results for their documents"
       SELECT 1 FROM documents d
       JOIN projects p ON d.project_id = p.id
       WHERE d.id = validation_results.document_id
-      AND p.user_id = auth.uid()
+      AND p.created_by = auth.uid()
     )
   );
 
@@ -42,7 +42,7 @@ CREATE POLICY "Users can insert validation results for their documents"
       SELECT 1 FROM documents d
       JOIN projects p ON d.project_id = p.id
       WHERE d.id = validation_results.document_id
-      AND p.user_id = auth.uid()
+      AND p.created_by = auth.uid()
     )
   );
 
