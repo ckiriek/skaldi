@@ -19,9 +19,19 @@ export function ValidateDocumentButton({
     setLoading(true)
 
     try {
-      // For now, use placeholder content
-      // In production, fetch actual document content
-      const content = `Sample ${documentType} content for validation`
+      // Fetch actual document content
+      const docResponse = await fetch(`/api/documents/${documentId}`)
+      if (!docResponse.ok) {
+        throw new Error('Failed to fetch document')
+      }
+      
+      const doc = await docResponse.json()
+      const content = doc.content || ''
+      
+      if (!content || content.length < 10) {
+        alert('Document is empty or too short to validate. Please generate content first.')
+        return
+      }
 
       const response = await fetch('/api/validate', {
         method: 'POST',
