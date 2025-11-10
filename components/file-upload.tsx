@@ -203,9 +203,9 @@ export function FileUpload({ projectId }: FileUploadProps) {
               className="hidden"
               id="file-input"
             />
-            <label htmlFor="file-input">
-              <Button variant="outline" size="sm" asChild>
-                <span>Select Files</span>
+            <label htmlFor="file-input" className="cursor-pointer">
+              <Button variant="outline" size="sm" type="button">
+                Select Files
               </Button>
             </label>
           </div>
