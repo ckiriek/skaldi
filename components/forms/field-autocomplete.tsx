@@ -118,10 +118,14 @@ export function FieldAutocomplete({
     else if (item.country) selectedValue = item.country
     else if (item.application_number) selectedValue = item.application_number
 
-    onChange(selectedValue)
-    onSelect?.(item)
+    // Close dropdown first to prevent re-search
     setIsOpen(false)
     setSelectedIndex(-1)
+    setSuggestions([])
+    
+    // Then update value
+    onChange(selectedValue)
+    onSelect?.(item)
   }
 
   const defaultRenderSuggestion = (item: any) => {
@@ -168,6 +172,18 @@ export function FieldAutocomplete({
     // Countries
     if (item.country) {
       return <div className="text-sm text-gray-900">{item.country}</div>
+    }
+
+    // Drug Class / Active Ingredient
+    if (item.type && (item.type === 'active_ingredient' || item.type === 'drug_class')) {
+      return (
+        <div>
+          <div className="font-semibold text-sm text-gray-900">{item.name}</div>
+          <div className="text-xs text-muted-foreground mt-0.5 capitalize">
+            {item.type.replace('_', ' ')}
+          </div>
+        </div>
+      )
     }
 
     // Fallback - show name if exists

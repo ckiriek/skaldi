@@ -27,8 +27,6 @@ export default function NewProjectPage() {
     primary_endpoint: '',
     // Generic-specific fields
     rld_brand_name: '',
-    rld_application_number: '',
-    rld_te_code: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -63,8 +61,6 @@ export default function NewProjectPage() {
           countries: countriesArray,
           design_json: designJson,
           rld_brand_name: formData.product_type === 'generic' ? formData.rld_brand_name : undefined,
-          rld_application_number: formData.product_type === 'generic' ? formData.rld_application_number : undefined,
-          te_code: formData.product_type === 'generic' ? formData.rld_te_code : undefined,
         }),
       })
 
@@ -206,34 +202,8 @@ export default function NewProjectPage() {
                       placeholder="e.g., GLUCOPHAGE"
                       required={formData.product_type === 'generic'}
                     />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Application Number *
-                    </label>
-                    <FieldAutocomplete
-                      value={formData.rld_application_number}
-                      onChange={(value) => setFormData({ ...formData, rld_application_number: value })}
-                      endpoint="/api/v1/autocomplete/rld?type=application"
-                      placeholder="e.g., NDA020357"
-                      required={formData.product_type === 'generic'}
-                    />
                     <p className="mt-1 text-xs text-gray-500">
-                      Find this on FDA Orange Book or Drugs@FDA
-                    </p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      TE Code (Optional)
-                    </label>
-                    <Input
-                      value={formData.rld_te_code}
-                      onChange={(e) => setFormData({ ...formData, rld_te_code: e.target.value })}
-                      placeholder="e.g., AB"
-                      maxLength={2}
-                    />
-                    <p className="mt-1 text-xs text-gray-500">
-                      Therapeutic Equivalence code (AB = bioequivalent)
+                      We'll automatically fetch Application Number and TE Code from FDA Orange Book
                     </p>
                   </div>
                   <div className="bg-white border border-blue-300 rounded-md p-3">
@@ -283,10 +253,11 @@ export default function NewProjectPage() {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Drug Class / Active Ingredient
               </label>
-              <Input
+              <FieldAutocomplete
                 value={formData.drug_class}
-                onChange={(e) => setFormData({ ...formData, drug_class: e.target.value })}
-                placeholder="e.g., DPP-4 inhibitor, metformin, SGLT2 inhibitor"
+                onChange={(value) => setFormData({ ...formData, drug_class: value })}
+                endpoint="/api/v1/autocomplete/drug-class"
+                placeholder="e.g., metformin, DPP-4 inhibitor, SGLT2 inhibitor"
               />
               <p className="mt-1 text-xs text-gray-500">
                 Used for safety data search. For investigational drugs, specify the drug class or similar approved drug.
