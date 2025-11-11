@@ -2,9 +2,12 @@ import { createClient } from '@/lib/supabase/server'
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
+import { Progress } from '@/components/ui/progress'
+import { EmptyState } from '@/components/ui/empty-state'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Download, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Download, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
 import { ValidateDocumentButton } from '@/components/validate-document-button'
 import { DocumentViewer } from '@/components/document-viewer'
 
@@ -43,102 +46,129 @@ export default async function DocumentPage({ params }: { params: { id: string } 
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8 fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-4">
-          <Link href={`/dashboard/projects/${(document as any).projects?.id}`}>
-            <Button variant="outline" size="sm">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Back to Project
-            </Button>
-          </Link>
+      <div>
+        <Link href={`/dashboard/projects/${(document as any).projects?.id}`}>
+          <Button variant="ghost" size="sm" className="gap-2 mb-4">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Project
+          </Button>
+        </Link>
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">
-              {document.type} - Version {document.version}
+            <h1 className="text-4xl font-semibold tracking-tight">
+              {document.type}
             </h1>
-            <p className="text-gray-600 mt-1">
-              {(document as any).projects?.title}
-            </p>
+            <div className="flex items-center gap-3 mt-3">
+              <Badge size="lg">Version {document.version}</Badge>
+              <Separator orientation="vertical" className="h-6" />
+              <span className="text-muted-foreground">{(document as any).projects?.title}</span>
+            </div>
           </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <ValidateDocumentButton 
-            documentId={document.id}
-            documentType={document.type}
-          />
-          <a href={`/api/documents/${document.id}/export/docx`} download>
+          <div className="flex items-center gap-2">
+            <ValidateDocumentButton 
+              documentId={document.id}
+              documentType={document.type}
+            />
+            <a href={`/api/documents/${document.id}/export/docx`} download>
+              <Button 
+                variant="outline" 
+                size="sm"
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Export DOCX
+              </Button>
+            </a>
             <Button 
               variant="outline" 
               size="sm"
+              disabled
+              title="PDF export temporarily disabled - DOCX available"
+              className="gap-2"
             >
-              <Download className="h-4 w-4 mr-2" />
-              Export DOCX
+              <Download className="h-4 w-4" />
+              Export PDF
             </Button>
-          </a>
-          <Button 
-            variant="outline" 
-            size="sm"
-            disabled
-            title="PDF export temporarily disabled - DOCX available"
-          >
-            <Download className="h-4 w-4 mr-2" />
-            Export PDF
-          </Button>
+          </div>
         </div>
       </div>
 
+      <Separator />
+
       {/* Document Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Document Info</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FileText className="h-5 w-5 text-primary" />
+              Document Info
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-600">Type:</span>{' '}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Type:</span>
               <span className="font-medium">{document.type}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Version:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Version:</span>
               <span className="font-medium">{document.version}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Status:</span>{' '}
-              <span className="font-medium capitalize">{document.status}</span>
+            <Separator />
+            <div className="flex justify-between items-center">
+              <span className="text-muted-foreground">Status:</span>
+              <Badge 
+                variant={
+                  document.status === 'approved' ? 'success' :
+                  document.status === 'review' ? 'info' : 'secondary'
+                }
+                size="sm"
+              >
+                {document.status}
+              </Badge>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Project Info</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Info className="h-5 w-5 text-primary" />
+              Project Info
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-600">Phase:</span>{' '}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Phase:</span>
               <span className="font-medium">{project?.phase}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Indication:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Indication:</span>
               <span className="font-medium">{project?.indication}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Timeline</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
+              Timeline
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-600">Created:</span>{' '}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Created:</span>
               <span className="font-medium">
                 {new Date(document.created_at).toLocaleDateString()}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600">Updated:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Updated:</span>
               <span className="font-medium">
                 {new Date(document.updated_at).toLocaleDateString()}
               </span>
@@ -154,68 +184,88 @@ export default async function DocumentPage({ params }: { params: { id: string } 
           documentType={document.type}
         />
       ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <div className="max-w-md mx-auto">
-              <p className="text-gray-600 mb-4 text-lg">
-                No content generated yet.
-              </p>
-              <p className="text-sm text-gray-500 mb-6">
-                Click "Generate Document" on the project page to create content using AI.
-              </p>
-              <Link href={`/dashboard/projects/${(document as any).project_id}`}>
-                <Button>
-                  Go to Project
-                </Button>
-              </Link>
-            </div>
-          </CardContent>
-        </Card>
+        <EmptyState
+          icon={<FileText className="h-12 w-12" />}
+          title="No content generated yet"
+          description="Click 'Generate Document' on the project page to create content using AI."
+          action={{
+            label: 'Go to Project',
+            onClick: () => window.location.href = `/dashboard/projects/${(document as any).project_id}`
+          }}
+        />
       )}
 
       {/* Validation Results */}
-      <Card>
+      <Card className="hover-lift">
         <CardHeader>
-          <CardTitle>Validation Results</CardTitle>
+          <CardTitle className="text-xl">Validation Results</CardTitle>
           <CardDescription>
             ICH/FDA compliance checks
           </CardDescription>
         </CardHeader>
         <CardContent>
           {validationResults ? (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {/* Summary */}
-              <div className="grid grid-cols-3 gap-4 p-4 bg-gray-50 rounded-lg">
-                <div>
-                  <p className="text-sm text-gray-600">Completeness Score</p>
-                  <p className="text-2xl font-bold text-gray-900">{validationResults.completeness_score}%</p>
+              <div className="grid grid-cols-3 gap-6">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Completeness Score</p>
+                  <p className="text-3xl font-semibold">{validationResults.completeness_score}%</p>
+                  <Progress 
+                    value={validationResults.completeness_score} 
+                    variant={
+                      validationResults.completeness_score >= 80 ? 'success' :
+                      validationResults.completeness_score >= 60 ? 'warning' : 'error'
+                    }
+                    showLabel
+                  />
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Status</p>
-                  <Badge variant={validationResults.status === 'approved' ? 'default' : validationResults.status === 'review' ? 'secondary' : 'destructive'}>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Status</p>
+                  <Badge 
+                    variant={
+                      validationResults.status === 'approved' ? 'success' : 
+                      validationResults.status === 'review' ? 'info' : 'error'
+                    }
+                    size="lg"
+                  >
                     {validationResults.status}
                   </Badge>
                 </div>
-                <div>
-                  <p className="text-sm text-gray-600">Checks Passed</p>
-                  <p className="text-2xl font-bold text-gray-900">{validationResults.passed}/{validationResults.total_rules}</p>
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground">Checks Passed</p>
+                  <p className="text-3xl font-semibold">{validationResults.passed}/{validationResults.total_rules}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {Math.round((validationResults.passed / validationResults.total_rules) * 100)}% success rate
+                  </p>
                 </div>
               </div>
 
+              <Separator />
+
               {/* Detailed Results */}
-              <div className="space-y-2">
-                <h3 className="font-semibold text-sm text-gray-700">Detailed Checks</h3>
+              <div className="space-y-3">
+                <h3 className="font-semibold text-base">Detailed Checks</h3>
                 {(validationResults.results as any[]).map((result: any, index: number) => (
-                  <div key={index} className={`p-3 rounded-lg border ${
-                    result.passed ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'
-                  }`}>
-                    <div className="flex items-start justify-between">
+                  <div 
+                    key={index} 
+                    className={`p-4 rounded-lg border transition-smooth slide-in-from-left ${
+                      result.passed 
+                        ? 'bg-success/5 border-success/20' 
+                        : 'bg-error/5 border-error/20'
+                    }`}
+                    style={{ animationDelay: `${index * 50}ms` }}
+                  >
+                    <div className="flex items-start justify-between gap-3">
                       <div className="flex-1">
-                        <p className="font-medium text-sm">{result.rule_name}</p>
-                        <p className="text-xs text-gray-600 mt-1">{result.section_ref}</p>
+                        <p className="font-semibold text-sm">{result.rule_name}</p>
+                        <p className="text-xs text-muted-foreground mt-1">{result.section_ref}</p>
                         <p className="text-sm mt-2">{result.message}</p>
                       </div>
-                      <Badge variant={result.passed ? 'default' : 'destructive'} className="ml-2">
+                      <Badge 
+                        variant={result.passed ? 'success' : 'error'} 
+                        size="sm"
+                      >
                         {result.passed ? 'Passed' : 'Failed'}
                       </Badge>
                     </div>
@@ -223,18 +273,16 @@ export default async function DocumentPage({ params }: { params: { id: string } 
                 ))}
               </div>
 
-              <p className="text-xs text-gray-500 mt-4">
+              <p className="text-xs text-muted-foreground mt-4">
                 Last validated: {new Date(validationResults.validation_date).toLocaleString()}
               </p>
             </div>
           ) : (
-            <div className="text-center py-8 text-gray-500">
-              <CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
-              <p>No validation results yet</p>
-              <p className="text-sm mt-2">
-                Click "Validate" to check document compliance
-              </p>
-            </div>
+            <EmptyState
+              icon={<CheckCircle className="h-12 w-12" />}
+              title="No validation results yet"
+              description="Click 'Validate' to check document compliance with ICH/FDA guidelines"
+            />
           )}
         </CardContent>
       </Card>
