@@ -204,11 +204,13 @@ export class OrangeBookAdapter {
     try {
       await this.rateLimit()
 
+      // Use wildcard for partial matching (e.g., "gluco" matches "Glucophage")
       const url = this.buildUrl({
-        search: `openfda.brand_name:"${brandName}"`,
+        search: `openfda.brand_name:${brandName}*`,
         limit: '10',
       })
 
+      console.log('🔶 Orange Book search URL:', url)
       const response = await fetch(url)
 
       if (!response.ok) {
