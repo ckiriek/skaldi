@@ -62,28 +62,36 @@ Implement Week 1 tasks from WEEK_1_ACTION_PLAN.md:
 - [x] Log to ingestion_logs
 - [x] Create test script for PubChem adapter
 
+### ✅ Completed (continued)
+
+#### Day 1 (Nov 11 Evening) - Template Engine Architecture
+- [x] Create Handlebars template engine wrapper
+- [x] Register 20+ custom helpers (gte, decimal, percent, date, etc.)
+- [x] Create IB Generic Section 6 template (Safety and Tolerability)
+- [x] Create mock test script (demonstrates rendering without dependencies)
+- [x] Document template engine setup and usage
+
 ### ⏳ In Progress
 
 #### Day 1-2 (Nov 11-12) - Testing & Next Adapters
+- [ ] Install Handlebars (npm install handlebars @types/handlebars)
+- [ ] Test template engine with real data
 - [ ] Test end-to-end enrichment flow
-- [ ] Verify database operations
 - [ ] Add openFDA adapter (labels)
 - [ ] Add DailyMed adapter (current labels)
 
 ### 📋 Pending
 
-#### Day 3 (Nov 13) - Template Engine
-- [ ] Install Handlebars
-- [ ] Create test template (IB Generic Section 6)
-- [ ] Implement template rendering
-- [ ] Test conditional logic ({{#if generic_mode}})
+#### Day 2-3 (Nov 12-13) - More Source Adapters
+- [ ] openFDA adapter (labels from FDA)
+- [ ] DailyMed adapter (current labels)
+- [ ] Orange Book adapter (RLD, TE codes)
 
-#### Day 4-5 (Nov 14-15) - Regulatory Data Agent Skeleton
-- [ ] Create API Route: `/api/v1/enrich`
-- [ ] Create Edge Function: `enrich-data`
-- [ ] Define adapter interface
-- [ ] Implement first adapter (PubChem)
-- [ ] Test end-to-end flow
+#### Day 4-5 (Nov 14-15) - More Adapters & Templates
+- [ ] EMA EPAR adapter
+- [ ] ClinicalTrials.gov adapter
+- [ ] Create more IB templates (Section 5, Section 7)
+- [ ] Integrate templates with Composer Agent
 
 ---
 
