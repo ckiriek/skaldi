@@ -50,25 +50,14 @@ export async function GET(request: NextRequest) {
       const searchResults = await pubchem.searchCompounds(query!, limit)
       console.log('🔬 PubChem search results:', searchResults.length, searchResults)
       
-      // Fetch full compound data for each result
-      for (const result of searchResults.slice(0, 5)) { // Limit to 5 to avoid rate limiting
-        try {
-          console.log('🔬 Fetching compound details for:', result.name)
-          const compound = await pubchem.fetchCompound(result.name)
-          if (compound) {
-            console.log('✅ PubChem compound found:', compound.name)
-            results.push({
-              name: compound.name,
-              source: 'pubchem',
-              molecular_formula: compound.molecular_formula,
-              inchikey: compound.inchikey
-            })
-          }
-        } catch (err) {
-          // Skip compounds that fail to fetch
-          console.error(`❌ Failed to fetch compound ${result.name}:`, err)
-        }
+      // Add results directly (autocomplete already returns names)
+      for (const result of searchResults) {
+        results.push({
+          name: result.name,
+          source: 'pubchem'
+        })
       }
+      console.log('✅ Added', searchResults.length, 'PubChem results')
     } catch (error) {
       console.error('❌ PubChem search error:', error)
     }

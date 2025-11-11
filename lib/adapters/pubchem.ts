@@ -213,35 +213,33 @@ export class PubChemAdapter {
     try {
       await this.rateLimit()
 
-      const searchUrl = `${this.baseUrl}/compound/name/${encodeURIComponent(query)}/cids/JSON?list_return=listkey`
-      const searchResponse = await fetch(searchUrl)
+      // Use autocomplete API for partial matches
+      const autocompleteUrl = `https://pubchem.ncbi.nlm.nih.gov/rest/autocomplete/compound/${encodeURIComponent(query)}/json?limit=${limit}`
+      console.log('🔬 PubChem autocomplete URL:', autocompleteUrl)
+      
+      const searchResponse = await fetch(autocompleteUrl)
 
       if (!searchResponse.ok) {
         if (searchResponse.status === 404) {
+          console.log('🔬 PubChem: No results (404)')
           return []
         }
         throw new Error(`PubChem search failed: ${searchResponse.status}`)
       }
 
       const searchData = await searchResponse.json()
-      const cids = searchData.IdentifierList?.CID?.slice(0, limit) || []
+      console.log('🔬 PubChem autocomplete response:', searchData)
+      
+      // Autocomplete returns {total, dictionary_terms: {compound: ["name1", "name2", ...]}}
+      const names = searchData.dictionary_terms?.compound || []
+      
+      // Return names (we don't have CIDs from autocomplete, but that's ok for autocomplete)
+      const results = names.slice(0, limit).map((name: string, index: number) => ({
+        cid: index, // Dummy CID for autocomplete
+        name
+      }))
 
-      // Fetch names for each CID
-      const results = await Promise.all(
-        cids.map(async (cid: number) => {
-          try {
-            await this.rateLimit()
-            const nameUrl = `${this.baseUrl}/compound/cid/${cid}/property/Title/JSON`
-            const nameResponse = await fetch(nameUrl)
-            const nameData = await nameResponse.json()
-            const name = nameData.PropertyTable?.Properties?.[0]?.Title || `CID ${cid}`
-            return { cid, name }
-          } catch {
-            return { cid, name: `CID ${cid}` }
-          }
-        })
-      )
-
+      console.log('🔬 PubChem results:', results)
       return results
 
     } catch (error) {
