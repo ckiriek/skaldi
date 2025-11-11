@@ -219,7 +219,7 @@ function renderTemplate(template: string, data: any): string {
     return array.map((item, index) => {
       let itemContent = content
       // Replace {{this.property}}
-      itemContent = itemContent.replace(/\{\{this\.([^}]+)\}\}/g, (m, prop) => {
+      itemContent = itemContent.replace(/\{\{this\.([^}]+)\}\}/g, (m: string, prop: string) => {
         return item[prop] !== undefined ? String(item[prop]) : m
       })
       // Replace {{@index}}

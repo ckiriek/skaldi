@@ -279,7 +279,7 @@ export class ClinicalTrialsAdapter {
 
     // Parse arms
     const trialArms = arms?.armGroups?.map(arm => ({
-      arm_name: arm.label,
+      arm_label: arm.label,
       arm_type: arm.type,
       description: arm.description,
       n: undefined, // Not available in basic API response
@@ -313,23 +313,18 @@ export class ClinicalTrialsAdapter {
     })) || []
 
     const trial: Trial = {
-      id: '', // Will be set by database
+      nct_id: id.nctId,
       inchikey: '', // Will be linked later
-      registry_id: id.nctId,
-      registry: 'ClinicalTrials.gov',
       title: id.officialTitle || id.briefTitle,
       phase,
       status: status.overallStatus,
+      enrollment: design?.enrollmentInfo?.count,
       start_date: status.startDateStruct?.date,
       completion_date: status.completionDateStruct?.date,
-      sponsor: sponsor.leadSponsor.name,
-      collaborators: sponsor.collaborators?.map(c => c.name),
-      indication: protocol.conditionsModule?.conditions.join(', '),
-      trial_design: trialDesign,
+      design: trialDesign,
       arms: trialArms,
-      outcomes: [...primaryOutcomes, ...secondaryOutcomes],
-      inclusion_criteria: eligibility?.eligibilityCriteria,
-      exclusion_criteria: undefined,
+      outcomes_primary: primaryOutcomes,
+      outcomes_secondary: secondaryOutcomes,
       source: 'ClinicalTrials.gov',
       source_url: `https://clinicaltrials.gov/study/${id.nctId}`,
       retrieved_at: new Date().toISOString(),
@@ -343,39 +338,24 @@ export class ClinicalTrialsAdapter {
   /**
    * Build clinical summary from trials
    * 
+   * Note: This is a simplified version. Full implementation would require
+   * parsing trial results and outcomes data.
+   * 
    * @param trials - Array of Trial objects
-   * @returns ClinicalSummary object
+   * @returns Partial ClinicalSummary object
    */
-  static buildClinicalSummary(trials: Trial[]): ClinicalSummary {
-    const totalSubjects = trials.reduce((sum, trial) => {
-      return sum + (trial.trial_design?.enrollment_n || 0)
-    }, 0)
-
+  static buildClinicalSummary(trials: Trial[]): Partial<ClinicalSummary> {
     const phases = new Set<string>()
     trials.forEach(trial => {
       if (trial.phase) phases.add(trial.phase)
     })
 
-    const indications = new Set<string>()
-    trials.forEach(trial => {
-      if (trial.indication) indications.add(trial.indication)
-    })
-
     return {
-      id: '',
       inchikey: '',
-      total_subjects: totalSubjects,
-      total_studies: trials.length,
-      phases_studied: Array.from(phases),
-      indications_studied: Array.from(indications),
-      pharmacokinetics: undefined,
-      efficacy_data: undefined,
-      safety_data: undefined,
-      special_populations: undefined,
       source: 'ClinicalTrials.gov',
       source_url: 'https://clinicaltrials.gov',
       retrieved_at: new Date().toISOString(),
-      confidence: 'high',
+      confidence: 'medium',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     }

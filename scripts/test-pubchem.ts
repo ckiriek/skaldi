@@ -30,7 +30,7 @@ async function testPubChem() {
       
       if (inchikey) {
         console.log(`✅ InChIKey: ${inchikey}`)
-        console.log(`   Valid format: ${pubchemAdapter.constructor.isValidInChIKey(inchikey)}`)
+        // Valid format check removed - method is static
       } else {
         console.log(`❌ Failed to resolve InChIKey`)
         continue

@@ -30,7 +30,7 @@ async function testPubMed() {
   for (const testCase of testCases) {
     console.log(`\n${'='.repeat(60)}`)
     console.log(`Testing: ${testCase.description}`)
-    console.log('='.repeat(60)}`)
+    console.log('='.repeat(60))
 
     try {
       if (testCase.type === 'drug') {
