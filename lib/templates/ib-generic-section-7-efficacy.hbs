@@ -1,0 +1,467 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 7: Efficacy and Clinical Outcomes
+  
+  Template for ICH E6 (R2) compliant IB Section 7
+  
+  Data Sources:
+  - clinical_summary (efficacy data, outcomes)
+  - trials (clinical trial results)
+  - literature (efficacy studies)
+  - label (indications, clinical studies section)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - rld_brand_name: string
+  - clinical_summary: ClinicalSummary
+  - trials: Trial[]
+  - literature: Literature[]
+  - label: Label
+--}}
+
+# 7. EFFICACY AND CLINICAL OUTCOMES
+
+## 7.1 Overview
+
+This section summarizes the efficacy and clinical outcomes of {{compound_name}} ({{generic_name}}), based on data from the Reference Listed Drug (RLD) {{rld_brand_name}} and supporting scientific literature.
+
+{{#if clinical_summary}}
+{{compound_name}} has been evaluated in {{#if clinical_summary.total_studies}}{{clinical_summary.total_studies}}{{else}}[number]{{/if}} clinical studies involving {{#if clinical_summary.total_subjects}}{{clinical_summary.total_subjects}}{{else}}[number]{{/if}} subjects across {{#if clinical_summary.phases_studied}}{{join clinical_summary.phases_studied ", "}}{{else}}[phases]{{/if}}.
+{{else}}
+{{compound_name}} has been extensively studied in clinical trials to establish its efficacy for the approved indication(s).
+{{/if}}
+
+---
+
+## 7.2 Approved Indications
+
+{{#if label.sections.indications_and_usage}}
+{{label.sections.indications_and_usage}}
+{{else}}
+{{#if clinical_summary.indications_studied}}
+{{compound_name}} is indicated for:
+{{#each clinical_summary.indications_studied}}
+- {{this}}
+{{/each}}
+{{else}}
+{{compound_name}} is indicated for [indication].
+{{/if}}
+{{/if}}
+
+---
+
+## 7.3 Clinical Development Program
+
+### 7.3.1 Study Overview
+
+{{#if clinical_summary}}
+The clinical development program for {{rld_brand_name}} (reference for {{compound_name}}) included:
+
+**Study Phases:**
+{{#if clinical_summary.phases_studied}}
+{{#each clinical_summary.phases_studied}}
+- {{this}}
+{{/each}}
+{{else}}
+- Phase 1: Pharmacokinetics and safety
+- Phase 2: Dose-finding and preliminary efficacy
+- Phase 3: Pivotal efficacy and safety trials
+- Phase 4: Post-marketing surveillance
+{{/if}}
+
+**Total Subjects Enrolled:** {{#if clinical_summary.total_subjects}}{{clinical_summary.total_subjects}}{{else}}[number]{{/if}}
+
+**Total Studies:** {{#if clinical_summary.total_studies}}{{clinical_summary.total_studies}}{{else}}[number]{{/if}}
+
+**Study Populations:**
+{{#if clinical_summary.populations_studied}}
+{{#each clinical_summary.populations_studied}}
+- {{this}}
+{{/each}}
+{{else}}
+- [Population 1]
+- [Population 2]
+{{/if}}
+{{else}}
+The clinical development program for {{rld_brand_name}} included multiple phases of clinical trials to establish efficacy and safety.
+{{/if}}
+
+### 7.3.2 Key Efficacy Endpoints
+
+{{#if clinical_summary.efficacy_data}}
+**Primary Endpoints:**
+{{#if clinical_summary.efficacy_data.primary_endpoints}}
+{{#each clinical_summary.efficacy_data.primary_endpoints}}
+- {{this.endpoint}}: {{this.description}}
+{{/each}}
+{{else}}
+- [Primary endpoint 1]
+- [Primary endpoint 2]
+{{/if}}
+
+**Secondary Endpoints:**
+{{#if clinical_summary.efficacy_data.secondary_endpoints}}
+{{#each clinical_summary.efficacy_data.secondary_endpoints}}
+- {{this.endpoint}}: {{this.description}}
+{{/each}}
+{{else}}
+- [Secondary endpoint 1]
+- [Secondary endpoint 2]
+{{/if}}
+{{else}}
+**Primary Endpoints:**
+- [Primary endpoint]
+
+**Secondary Endpoints:**
+- [Secondary endpoint 1]
+- [Secondary endpoint 2]
+{{/if}}
+
+---
+
+## 7.4 Pivotal Clinical Trials
+
+{{#if trials}}
+{{#each trials}}
+### 7.4.{{add @index 1}} {{this.title}} ({{this.registry_id}})
+
+**Study Design:**
+- **Type:** {{#if this.trial_design.study_type}}{{this.trial_design.study_type}}{{else}}[type]{{/if}}
+- **Phase:** {{#if this.phase}}{{this.phase}}{{else}}[phase]{{/if}}
+- **Allocation:** {{#if this.trial_design.allocation}}{{this.trial_design.allocation}}{{else}}[allocation]{{/if}}
+- **Masking:** {{#if this.trial_design.masking}}{{this.trial_design.masking}}{{else}}[masking]{{/if}}
+- **Primary Purpose:** {{#if this.trial_design.primary_purpose}}{{this.trial_design.primary_purpose}}{{else}}[purpose]{{/if}}
+
+**Study Population:**
+- **Indication:** {{#if this.indication}}{{this.indication}}{{else}}[indication]{{/if}}
+- **Enrollment:** {{#if this.trial_design.enrollment_n}}N={{this.trial_design.enrollment_n}}{{else}}N=[number]{{/if}} subjects
+{{#if this.inclusion_criteria}}
+- **Key Inclusion Criteria:** {{this.inclusion_criteria}}
+{{/if}}
+
+**Treatment Arms:**
+{{#if this.arms}}
+{{#each this.arms}}
+- **{{this.arm_name}}** ({{this.arm_type}}){{#if this.n}}: N={{this.n}}{{/if}}
+  {{#if this.description}}{{this.description}}{{/if}}
+{{/each}}
+{{else}}
+- [Arm 1]
+- [Arm 2]
+{{/if}}
+
+**Outcomes:**
+{{#if this.outcomes}}
+{{#each this.outcomes}}
+**{{capitalize this.outcome_type}} Outcome:** {{this.measure}}
+{{#if this.time_frame}}- Time Frame: {{this.time_frame}}{{/if}}
+{{#if this.result}}
+- Result: {{this.result}}{{#if this.unit}} {{this.unit}}{{/if}}
+{{#if this.n}}- N: {{this.n}}{{/if}}
+{{#if this.mean}}- Mean: {{decimal this.mean 2}}{{#if this.sd}} (SD: {{decimal this.sd 2}}){{/if}}{{/if}}
+{{#if this.p_value}}- P-value: {{this.p_value}}{{/if}}
+{{/if}}
+
+{{/each}}
+{{else}}
+- [Outcome 1]
+- [Outcome 2]
+{{/if}}
+
+**Conclusion:** {{#if this.conclusion}}{{this.conclusion}}{{else}}[Summarize key findings and clinical significance]{{/if}}
+
+**Source:** {{#if this.source_url}}{{this.source_url}}{{else}}ClinicalTrials.gov{{/if}}
+
+---
+
+{{/each}}
+{{else}}
+### 7.4.1 Pivotal Trial 1
+
+**Study Design:** [Describe study design]
+
+**Study Population:** [Describe population]
+
+**Treatment Arms:** [List arms]
+
+**Outcomes:** [Describe outcomes]
+
+**Conclusion:** [Summarize findings]
+
+---
+
+### 7.4.2 Pivotal Trial 2
+
+**Study Design:** [Describe study design]
+
+**Study Population:** [Describe population]
+
+**Treatment Arms:** [List arms]
+
+**Outcomes:** [Describe outcomes]
+
+**Conclusion:** [Summarize findings]
+
+---
+
+{{/if}}
+
+## 7.5 Efficacy Results Summary
+
+### 7.5.1 Primary Efficacy Outcomes
+
+{{#if clinical_summary.efficacy_data}}
+{{#if clinical_summary.efficacy_data.primary_results}}
+{{#each clinical_summary.efficacy_data.primary_results}}
+**{{this.endpoint}}**
+- **Result:** {{this.result}}{{#if this.unit}} {{this.unit}}{{/if}}
+{{#if this.comparator}}- **Comparator:** {{this.comparator}}{{/if}}
+{{#if this.difference}}- **Difference:** {{this.difference}}{{#if this.ci_95}} (95% CI: {{this.ci_95}}){{/if}}{{/if}}
+{{#if this.p_value}}- **P-value:** {{this.p_value}}{{/if}}
+- **Clinical Significance:** {{#if this.clinical_significance}}{{this.clinical_significance}}{{else}}[Describe clinical significance]{{/if}}
+
+{{/each}}
+{{else}}
+[Summarize primary efficacy outcomes from pivotal trials]
+{{/if}}
+{{else}}
+[Summarize primary efficacy outcomes from pivotal trials]
+{{/if}}
+
+### 7.5.2 Secondary Efficacy Outcomes
+
+{{#if clinical_summary.efficacy_data}}
+{{#if clinical_summary.efficacy_data.secondary_results}}
+{{#each clinical_summary.efficacy_data.secondary_results}}
+**{{this.endpoint}}**
+- **Result:** {{this.result}}{{#if this.unit}} {{this.unit}}{{/if}}
+{{#if this.p_value}}- **P-value:** {{this.p_value}}{{/if}}
+
+{{/each}}
+{{else}}
+[Summarize secondary efficacy outcomes from pivotal trials]
+{{/if}}
+{{else}}
+[Summarize secondary efficacy outcomes from pivotal trials]
+{{/if}}
+
+### 7.5.3 Subgroup Analyses
+
+{{#if clinical_summary.efficacy_data.subgroup_analyses}}
+{{#each clinical_summary.efficacy_data.subgroup_analyses}}
+**{{this.subgroup}}**
+- {{this.finding}}
+{{#if this.p_value}}- P-value: {{this.p_value}}{{/if}}
+
+{{/each}}
+{{else}}
+[Describe efficacy in key subgroups: age, gender, race, disease severity, etc.]
+{{/if}}
+
+---
+
+## 7.6 Dose-Response Relationship
+
+{{#if clinical_summary.efficacy_data.dose_response}}
+{{clinical_summary.efficacy_data.dose_response}}
+{{else}}
+[Describe dose-response relationship, optimal dose, dose-ranging studies]
+
+**Recommended Dose:** [dose and frequency]
+
+**Dose Adjustments:** [Describe dose adjustments for special populations]
+{{/if}}
+
+---
+
+## 7.7 Duration of Effect
+
+{{#if clinical_summary.efficacy_data.duration_of_effect}}
+{{clinical_summary.efficacy_data.duration_of_effect}}
+{{else}}
+[Describe duration of therapeutic effect, time to onset, maintenance of effect]
+{{/if}}
+
+---
+
+## 7.8 Comparative Efficacy
+
+{{#if clinical_summary.efficacy_data.comparative_efficacy}}
+### 7.8.1 Head-to-Head Comparisons
+
+{{#each clinical_summary.efficacy_data.comparative_efficacy}}
+**vs. {{this.comparator}}**
+- **Study:** {{this.study_id}}
+- **Outcome:** {{this.outcome}}
+- **Result:** {{this.result}}
+{{#if this.superiority}}- **Superiority:** {{this.superiority}}{{/if}}
+{{#if this.non_inferiority}}- **Non-Inferiority:** {{this.non_inferiority}}{{/if}}
+
+{{/each}}
+{{else}}
+[Describe comparative efficacy vs. placebo, active comparators, or standard of care]
+{{/if}}
+
+---
+
+## 7.9 Long-Term Efficacy
+
+{{#if clinical_summary.efficacy_data.long_term_efficacy}}
+{{clinical_summary.efficacy_data.long_term_efficacy}}
+{{else}}
+[Describe long-term efficacy data from extension studies, real-world evidence]
+{{/if}}
+
+---
+
+## 7.10 Special Populations
+
+### 7.10.1 Geriatric Patients
+
+{{#if clinical_summary.special_populations.geriatric_efficacy}}
+{{clinical_summary.special_populations.geriatric_efficacy}}
+{{else}}
+[Describe efficacy in elderly patients]
+{{/if}}
+
+### 7.10.2 Pediatric Patients
+
+{{#if clinical_summary.special_populations.pediatric_efficacy}}
+{{clinical_summary.special_populations.pediatric_efficacy}}
+{{else}}
+[Describe efficacy in pediatric patients, if applicable]
+{{/if}}
+
+### 7.10.3 Renal Impairment
+
+{{#if clinical_summary.special_populations.renal_impairment_efficacy}}
+{{clinical_summary.special_populations.renal_impairment_efficacy}}
+{{else}}
+[Describe efficacy in patients with renal impairment]
+{{/if}}
+
+### 7.10.4 Hepatic Impairment
+
+{{#if clinical_summary.special_populations.hepatic_impairment_efficacy}}
+{{clinical_summary.special_populations.hepatic_impairment_efficacy}}
+{{else}}
+[Describe efficacy in patients with hepatic impairment]
+{{/if}}
+
+---
+
+## 7.11 Supporting Literature
+
+{{#if literature}}
+The efficacy of {{compound_name}} is supported by {{length literature}} publications in peer-reviewed journals.
+
+### 7.11.1 Key Studies
+
+{{#each literature}}
+{{#if lte @index 4}}
+**{{this.title}}**  
+{{#each this.authors}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}  
+*{{this.journal}}*{{#if this.publication_date}} ({{this.publication_date}}){{/if}}
+
+{{#if this.abstract}}
+{{this.abstract}}
+{{/if}}
+
+PMID: {{this.pmid}}  
+{{#if this.source_url}}Source: {{this.source_url}}{{/if}}
+
+---
+
+{{/if}}
+{{/each}}
+
+### 7.11.2 Additional References
+
+{{#each literature}}
+{{#if gte @index 5}}
+{{add @index 1}}. {{#each this.authors}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. {{this.title}}. {{this.journal}}{{#if this.publication_date}}. {{this.publication_date}}{{/if}}{{#if this.volume}};{{this.volume}}{{/if}}{{#if this.issue}}({{this.issue}}){{/if}}{{#if this.pages}}:{{this.pages}}{{/if}}. PMID: {{this.pmid}}.
+
+{{/if}}
+{{/each}}
+{{else}}
+[List key efficacy studies from literature]
+
+1. [Reference 1]
+2. [Reference 2]
+3. [Reference 3]
+{{/if}}
+
+---
+
+## 7.12 Clinical Implications
+
+### 7.12.1 Therapeutic Benefit
+
+{{compound_name}} has demonstrated significant therapeutic benefit in the treatment of {{#if clinical_summary.primary_indication}}{{clinical_summary.primary_indication}}{{else}}[indication]{{/if}}.
+
+**Key Benefits:**
+{{#if clinical_summary.efficacy_data.key_benefits}}
+{{#each clinical_summary.efficacy_data.key_benefits}}
+- {{this}}
+{{/each}}
+{{else}}
+- [Benefit 1]
+- [Benefit 2]
+- [Benefit 3]
+{{/if}}
+
+### 7.12.2 Clinical Relevance
+
+{{#if clinical_summary.efficacy_data.clinical_relevance}}
+{{clinical_summary.efficacy_data.clinical_relevance}}
+{{else}}
+[Describe clinical relevance of efficacy findings, impact on patient outcomes, quality of life]
+{{/if}}
+
+### 7.12.3 Place in Therapy
+
+{{#if clinical_summary.efficacy_data.place_in_therapy}}
+{{clinical_summary.efficacy_data.place_in_therapy}}
+{{else}}
+[Describe the role of {{compound_name}} in the treatment algorithm, first-line vs. second-line, combination therapy]
+{{/if}}
+
+---
+
+## 7.13 Summary
+
+{{compound_name}} has demonstrated efficacy for the treatment of {{#if clinical_summary.primary_indication}}{{clinical_summary.primary_indication}}{{else}}[indication]{{/if}} in well-controlled clinical trials.
+
+**Key Efficacy Findings:**
+- {{#if clinical_summary.total_studies}}{{clinical_summary.total_studies}}{{else}}[Number]{{/if}} clinical studies involving {{#if clinical_summary.total_subjects}}{{clinical_summary.total_subjects}}{{else}}[number]{{/if}} subjects
+- Demonstrated efficacy across {{#if clinical_summary.phases_studied}}{{join clinical_summary.phases_studied ", "}}{{else}}multiple phases{{/if}}
+- Consistent efficacy in diverse patient populations
+- Favorable benefit-risk profile
+
+As a generic formulation, {{compound_name}} is bioequivalent to {{rld_brand_name}} and is expected to provide equivalent therapeutic efficacy.
+
+---
+
+## 7.14 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if label}}
+- **FDA Label:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+{{#if clinical_summary}}
+- **Clinical Summary:** {{clinical_summary.source}} (Retrieved: {{date clinical_summary.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if trials}}
+- **Clinical Trials:** {{length trials}} trials from ClinicalTrials.gov
+{{/if}}
+{{#if literature}}
+- **Literature:** {{length literature}} articles from PubMed
+{{/if}}
+
+**Confidence Level:** {{#if clinical_summary.confidence}}{{capitalize clinical_summary.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) guidelines for Investigator's Brochure content.*

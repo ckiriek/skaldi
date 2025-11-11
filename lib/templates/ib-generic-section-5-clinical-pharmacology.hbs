@@ -1,0 +1,367 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 5: Clinical Pharmacology
+  
+  Template for ICH E6 (R2) compliant IB Section 5
+  
+  Data Sources:
+  - clinical_summary (pharmacokinetics, pharmacodynamics)
+  - labels (clinical_pharmacology section)
+  - literature (PK/PD studies)
+  - trials (PK/PD trials)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - rld_brand_name: string
+  - clinical_summary: ClinicalSummary
+  - label: Label
+  - literature: Literature[]
+  - trials: Trial[]
+--}}
+
+# 5. CLINICAL PHARMACOLOGY
+
+## 5.1 Overview
+
+{{compound_name}} ({{generic_name}}) is a {{#if clinical_summary.drug_class}}{{clinical_summary.drug_class}}{{else}}[drug class]{{/if}} indicated for {{#if clinical_summary.primary_indication}}{{clinical_summary.primary_indication}}{{else}}[indication]{{/if}}.
+
+This section summarizes the clinical pharmacology of {{compound_name}}, including its mechanism of action, pharmacokinetics, and pharmacodynamics. The data presented are derived from the Reference Listed Drug (RLD) {{rld_brand_name}} and supporting scientific literature.
+
+---
+
+## 5.2 Mechanism of Action
+
+{{#if label.sections.clinical_pharmacology.mechanism_of_action}}
+{{label.sections.clinical_pharmacology.mechanism_of_action}}
+{{else}}
+{{#if clinical_summary.mechanism_of_action}}
+{{clinical_summary.mechanism_of_action}}
+{{else}}
+The mechanism of action of {{compound_name}} involves [describe mechanism]. The drug exerts its therapeutic effects by [describe pathway].
+{{/if}}
+{{/if}}
+
+**Key Pharmacological Actions:**
+{{#if clinical_summary.pharmacological_actions}}
+{{#each clinical_summary.pharmacological_actions}}
+- {{this}}
+{{/each}}
+{{else}}
+- [Primary pharmacological action]
+- [Secondary pharmacological action]
+- [Additional effects]
+{{/if}}
+
+---
+
+## 5.3 Pharmacokinetics
+
+### 5.3.1 Absorption
+
+{{#if clinical_summary.pharmacokinetics.absorption}}
+**Bioavailability:** {{#if clinical_summary.pharmacokinetics.absorption.bioavailability}}{{clinical_summary.pharmacokinetics.absorption.bioavailability}}%{{else}}[value]%{{/if}}
+
+**Time to Peak Concentration (Tmax):** {{#if clinical_summary.pharmacokinetics.absorption.tmax}}{{clinical_summary.pharmacokinetics.absorption.tmax}} hours{{else}}[value] hours{{/if}}
+
+**Effect of Food:** {{#if clinical_summary.pharmacokinetics.absorption.food_effect}}{{clinical_summary.pharmacokinetics.absorption.food_effect}}{{else}}[Describe food effect]{{/if}}
+
+{{clinical_summary.pharmacokinetics.absorption.description}}
+{{else}}
+{{compound_name}} is absorbed from the gastrointestinal tract following oral administration. 
+
+**Bioavailability:** [value]%
+
+**Time to Peak Concentration (Tmax):** [value] hours
+
+**Effect of Food:** [Describe food effect]
+{{/if}}
+
+### 5.3.2 Distribution
+
+{{#if clinical_summary.pharmacokinetics.distribution}}
+**Volume of Distribution (Vd):** {{#if clinical_summary.pharmacokinetics.distribution.volume}}{{clinical_summary.pharmacokinetics.distribution.volume}} L/kg{{else}}[value] L/kg{{/if}}
+
+**Protein Binding:** {{#if clinical_summary.pharmacokinetics.distribution.protein_binding}}{{clinical_summary.pharmacokinetics.distribution.protein_binding}}%{{else}}[value]%{{/if}}
+
+**Tissue Distribution:** {{#if clinical_summary.pharmacokinetics.distribution.tissue_distribution}}{{clinical_summary.pharmacokinetics.distribution.tissue_distribution}}{{else}}[Describe tissue distribution]{{/if}}
+
+{{clinical_summary.pharmacokinetics.distribution.description}}
+{{else}}
+{{compound_name}} is widely distributed throughout the body.
+
+**Volume of Distribution (Vd):** [value] L/kg
+
+**Protein Binding:** [value]% bound to plasma proteins
+
+**Tissue Distribution:** [Describe tissue distribution]
+{{/if}}
+
+### 5.3.3 Metabolism
+
+{{#if clinical_summary.pharmacokinetics.metabolism}}
+**Primary Metabolic Pathway:** {{#if clinical_summary.pharmacokinetics.metabolism.primary_pathway}}{{clinical_summary.pharmacokinetics.metabolism.primary_pathway}}{{else}}[pathway]{{/if}}
+
+**Enzymes Involved:** {{#if clinical_summary.pharmacokinetics.metabolism.enzymes}}{{join clinical_summary.pharmacokinetics.metabolism.enzymes ", "}}{{else}}[enzymes]{{/if}}
+
+**Active Metabolites:** {{#if clinical_summary.pharmacokinetics.metabolism.active_metabolites}}{{join clinical_summary.pharmacokinetics.metabolism.active_metabolites ", "}}{{else}}None identified{{/if}}
+
+{{clinical_summary.pharmacokinetics.metabolism.description}}
+{{else}}
+{{compound_name}} is metabolized primarily in the liver.
+
+**Primary Metabolic Pathway:** [pathway]
+
+**Enzymes Involved:** [CYP enzymes]
+
+**Active Metabolites:** [List or "None identified"]
+{{/if}}
+
+### 5.3.4 Elimination
+
+{{#if clinical_summary.pharmacokinetics.elimination}}
+**Half-Life (t½):** {{#if clinical_summary.pharmacokinetics.elimination.half_life}}{{clinical_summary.pharmacokinetics.elimination.half_life}} hours{{else}}[value] hours{{/if}}
+
+**Clearance (CL):** {{#if clinical_summary.pharmacokinetics.elimination.clearance}}{{clinical_summary.pharmacokinetics.elimination.clearance}} mL/min/kg{{else}}[value] mL/min/kg{{/if}}
+
+**Primary Route of Excretion:** {{#if clinical_summary.pharmacokinetics.elimination.primary_route}}{{clinical_summary.pharmacokinetics.elimination.primary_route}}{{else}}[route]{{/if}}
+
+**Renal Excretion:** {{#if clinical_summary.pharmacokinetics.elimination.renal_excretion}}{{clinical_summary.pharmacokinetics.elimination.renal_excretion}}% of dose{{else}}[value]% of dose{{/if}}
+
+{{clinical_summary.pharmacokinetics.elimination.description}}
+{{else}}
+{{compound_name}} is eliminated primarily through [route].
+
+**Half-Life (t½):** [value] hours
+
+**Clearance (CL):** [value] mL/min/kg
+
+**Primary Route of Excretion:** [Renal/Hepatic/Biliary]
+
+**Renal Excretion:** [value]% of dose excreted unchanged in urine
+{{/if}}
+
+---
+
+## 5.4 Pharmacodynamics
+
+### 5.4.1 Pharmacological Effects
+
+{{#if clinical_summary.pharmacodynamics}}
+{{#if clinical_summary.pharmacodynamics.primary_effects}}
+**Primary Pharmacodynamic Effects:**
+{{#each clinical_summary.pharmacodynamics.primary_effects}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{#if clinical_summary.pharmacodynamics.secondary_effects}}
+**Secondary Pharmacodynamic Effects:**
+{{#each clinical_summary.pharmacodynamics.secondary_effects}}
+- {{this}}
+{{/each}}
+{{/if}}
+
+{{clinical_summary.pharmacodynamics.description}}
+{{else}}
+{{compound_name}} produces the following pharmacodynamic effects:
+
+**Primary Effects:**
+- [Primary effect 1]
+- [Primary effect 2]
+
+**Secondary Effects:**
+- [Secondary effect 1]
+- [Secondary effect 2]
+{{/if}}
+
+### 5.4.2 Dose-Response Relationship
+
+{{#if clinical_summary.pharmacodynamics.dose_response}}
+{{clinical_summary.pharmacodynamics.dose_response}}
+{{else}}
+The pharmacodynamic response to {{compound_name}} is dose-dependent. [Describe dose-response relationship, ED50, therapeutic window, etc.]
+{{/if}}
+
+### 5.4.3 Onset and Duration of Action
+
+{{#if clinical_summary.pharmacodynamics.onset_duration}}
+**Onset of Action:** {{#if clinical_summary.pharmacodynamics.onset_duration.onset}}{{clinical_summary.pharmacodynamics.onset_duration.onset}}{{else}}[time]{{/if}}
+
+**Duration of Action:** {{#if clinical_summary.pharmacodynamics.onset_duration.duration}}{{clinical_summary.pharmacodynamics.onset_duration.duration}}{{else}}[time]{{/if}}
+
+{{clinical_summary.pharmacodynamics.onset_duration.description}}
+{{else}}
+**Onset of Action:** [time]
+
+**Duration of Action:** [time]
+
+[Describe onset and duration]
+{{/if}}
+
+---
+
+## 5.5 Drug Interactions
+
+### 5.5.1 Pharmacokinetic Interactions
+
+{{#if label.sections.drug_interactions}}
+{{label.sections.drug_interactions}}
+{{else}}
+{{#if clinical_summary.drug_interactions.pharmacokinetic}}
+{{#each clinical_summary.drug_interactions.pharmacokinetic}}
+**{{this.drug}}**
+- **Mechanism:** {{this.mechanism}}
+- **Effect:** {{this.effect}}
+- **Clinical Significance:** {{this.clinical_significance}}
+{{/each}}
+{{else}}
+[Describe pharmacokinetic drug interactions, including CYP interactions, transporter interactions, etc.]
+{{/if}}
+{{/if}}
+
+### 5.5.2 Pharmacodynamic Interactions
+
+{{#if clinical_summary.drug_interactions.pharmacodynamic}}
+{{#each clinical_summary.drug_interactions.pharmacodynamic}}
+**{{this.drug}}**
+- **Mechanism:** {{this.mechanism}}
+- **Effect:** {{this.effect}}
+- **Clinical Significance:** {{this.clinical_significance}}
+{{/each}}
+{{else}}
+[Describe pharmacodynamic drug interactions, including additive/synergistic effects, antagonistic effects, etc.]
+{{/if}}
+
+---
+
+## 5.6 Special Populations
+
+### 5.6.1 Renal Impairment
+
+{{#if clinical_summary.special_populations.renal_impairment}}
+{{clinical_summary.special_populations.renal_impairment}}
+{{else}}
+{{#if label.sections.use_in_specific_populations}}
+[Extract renal impairment information from label]
+{{else}}
+[Describe PK/PD in patients with renal impairment, dose adjustments if needed]
+{{/if}}
+{{/if}}
+
+### 5.6.2 Hepatic Impairment
+
+{{#if clinical_summary.special_populations.hepatic_impairment}}
+{{clinical_summary.special_populations.hepatic_impairment}}
+{{else}}
+[Describe PK/PD in patients with hepatic impairment, dose adjustments if needed]
+{{/if}}
+
+### 5.6.3 Geriatric Patients
+
+{{#if clinical_summary.special_populations.geriatric}}
+{{clinical_summary.special_populations.geriatric}}
+{{else}}
+[Describe PK/PD in elderly patients, dose adjustments if needed]
+{{/if}}
+
+### 5.6.4 Pediatric Patients
+
+{{#if clinical_summary.special_populations.pediatric}}
+{{clinical_summary.special_populations.pediatric}}
+{{else}}
+[Describe PK/PD in pediatric patients, dose adjustments if needed]
+{{/if}}
+
+### 5.6.5 Pregnancy and Lactation
+
+{{#if clinical_summary.special_populations.pregnancy}}
+{{clinical_summary.special_populations.pregnancy}}
+{{else}}
+[Describe PK/PD during pregnancy and lactation, risk categories]
+{{/if}}
+
+---
+
+## 5.7 Bioequivalence to Reference Listed Drug
+
+As a generic formulation, {{compound_name}} has been demonstrated to be bioequivalent to the RLD {{rld_brand_name}}.
+
+**Bioequivalence Criteria:**
+- 90% confidence interval for AUC and Cmax ratios (Test/Reference) must fall within 80.00% - 125.00%
+- Study conducted under fasting and/or fed conditions as appropriate
+
+**Bioequivalence Study Results:**
+{{#if clinical_summary.bioequivalence}}
+| Parameter | Test ({{compound_name}}) | Reference ({{rld_brand_name}}) | Ratio (%) | 90% CI |
+|-----------|--------------------------|--------------------------------|-----------|--------|
+| AUC₀₋∞ (ng·h/mL) | {{#if clinical_summary.bioequivalence.auc_test}}{{decimal clinical_summary.bioequivalence.auc_test 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.auc_ref}}{{decimal clinical_summary.bioequivalence.auc_ref 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.auc_ratio}}{{decimal clinical_summary.bioequivalence.auc_ratio 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.auc_ci}}{{clinical_summary.bioequivalence.auc_ci}}{{else}}[CI]{{/if}} |
+| Cmax (ng/mL) | {{#if clinical_summary.bioequivalence.cmax_test}}{{decimal clinical_summary.bioequivalence.cmax_test 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.cmax_ref}}{{decimal clinical_summary.bioequivalence.cmax_ref 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.cmax_ratio}}{{decimal clinical_summary.bioequivalence.cmax_ratio 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.cmax_ci}}{{clinical_summary.bioequivalence.cmax_ci}}{{else}}[CI]{{/if}} |
+| Tmax (h) | {{#if clinical_summary.bioequivalence.tmax_test}}{{decimal clinical_summary.bioequivalence.tmax_test 2}}{{else}}[value]{{/if}} | {{#if clinical_summary.bioequivalence.tmax_ref}}{{decimal clinical_summary.bioequivalence.tmax_ref 2}}{{else}}[value]{{/if}} | - | - |
+
+**Conclusion:** {{compound_name}} meets FDA bioequivalence criteria and is therapeutically equivalent to {{rld_brand_name}}.
+{{else}}
+[Insert bioequivalence study results table]
+
+**Conclusion:** {{compound_name}} meets FDA bioequivalence criteria and is therapeutically equivalent to {{rld_brand_name}}.
+{{/if}}
+
+---
+
+## 5.8 Summary
+
+{{compound_name}} exhibits pharmacokinetic and pharmacodynamic properties consistent with the RLD {{rld_brand_name}}. Key clinical pharmacology characteristics include:
+
+**Pharmacokinetics:**
+- Bioavailability: {{#if clinical_summary.pharmacokinetics.absorption.bioavailability}}{{clinical_summary.pharmacokinetics.absorption.bioavailability}}%{{else}}[value]%{{/if}}
+- Half-life: {{#if clinical_summary.pharmacokinetics.elimination.half_life}}{{clinical_summary.pharmacokinetics.elimination.half_life}} hours{{else}}[value] hours{{/if}}
+- Primary elimination route: {{#if clinical_summary.pharmacokinetics.elimination.primary_route}}{{clinical_summary.pharmacokinetics.elimination.primary_route}}{{else}}[route]{{/if}}
+
+**Pharmacodynamics:**
+- Mechanism: {{#if clinical_summary.mechanism_of_action}}{{clinical_summary.mechanism_of_action}}{{else}}[mechanism]{{/if}}
+- Onset: {{#if clinical_summary.pharmacodynamics.onset_duration.onset}}{{clinical_summary.pharmacodynamics.onset_duration.onset}}{{else}}[time]{{/if}}
+- Duration: {{#if clinical_summary.pharmacodynamics.onset_duration.duration}}{{clinical_summary.pharmacodynamics.onset_duration.duration}}{{else}}[time]{{/if}}
+
+**Bioequivalence:**
+- Demonstrated bioequivalence to {{rld_brand_name}}
+- Meets FDA 80-125% criteria for AUC and Cmax
+
+---
+
+## 5.9 References
+
+{{#if literature}}
+{{#each literature}}
+{{add @index 1}}. {{#each this.authors}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. {{this.title}}. {{this.journal}}{{#if this.publication_date}}. {{this.publication_date}}{{/if}}{{#if this.volume}};{{this.volume}}{{/if}}{{#if this.issue}}({{this.issue}}){{/if}}{{#if this.pages}}:{{this.pages}}{{/if}}. PMID: {{this.pmid}}.
+
+{{/each}}
+{{else}}
+1. [Reference 1]
+2. [Reference 2]
+3. [Reference 3]
+{{/if}}
+
+---
+
+## 5.10 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if label}}
+- **FDA Label:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+{{#if clinical_summary}}
+- **Clinical Summary:** {{clinical_summary.source}} (Retrieved: {{date clinical_summary.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if literature}}
+- **Literature:** {{length literature}} articles from PubMed
+{{/if}}
+{{#if trials}}
+- **Clinical Trials:** {{length trials}} trials from ClinicalTrials.gov
+{{/if}}
+
+**Confidence Level:** {{#if clinical_summary.confidence}}{{capitalize clinical_summary.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) guidelines for Investigator's Brochure content.*
