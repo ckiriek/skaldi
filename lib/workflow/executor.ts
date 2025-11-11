@@ -410,13 +410,54 @@ async function composerAgent(input: any): Promise<AgentResult> {
 }
 
 /**
- * Writer Agent - Generates content (placeholder)
+ * Writer Agent - Generates content
  */
 async function writerAgent(input: any): Promise<AgentResult> {
-  // TODO: Implement writer agent
-  return {
-    success: true,
-    data: { message: 'Writer agent not yet implemented' },
+  try {
+    // Call writer API
+    const response = await fetch('/api/v1/write', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        document_id: input.document_id,
+        refinement_type: input.refinement_type || 'enhance',
+        context: input.context,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.json()
+      return {
+        success: false,
+        error: {
+          type: 'fatal',
+          message: error.error || 'Content generation failed',
+          code: ErrorCodes.GENERATION_FAILED,
+        },
+      }
+    }
+
+    const data = await response.json()
+
+    return {
+      success: true,
+      data: data.data,
+      metadata: {
+        duration_ms: data.data.duration_ms,
+        word_count_before: data.data.word_count_before,
+        word_count_after: data.data.word_count_after,
+        changes_made: data.data.changes_made,
+      },
+    }
+  } catch (error) {
+    return {
+      success: false,
+      error: {
+        type: 'transient',
+        message: error instanceof Error ? error.message : 'Unknown error',
+        code: ErrorCodes.NETWORK_ERROR,
+      },
+    }
   }
 }
 
