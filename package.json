@@ -36,6 +36,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.1",
     "tailwind-merge": "^2.2.0",
+    "use-debounce": "^10.0.6",
     "zod": "^3.22.4"
   },
   "devDependencies": {
