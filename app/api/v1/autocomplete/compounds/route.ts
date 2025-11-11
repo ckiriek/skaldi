@@ -17,6 +17,8 @@ export async function GET(request: NextRequest) {
     const query = searchParams.get('q')
     const limit = parseInt(searchParams.get('limit') || '10')
 
+    console.log('🔍 Compounds autocomplete API called:', { query, limit })
+
     validateRequiredFields(
       { q: query },
       ['q'],
@@ -26,6 +28,7 @@ export async function GET(request: NextRequest) {
 
     // Minimum 3 characters for search
     if (query!.length < 3) {
+      console.log('⚠️ Query too short:', query)
       return NextResponse.json({
         success: true,
         data: [],
@@ -105,6 +108,8 @@ export async function GET(request: NextRequest) {
         index === self.findIndex(r => r.name.toLowerCase() === result.name.toLowerCase())
       )
       .slice(0, limit)
+
+    console.log('✅ Returning results:', { total: uniqueResults.length, results: uniqueResults })
 
     return NextResponse.json({
       success: true,

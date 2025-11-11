@@ -49,18 +49,27 @@ export function FieldAutocomplete({
     }
 
     setLoading(true)
+    const url = `${endpoint}?q=${encodeURIComponent(searchQuery)}&limit=10`
+    console.log('🔍 Autocomplete search:', { endpoint, query: searchQuery, url })
+    
     try {
-      const response = await fetch(
-        `${endpoint}?q=${encodeURIComponent(searchQuery)}&limit=10`
-      )
+      const response = await fetch(url)
+      console.log('📡 Response status:', response.status, response.statusText)
+      
       const data = await response.json()
+      console.log('📦 Response data:', data)
 
       if (data.success && data.data) {
+        console.log('✅ Found suggestions:', data.data.length, data.data)
         setSuggestions(data.data)
         setIsOpen(data.data.length > 0)
+      } else {
+        console.warn('⚠️ No data or not successful:', data)
+        setSuggestions([])
+        setIsOpen(false)
       }
     } catch (error) {
-      console.error('Autocomplete search failed:', error)
+      console.error('❌ Autocomplete search failed:', error)
       setSuggestions([])
       setIsOpen(false)
     } finally {
