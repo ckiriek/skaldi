@@ -3,9 +3,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Separator } from '@/components/ui/separator'
+import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
+import { EmptyState } from '@/components/ui/empty-state'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { FileText, Plus, Calendar, MapPin, Database, CheckCircle, AlertCircle, FlaskConical, BookOpen, Shield, ExternalLink } from 'lucide-react'
+import { FileText, Plus, Calendar, MapPin, Database, CheckCircle, AlertCircle, FlaskConical, BookOpen, Shield, ExternalLink, ArrowLeft } from 'lucide-react'
 import { GenerateDocumentButton } from '@/components/generate-document-button'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { FileUpload } from '@/components/file-upload'
@@ -62,93 +65,92 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const safetyReportsCount = evidenceSources?.filter(e => e.source === 'openFDA').length || 0
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
+    <div className="space-y-8 fade-in">
+      {/* Back Button & Header */}
       <div>
-        <div className="flex items-center justify-between">
+        <Link href="/dashboard/projects">
+          <Button variant="ghost" size="sm" className="gap-2 mb-4">
+            <ArrowLeft className="h-4 w-4" />
+            Back to Projects
+          </Button>
+        </Link>
+        <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{project.title}</h1>
-            <div className="flex items-center gap-3 mt-2">
-              <Badge>{project.phase}</Badge>
-              <span className="text-gray-600">{project.indication}</span>
+            <h1 className="text-4xl font-semibold tracking-tight">{project.title}</h1>
+            <div className="flex items-center gap-3 mt-3">
+              <Badge size="lg">{project.phase}</Badge>
+              <Separator orientation="vertical" className="h-6" />
+              <span className="text-muted-foreground">{project.indication}</span>
             </div>
           </div>
         </div>
       </div>
 
+      <Separator />
+
       {/* Smart Workflow Banner */}
       {!hasExternalData ? (
-        <Card className="bg-amber-50 border-amber-200">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-medium text-amber-900">
-                  📊 Next Step: Fetch External Data
-                </h3>
-                <p className="text-sm text-amber-700 mt-1">
-                  Before generating documents, fetch external evidence from ClinicalTrials.gov, PubMed, and openFDA. 
-                  This ensures your documents contain accurate safety data, clinical context, and published research.
-                </p>
-                <div className="mt-3">
-                  <FetchExternalDataButton projectId={project.id} />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert variant="warning">
+          <AlertCircle className="h-5 w-5" />
+          <AlertTitle>📊 Next Step: Fetch External Data</AlertTitle>
+          <AlertDescription>
+            Before generating documents, fetch external evidence from ClinicalTrials.gov, PubMed, and openFDA. 
+            This ensures your documents contain accurate safety data, clinical context, and published research.
+          </AlertDescription>
+          <div className="mt-4">
+            <FetchExternalDataButton projectId={project.id} />
+          </div>
+        </Alert>
       ) : (
-        <Card className="bg-green-50 border-green-200">
-          <CardContent className="pt-6">
-            <div className="flex items-start gap-3">
-              <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-              <div className="flex-1">
-                <h3 className="font-medium text-green-900">
-                  ✅ External Data Ready
-                </h3>
-                <p className="text-sm text-green-700 mt-1">
-                  {evidenceSources.length} evidence sources fetched: {clinicalTrialsCount} clinical trials, {publicationsCount} publications, {safetyReportsCount} safety reports.
-                  You can now generate documents with complete data.
-                </p>
-                <div className="mt-3">
-                  <GenerateDocumentButton projectId={project.id} />
-                </div>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <Alert variant="success">
+          <CheckCircle className="h-5 w-5" />
+          <AlertTitle>✅ External Data Ready</AlertTitle>
+          <AlertDescription>
+            {evidenceSources.length} evidence sources fetched: {clinicalTrialsCount} clinical trials, {publicationsCount} publications, {safetyReportsCount} safety reports.
+            You can now generate documents with complete data.
+          </AlertDescription>
+          <div className="mt-4">
+            <GenerateDocumentButton projectId={project.id} />
+          </div>
+        </Alert>
       )}
 
       {/* Project Details */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">Study Design</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <FlaskConical className="h-5 w-5 text-primary" />
+              Study Design
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-600">Type:</span>{' '}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Type:</span>
               <span className="font-medium">{designJson?.design_type || 'N/A'}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Blinding:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Blinding:</span>
               <span className="font-medium">{designJson?.blinding || 'N/A'}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Arms:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Arms:</span>
               <span className="font-medium">{designJson?.arms || 'N/A'}</span>
             </div>
-            <div>
-              <span className="text-gray-600">Duration:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Duration:</span>
               <span className="font-medium">{designJson?.duration_weeks || 'N/A'} weeks</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              <MapPin className="w-4 h-4 inline mr-2" />
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-primary" />
               Countries
             </CardTitle>
           </CardHeader>
@@ -156,33 +158,34 @@ export default async function ProjectPage({ params }: { params: { id: string } }
             {project.countries && project.countries.length > 0 ? (
               <div className="flex flex-wrap gap-2">
                 {project.countries.map((country: string) => (
-                  <Badge key={country} variant="outline">
+                  <Badge key={country} variant="secondary" size="sm">
                     {country}
                   </Badge>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">No countries specified</p>
+              <p className="text-sm text-muted-foreground">No countries specified</p>
             )}
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover-lift">
           <CardHeader>
-            <CardTitle className="text-sm font-medium">
-              <Calendar className="w-4 h-4 inline mr-2" />
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-primary" />
               Timeline
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <div>
-              <span className="text-gray-600">Created:</span>{' '}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Created:</span>
               <span className="font-medium">
                 {new Date(project.created_at).toLocaleDateString()}
               </span>
             </div>
-            <div>
-              <span className="text-gray-600">Primary Endpoint:</span>{' '}
+            <Separator />
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Primary Endpoint:</span>
               <span className="font-medium">{designJson?.primary_endpoint || 'N/A'}</span>
             </div>
           </CardContent>
@@ -221,11 +224,11 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       )}
 
       {/* Documents */}
-      <Card>
+      <Card className="hover-lift">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>Documents</CardTitle>
+              <CardTitle className="text-xl">Documents</CardTitle>
               <CardDescription>Generated regulatory documents</CardDescription>
             </div>
           </div>
@@ -233,18 +236,21 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         <CardContent>
           {documents && documents.length > 0 ? (
             <div className="space-y-3">
-              {documents.map((doc) => (
+              {documents.map((doc, index) => (
                 <Link
                   key={doc.id}
                   href={`/dashboard/documents/${doc.id}`}
-                  className="block p-4 border rounded-lg hover:bg-gray-50 transition"
+                  className="block p-4 border rounded-lg hover:bg-accent hover:border-primary transition-smooth slide-in-from-left"
+                  style={{ animationDelay: `${index * 50}ms` }}
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
-                      <FileText className="w-5 h-5 text-gray-400" />
+                      <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                        <FileText className="h-5 w-5 text-primary" />
+                      </div>
                       <div>
-                        <p className="font-medium">{doc.type} - Version {doc.version}</p>
-                        <p className="text-sm text-gray-600">
+                        <p className="font-semibold">{doc.type} - Version {doc.version}</p>
+                        <p className="text-sm text-muted-foreground">
                           Created {new Date(doc.created_at).toLocaleDateString()}
                         </p>
                       </div>
@@ -254,9 +260,10 @@ export default async function ProjectPage({ params }: { params: { id: string } }
                         doc.status === 'approved'
                           ? 'success'
                           : doc.status === 'review'
-                          ? 'default'
-                          : 'outline'
+                          ? 'info'
+                          : 'secondary'
                       }
+                      size="sm"
                     >
                       {doc.status}
                     </Badge>
@@ -265,13 +272,11 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               ))}
             </div>
           ) : (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No documents</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Generate your first document to get started
-              </p>
-            </div>
+            <EmptyState
+              icon={<FileText className="h-12 w-12" />}
+              title="No documents yet"
+              description="Generate your first document to get started"
+            />
           )}
         </CardContent>
       </Card>
