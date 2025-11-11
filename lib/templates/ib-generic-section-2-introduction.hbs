@@ -1,0 +1,320 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 2: Introduction
+  
+  Template for ICH E6 (R2) compliant IB Section 2
+  
+  Data Sources:
+  - compound (chemical overview)
+  - clinical_summary (therapeutic class, indications)
+  - label (approved indications, mechanism)
+  - literature (development history)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - rld_brand_name: string
+  - product_type: string
+  - compound: Compound
+  - clinical_summary: ClinicalSummary
+  - label: Label
+  - literature: Literature[]
+--}}
+
+# 2. INTRODUCTION
+
+## 2.1 Overview
+
+{{compound_name}} ({{#if generic_name}}{{generic_name}}{{else}}[generic name]{{/if}}) is a {{#if clinical_summary.drug_class}}{{clinical_summary.drug_class}}{{else}}[therapeutic class]{{/if}} used in the treatment of {{#if clinical_summary.primary_indication}}{{clinical_summary.primary_indication}}{{else}}[primary indication]{{/if}}.
+
+{{#if eq product_type "generic"}}
+This Investigator's Brochure (IB) describes the generic formulation of {{compound_name}}, which has been demonstrated to be bioequivalent to the Reference Listed Drug (RLD) {{rld_brand_name}}. As a generic product, {{compound_name}} provides the same therapeutic benefits as the RLD while offering increased accessibility and cost-effectiveness.
+{{else}}
+This Investigator's Brochure (IB) provides comprehensive information about {{compound_name}}, including its chemical, pharmaceutical, pharmacological, toxicological, and clinical properties.
+{{/if}}
+
+---
+
+## 2.2 Therapeutic Class and Pharmacological Category
+
+{{#if clinical_summary}}
+**Therapeutic Class:** {{#if clinical_summary.drug_class}}{{clinical_summary.drug_class}}{{else}}[Therapeutic class]{{/if}}
+
+**Pharmacological Category:** {{#if clinical_summary.pharmacological_category}}{{clinical_summary.pharmacological_category}}{{else}}[Pharmacological category]{{/if}}
+
+**ATC Code:** {{#if clinical_summary.atc_code}}{{clinical_summary.atc_code}}{{else}}[ATC code]{{/if}}
+
+**Mechanism of Action (Summary):**
+{{#if clinical_summary.mechanism_of_action}}
+{{clinical_summary.mechanism_of_action}}
+{{else}}
+[Brief summary of mechanism of action]
+{{/if}}
+{{else}}
+**Therapeutic Class:** [Therapeutic class]
+
+**Pharmacological Category:** [Pharmacological category]
+
+**ATC Code:** [ATC code]
+
+**Mechanism of Action (Summary):** [Brief summary of mechanism of action]
+{{/if}}
+
+---
+
+## 2.3 Approved Indications
+
+{{#if label.sections.indications_and_usage}}
+{{label.sections.indications_and_usage}}
+{{else}}
+{{#if clinical_summary.indications_studied}}
+{{compound_name}} is indicated for:
+
+{{#each clinical_summary.indications_studied}}
+- {{this}}
+{{/each}}
+{{else}}
+{{compound_name}} is indicated for [list approved indications].
+{{/if}}
+{{/if}}
+
+---
+
+## 2.4 Development History and Regulatory Background
+
+### 2.4.1 Reference Listed Drug (RLD)
+
+{{#if eq product_type "generic"}}
+The Reference Listed Drug (RLD) for this generic product is {{rld_brand_name}}, which was originally approved by the FDA under {{#if rld_application_number}}{{rld_application_number}}{{else}}[NDA number]{{/if}}.
+
+**RLD Development Timeline:**
+{{#if clinical_summary.development_timeline}}
+{{#each clinical_summary.development_timeline}}
+- **{{this.year}}:** {{this.milestone}}
+{{/each}}
+{{else}}
+- **[Year]:** Initial FDA approval of {{rld_brand_name}}
+- **[Year]:** Key clinical trials completed
+- **[Year]:** Post-marketing studies
+- **[Year]:** Label updates and expanded indications
+{{/if}}
+
+**Clinical Development Program:**
+{{#if clinical_summary.total_studies}}
+The RLD was evaluated in {{clinical_summary.total_studies}} clinical studies involving {{#if clinical_summary.total_subjects}}{{clinical_summary.total_subjects}}{{else}}[number]{{/if}} subjects across {{#if clinical_summary.phases_studied}}{{join clinical_summary.phases_studied ", "}}{{else}}multiple phases{{/if}}.
+{{else}}
+The RLD underwent extensive clinical evaluation in Phase 1, 2, and 3 clinical trials to establish safety and efficacy.
+{{/if}}
+{{else}}
+### 2.4.1 Development History
+
+{{#if clinical_summary.development_timeline}}
+**Development Timeline:**
+{{#each clinical_summary.development_timeline}}
+- **{{this.year}}:** {{this.milestone}}
+{{/each}}
+{{else}}
+[Describe development history and key milestones]
+{{/if}}
+{{/if}}
+
+### 2.4.2 Regulatory Approvals
+
+{{#if label}}
+**FDA Approval:**
+- **Application Number:** {{#if rld_application_number}}{{rld_application_number}}{{else}}[Application number]{{/if}}
+- **Approval Date:** {{#if label.approval_date}}{{date label.approval_date "YYYY-MM-DD"}}{{else}}[Approval date]{{/if}}
+- **Application Type:** {{#if label.application_type}}{{label.application_type}}{{else}}[ANDA/NDA/BLA]{{/if}}
+{{else}}
+**FDA Approval:** [Approval information]
+{{/if}}
+
+**International Approvals:**
+{{#if clinical_summary.international_approvals}}
+{{#each clinical_summary.international_approvals}}
+- **{{this.region}}:** {{this.status}}{{#if this.approval_date}} ({{date this.approval_date "YYYY-MM-DD"}}){{/if}}
+{{/each}}
+{{else}}
+[List international regulatory approvals]
+{{/if}}
+
+---
+
+## 2.5 Rationale for Use
+
+### 2.5.1 Medical Need
+
+{{#if clinical_summary.medical_need}}
+{{clinical_summary.medical_need}}
+{{else}}
+[Describe the medical need addressed by this product, including disease burden, unmet medical needs, and therapeutic gaps]
+{{/if}}
+
+### 2.5.2 Therapeutic Benefit
+
+{{#if clinical_summary.therapeutic_benefit}}
+{{clinical_summary.therapeutic_benefit}}
+{{else}}
+{{compound_name}} provides therapeutic benefit through {{#if clinical_summary.mechanism_of_action}}its mechanism of action{{else}}[mechanism]{{/if}}, offering {{#if clinical_summary.key_benefits}}{{join clinical_summary.key_benefits ", "}}{{else}}[list key benefits]{{/if}}.
+{{/if}}
+
+{{#if eq product_type "generic"}}
+### 2.5.3 Generic Product Advantages
+
+As a generic formulation, {{compound_name}} offers several advantages:
+
+**Bioequivalence:** This product has been demonstrated to be bioequivalent to the RLD {{rld_brand_name}}, ensuring the same therapeutic efficacy and safety profile.
+
+**Accessibility:** Generic products increase patient access to essential medications by providing more affordable treatment options.
+
+**Quality:** This product is manufactured according to the same stringent quality standards (cGMP) as the RLD.
+
+**Therapeutic Equivalence:** {{#if te_code}}With a TE code of "{{te_code}}", this product is rated as therapeutically equivalent to the RLD{{else}}This product has been evaluated for therapeutic equivalence to the RLD{{/if}}.
+{{/if}}
+
+---
+
+## 2.6 Target Patient Population
+
+{{#if clinical_summary.target_population}}
+{{clinical_summary.target_population}}
+{{else}}
+**Primary Target Population:**
+[Describe primary target patient population: age range, disease characteristics, severity, etc.]
+
+**Secondary Populations:**
+[Describe any secondary or special populations]
+
+**Exclusions:**
+[Describe populations for whom the product is not indicated]
+{{/if}}
+
+---
+
+## 2.7 Scope of This Investigator's Brochure
+
+This Investigator's Brochure provides comprehensive information about {{compound_name}} to support clinical research and informed decision-making. The document includes:
+
+**Section 1: Product Information** - Product description, formulation, regulatory status
+
+**Section 2: Introduction** - Overview, therapeutic class, development history (this section)
+
+**Section 3: Physical, Chemical, and Pharmaceutical Properties** - Chemical structure, formulation, stability
+
+**Section 4: Nonclinical Studies** - Pharmacology, toxicology, safety pharmacology
+
+**Section 5: Clinical Pharmacology** - Pharmacokinetics, pharmacodynamics, drug interactions
+
+**Section 6: Safety and Tolerability** - Adverse events, safety profile, risk management
+
+**Section 7: Efficacy and Clinical Outcomes** - Clinical trial results, efficacy data
+
+**Section 8: Marketed Experience** - Post-marketing surveillance, real-world evidence
+
+**Section 9: Summary and Conclusions** - Overall benefit-risk assessment
+
+**Section 10: References** - Complete bibliography
+
+{{#if eq product_type "generic"}}
+**Note on Generic Products:** As this is a generic product bioequivalent to the RLD {{rld_brand_name}}, much of the clinical and nonclinical data presented in this IB is derived from the RLD's development program and approved labeling. Bioequivalence data specific to this generic formulation is provided in Section 5.7.
+{{/if}}
+
+---
+
+## 2.8 Document Version and Updates
+
+**Current Version:** {{#if label.version}}{{label.version}}{{else}}1.0{{/if}}
+
+**Effective Date:** {{date generated_at "YYYY-MM-DD"}}
+
+**Based on RLD Label:** {{#if label.effective_date}}{{date label.effective_date "YYYY-MM-DD"}}{{else}}[Label date]{{/if}}
+
+**Update Policy:** This Investigator's Brochure will be updated as new information becomes available, including:
+- New safety information
+- Updated efficacy data
+- Regulatory label changes
+- Post-marketing findings
+- Additional clinical trial results
+
+Investigators will be notified of any significant updates that may affect the conduct of clinical trials or patient safety.
+
+---
+
+## 2.9 Key Scientific Literature
+
+{{#if literature}}
+The following key publications provide foundational knowledge about {{compound_name}}:
+
+{{#each literature}}
+{{#if lte @index 4}}
+{{add @index 1}}. {{#each this.authors}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. {{this.title}}. *{{this.journal}}*{{#if this.publication_date}}. {{this.publication_date}}{{/if}}{{#if this.volume}};{{this.volume}}{{/if}}{{#if this.issue}}({{this.issue}}){{/if}}{{#if this.pages}}:{{this.pages}}{{/if}}. PMID: {{this.pmid}}.
+
+{{/if}}
+{{/each}}
+
+Additional references are provided in Section 10.
+{{else}}
+[List 3-5 key scientific publications about the compound]
+
+1. [Reference 1]
+2. [Reference 2]
+3. [Reference 3]
+
+Complete references are provided in Section 10.
+{{/if}}
+
+---
+
+## 2.10 Abbreviations and Definitions
+
+**AE** - Adverse Event  
+**ANDA** - Abbreviated New Drug Application  
+**ATC** - Anatomical Therapeutic Chemical Classification  
+**BLA** - Biologics License Application  
+**cGMP** - Current Good Manufacturing Practice  
+**FDA** - U.S. Food and Drug Administration  
+**GCP** - Good Clinical Practice  
+**IB** - Investigator's Brochure  
+**ICH** - International Council for Harmonisation  
+**NDA** - New Drug Application  
+**PK** - Pharmacokinetics  
+**PD** - Pharmacodynamics  
+**RLD** - Reference Listed Drug  
+**SAE** - Serious Adverse Event  
+**TE** - Therapeutic Equivalence  
+**USP** - United States Pharmacopeia  
+
+[Additional abbreviations specific to the compound or therapeutic area]
+
+---
+
+## 2.11 Summary
+
+{{compound_name}} is a {{#if clinical_summary.drug_class}}{{clinical_summary.drug_class}}{{else}}[therapeutic class]{{/if}} indicated for {{#if clinical_summary.primary_indication}}{{clinical_summary.primary_indication}}{{else}}[indication]{{/if}}. {{#if eq product_type "generic"}}As a generic product bioequivalent to {{rld_brand_name}}, it provides the same therapeutic benefits with demonstrated quality, safety, and efficacy.{{else}}This product has been extensively studied and approved for clinical use.{{/if}}
+
+This Investigator's Brochure provides comprehensive information to support clinical research, regulatory submissions, and informed medical decision-making.
+
+---
+
+## 2.12 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if compound}}
+- **Chemical Information:** {{compound.source}} (Retrieved: {{date compound.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if clinical_summary}}
+- **Clinical Summary:** {{clinical_summary.source}} (Retrieved: {{date clinical_summary.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if label}}
+- **FDA Label:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+{{#if literature}}
+- **Literature:** {{length literature}} articles from PubMed
+{{/if}}
+
+**Confidence Level:** {{#if clinical_summary.confidence}}{{capitalize clinical_summary.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) guidelines for Investigator's Brochure content.*

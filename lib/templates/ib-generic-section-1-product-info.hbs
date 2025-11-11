@@ -1,0 +1,363 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 1: Product Information
+  
+  Template for ICH E6 (R2) compliant IB Section 1
+  
+  Data Sources:
+  - project (product_type, compound_name, generic_name, rld_brand_name)
+  - compound (chemical structure, molecular data)
+  - product (formulation, strength, manufacturer)
+  - label (regulatory information)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - product_type: string
+  - rld_brand_name: string
+  - rld_application_number: string
+  - te_code: string
+  - compound: Compound
+  - product: Product
+  - label: Label
+--}}
+
+# 1. PRODUCT INFORMATION
+
+## 1.1 Product Name and Description
+
+**Generic Name:** {{#if generic_name}}{{generic_name}}{{else}}{{compound_name}}{{/if}}
+
+**Brand Name (RLD):** {{#if rld_brand_name}}{{rld_brand_name}}{{else}}[Reference Listed Drug brand name]{{/if}}
+
+**Product Type:** {{capitalize product_type}}
+
+{{#if compound}}
+**Chemical Name:** {{#if compound.name}}{{compound.name}}{{else}}[IUPAC chemical name]{{/if}}
+
+**Molecular Formula:** {{#if compound.molecular_formula}}{{compound.molecular_formula}}{{else}}[Formula]{{/if}}
+
+**Molecular Weight:** {{#if compound.molecular_weight}}{{decimal compound.molecular_weight 2}} g/mol{{else}}[Weight] g/mol{{/if}}
+
+**CAS Registry Number:** {{#if compound.cas_number}}{{compound.cas_number}}{{else}}[CAS number]{{/if}}
+{{else}}
+**Chemical Name:** [IUPAC chemical name]
+
+**Molecular Formula:** [Formula]
+
+**Molecular Weight:** [Weight] g/mol
+
+**CAS Registry Number:** [CAS number]
+{{/if}}
+
+---
+
+## 1.2 Description of Product
+
+{{compound_name}} is a {{#if product_type}}{{product_type}}{{else}}generic{{/if}} pharmaceutical product intended for {{#if label.sections.indications_and_usage}}the treatment of conditions as described in the approved labeling{{else}}[therapeutic indication]{{/if}}.
+
+{{#if eq product_type "generic"}}
+This product is a generic version of the Reference Listed Drug (RLD) {{rld_brand_name}}, approved under {{#if rld_application_number}}{{rld_application_number}}{{else}}[NDA/ANDA number]{{/if}}.
+
+**Therapeutic Equivalence (TE) Code:** {{#if te_code}}{{te_code}}{{else}}[TE code]{{/if}}
+
+{{#if te_code}}
+{{#if (or (eq te_code "AB") (eq te_code "AA") (eq te_code "AN") (eq te_code "AO") (eq te_code "AP") (eq te_code "AT"))}}
+**Bioequivalence Status:** This product has been determined to be therapeutically equivalent to the RLD. Products coded as "{{te_code}}" are considered bioequivalent and may be substituted for the RLD.
+{{else}}
+**Bioequivalence Status:** Refer to FDA Orange Book for specific therapeutic equivalence determination.
+{{/if}}
+{{/if}}
+{{/if}}
+
+---
+
+## 1.3 Pharmaceutical Formulation
+
+{{#if product}}
+**Dosage Form:** {{#if product.dosage_form}}{{product.dosage_form}}{{else}}[Dosage form]{{/if}}
+
+**Route of Administration:** {{#if product.route}}{{product.route}}{{else}}[Route]{{/if}}
+
+**Strength:** {{#if product.strength}}{{product.strength}}{{else}}[Strength]{{/if}}
+
+**Active Ingredient(s):**
+{{#if product.active_ingredients}}
+{{#each product.active_ingredients}}
+- {{this.name}}{{#if this.strength}}: {{this.strength}}{{/if}}
+{{/each}}
+{{else}}
+- {{compound_name}}: [strength]
+{{/if}}
+
+**Inactive Ingredients (Excipients):**
+{{#if product.inactive_ingredients}}
+{{#each product.inactive_ingredients}}
+- {{this}}
+{{/each}}
+{{else}}
+[List of inactive ingredients/excipients]
+{{/if}}
+{{else}}
+**Dosage Form:** [Dosage form]
+
+**Route of Administration:** [Route]
+
+**Strength:** [Strength]
+
+**Active Ingredient(s):**
+- {{compound_name}}: [strength]
+
+**Inactive Ingredients (Excipients):**
+[List of inactive ingredients/excipients]
+{{/if}}
+
+---
+
+## 1.4 Chemical Structure
+
+{{#if compound}}
+**InChIKey:** {{#if compound.inchikey}}{{compound.inchikey}}{{else}}[InChIKey]{{/if}}
+
+**SMILES:** {{#if compound.smiles}}{{compound.smiles}}{{else}}[SMILES notation]{{/if}}
+
+{{#if compound.chemical_structure_url}}
+**Chemical Structure:**
+
+![Chemical Structure]({{compound.chemical_structure_url}})
+
+*Figure 1.1: Chemical structure of {{compound_name}}*
+{{else}}
+**Chemical Structure:** [Insert structure diagram]
+{{/if}}
+
+**Synonyms:**
+{{#if compound.synonyms}}
+{{#each compound.synonyms}}
+- {{this}}
+{{/each}}
+{{else}}
+[List of chemical synonyms]
+{{/if}}
+{{else}}
+**InChIKey:** [InChIKey]
+
+**SMILES:** [SMILES notation]
+
+**Chemical Structure:** [Insert structure diagram]
+
+**Synonyms:** [List of chemical synonyms]
+{{/if}}
+
+---
+
+## 1.5 Regulatory Information
+
+### 1.5.1 Reference Listed Drug (RLD)
+
+{{#if eq product_type "generic"}}
+**RLD Brand Name:** {{#if rld_brand_name}}{{rld_brand_name}}{{else}}[RLD brand name]{{/if}}
+
+**RLD Application Number:** {{#if rld_application_number}}{{rld_application_number}}{{else}}[NDA number]{{/if}}
+
+**RLD Approval Date:** {{#if product.rld_approval_date}}{{date product.rld_approval_date "YYYY-MM-DD"}}{{else}}[Approval date]{{/if}}
+
+**RLD Manufacturer:** {{#if product.rld_manufacturer}}{{product.rld_manufacturer}}{{else}}[Manufacturer name]{{/if}}
+
+**Therapeutic Equivalence Code:** {{#if te_code}}{{te_code}}{{else}}[TE code]{{/if}}
+
+**Bioequivalence Determination:**
+{{#if te_code}}
+This generic product has been evaluated for bioequivalence to the RLD {{rld_brand_name}}. The FDA has assigned a therapeutic equivalence (TE) code of "{{te_code}}", indicating that this product {{#if (or (eq te_code "AB") (eq te_code "AA"))}}meets the necessary bioequivalence standards and is therapeutically equivalent to the RLD{{else}}has specific therapeutic equivalence considerations (refer to FDA Orange Book for details){{/if}}.
+{{else}}
+[Describe bioequivalence determination and FDA evaluation]
+{{/if}}
+{{else}}
+This section is applicable to generic products only. For innovator products, refer to the original NDA approval documentation.
+{{/if}}
+
+### 1.5.2 Regulatory Status
+
+{{#if label}}
+**FDA Approval Status:** {{#if label.approval_status}}{{capitalize label.approval_status}}{{else}}Approved{{/if}}
+
+**Application Type:** {{#if label.application_type}}{{label.application_type}}{{else}}[ANDA/NDA/BLA]{{/if}}
+
+**Application Number:** {{#if rld_application_number}}{{rld_application_number}}{{else}}[Application number]{{/if}}
+
+**Approval Date:** {{#if label.approval_date}}{{date label.approval_date "YYYY-MM-DD"}}{{else}}[Approval date]{{/if}}
+
+**Current Label Version:** {{#if label.version}}{{label.version}}{{else}}[Version]{{/if}}
+
+**Label Effective Date:** {{#if label.effective_date}}{{date label.effective_date "YYYY-MM-DD"}}{{else}}[Effective date]{{/if}}
+{{else}}
+**FDA Approval Status:** [Status]
+
+**Application Type:** [ANDA/NDA/BLA]
+
+**Application Number:** [Application number]
+
+**Approval Date:** [Approval date]
+{{/if}}
+
+### 1.5.3 International Regulatory Status
+
+{{#if product.international_approvals}}
+**Approved Regions:**
+{{#each product.international_approvals}}
+- **{{this.region}}:** {{this.status}}{{#if this.approval_date}} (Approved: {{date this.approval_date "YYYY-MM-DD"}}){{/if}}
+{{/each}}
+{{else}}
+[List international regulatory approvals: EMA, PMDA, Health Canada, etc.]
+{{/if}}
+
+---
+
+## 1.6 Manufacturer Information
+
+{{#if product}}
+**Manufacturer Name:** {{#if product.manufacturer}}{{product.manufacturer}}{{else}}[Manufacturer name]{{/if}}
+
+**Manufacturing Site:** {{#if product.manufacturing_site}}{{product.manufacturing_site}}{{else}}[Manufacturing site address]{{/if}}
+
+**Quality Standards:** {{#if product.quality_standards}}{{product.quality_standards}}{{else}}USP/NF, ICH Q7{{/if}}
+
+**GMP Certification:** {{#if product.gmp_certified}}Yes{{else}}[GMP certification status]{{/if}}
+{{else}}
+**Manufacturer Name:** [Manufacturer name]
+
+**Manufacturing Site:** [Manufacturing site address]
+
+**Quality Standards:** USP/NF, ICH Q7
+
+**GMP Certification:** [GMP certification status]
+{{/if}}
+
+---
+
+## 1.7 Storage and Handling
+
+{{#if label.sections.storage_and_handling}}
+{{label.sections.storage_and_handling}}
+{{else}}
+**Storage Conditions:** Store at controlled room temperature, 20°C to 25°C (68°F to 77°F). Excursions permitted between 15°C and 30°C (59°F and 86°F).
+
+**Special Handling:** [Describe any special handling requirements]
+
+**Stability:** [Describe stability data and shelf life]
+
+**Packaging:** [Describe packaging configuration]
+{{/if}}
+
+---
+
+## 1.8 Availability and Packaging
+
+{{#if product}}
+**Available Strengths:**
+{{#if product.available_strengths}}
+{{#each product.available_strengths}}
+- {{this}}
+{{/each}}
+{{else}}
+[List available strengths]
+{{/if}}
+
+**Package Sizes:**
+{{#if product.package_sizes}}
+{{#each product.package_sizes}}
+- {{this}}
+{{/each}}
+{{else}}
+[List package sizes and configurations]
+{{/if}}
+
+**NDC Codes:**
+{{#if product.ndc_codes}}
+{{#each product.ndc_codes}}
+- {{this.strength}}: {{this.ndc}}
+{{/each}}
+{{else}}
+[List NDC codes for each strength/package size]
+{{/if}}
+{{else}}
+**Available Strengths:** [List available strengths]
+
+**Package Sizes:** [List package sizes and configurations]
+
+**NDC Codes:** [List NDC codes for each strength/package size]
+{{/if}}
+
+---
+
+## 1.9 Product Identification
+
+{{#if product}}
+**Physical Description:**
+{{#if product.physical_description}}
+{{product.physical_description}}
+{{else}}
+[Describe physical appearance: color, shape, markings, scoring, etc.]
+{{/if}}
+
+**Imprint Code:** {{#if product.imprint_code}}{{product.imprint_code}}{{else}}[Imprint code]{{/if}}
+
+**Color:** {{#if product.color}}{{product.color}}{{else}}[Color]{{/if}}
+
+**Shape:** {{#if product.shape}}{{product.shape}}{{else}}[Shape]{{/if}}
+
+**Scoring:** {{#if product.scoring}}{{product.scoring}}{{else}}[Scoring information]{{/if}}
+{{else}}
+**Physical Description:** [Describe physical appearance: color, shape, markings, scoring, etc.]
+
+**Imprint Code:** [Imprint code]
+
+**Color:** [Color]
+
+**Shape:** [Shape]
+
+**Scoring:** [Scoring information]
+{{/if}}
+
+---
+
+## 1.10 Summary
+
+{{compound_name}} ({{#if generic_name}}{{generic_name}}{{else}}[generic name]{{/if}}) is a {{#if product_type}}{{product_type}}{{else}}generic{{/if}} pharmaceutical product {{#if eq product_type "generic"}}that is bioequivalent to the Reference Listed Drug {{rld_brand_name}}{{/if}}. 
+
+**Key Product Information:**
+- **Molecular Formula:** {{#if compound.molecular_formula}}{{compound.molecular_formula}}{{else}}[Formula]{{/if}}
+- **Molecular Weight:** {{#if compound.molecular_weight}}{{decimal compound.molecular_weight 2}} g/mol{{else}}[Weight] g/mol{{/if}}
+- **Dosage Form:** {{#if product.dosage_form}}{{product.dosage_form}}{{else}}[Dosage form]{{/if}}
+- **Route:** {{#if product.route}}{{product.route}}{{else}}[Route]{{/if}}
+{{#if eq product_type "generic"}}
+- **TE Code:** {{#if te_code}}{{te_code}}{{else}}[TE code]{{/if}}
+- **RLD:** {{#if rld_brand_name}}{{rld_brand_name}}{{else}}[RLD]{{/if}} ({{#if rld_application_number}}{{rld_application_number}}{{else}}[NDA]{{/if}})
+{{/if}}
+
+This product is manufactured in accordance with current Good Manufacturing Practices (cGMP) and meets all applicable quality standards.
+
+---
+
+## 1.11 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if compound}}
+- **Chemical Data:** {{compound.source}} (Retrieved: {{date compound.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if product}}
+- **Product Information:** {{product.source}} (Retrieved: {{date product.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if label}}
+- **Regulatory Information:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+{{#if rld_application_number}}
+- **RLD Information:** FDA Orange Book (Application {{rld_application_number}})
+{{/if}}
+
+**Confidence Level:** {{#if compound.confidence}}{{capitalize compound.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) guidelines for Investigator's Brochure content.*

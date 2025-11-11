@@ -77,16 +77,16 @@ export interface ComposerResult {
 // ============================================================================
 
 const IB_GENERIC_SECTIONS = {
-  'section-1': 'ib-generic-section-1-product-info',
-  'section-2': 'ib-generic-section-2-introduction',
-  'section-3': 'ib-generic-section-3-physical-chemical',
-  'section-4': 'ib-generic-section-4-nonclinical',
-  'section-5': 'ib-generic-section-5-clinical-pharmacology',
-  'section-6': 'ib-generic-section-6-safety',
-  'section-7': 'ib-generic-section-7-efficacy',
-  'section-8': 'ib-generic-section-8-marketed-experience',
-  'section-9': 'ib-generic-section-9-summary',
-  'section-10': 'ib-generic-section-10-references',
+  'section-1': 'ib-generic-section-1-product-info', // ✅ Complete
+  'section-2': 'ib-generic-section-2-introduction', // ✅ Complete
+  'section-3': 'ib-generic-section-3-physical-chemical', // ✅ Complete
+  'section-4': 'ib-generic-section-4-nonclinical', // ✅ Complete
+  'section-5': 'ib-generic-section-5-clinical-pharmacology', // ✅ Complete
+  'section-6': 'ib-generic-section-6-safety', // ✅ Complete
+  'section-7': 'ib-generic-section-7-efficacy', // ✅ Complete
+  'section-8': 'ib-generic-section-8-marketed-experience', // ⏳ Coming soon
+  'section-9': 'ib-generic-section-9-summary', // ⏳ Coming soon
+  'section-10': 'ib-generic-section-10-references', // ⏳ Coming soon
 }
 
 const IB_INNOVATOR_SECTIONS = {

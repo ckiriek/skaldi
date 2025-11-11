@@ -1,0 +1,564 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 4: Nonclinical Studies
+  
+  Template for ICH E6 (R2) compliant IB Section 4
+  
+  Data Sources:
+  - nonclinical_summary (pharmacology, toxicology)
+  - label (nonclinical sections)
+  - literature (nonclinical studies)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - rld_brand_name: string
+  - product_type: string
+  - nonclinical_summary: NonclinicalSummary
+  - label: Label
+  - literature: Literature[]
+--}}
+
+# 4. NONCLINICAL STUDIES
+
+{{#if eq product_type "generic"}}
+## 4.0 Note on Generic Products
+
+As a generic product bioequivalent to the Reference Listed Drug (RLD) {{rld_brand_name}}, {{compound_name}} relies on the nonclinical safety database established for the RLD. Generic products are not required to repeat nonclinical studies when bioequivalence to an approved RLD has been demonstrated.
+
+The nonclinical information presented in this section is derived from the RLD's approved labeling and published scientific literature. This data supports the safety profile of {{compound_name}} based on its pharmaceutical equivalence and bioequivalence to {{rld_brand_name}}.
+
+---
+{{/if}}
+
+## 4.1 Pharmacology Studies
+
+### 4.1.1 Primary Pharmacodynamics
+
+{{#if nonclinical_summary.pharmacology.primary}}
+**Mechanism of Action:**
+{{nonclinical_summary.pharmacology.primary.mechanism}}
+
+**Target Receptors/Enzymes:**
+{{#each nonclinical_summary.pharmacology.primary.targets}}
+- {{this.target}}: {{this.effect}} ({{this.potency}})
+{{/each}}
+
+**In Vitro Studies:**
+{{#each nonclinical_summary.pharmacology.primary.in_vitro}}
+- **{{this.study}}:** {{this.result}}
+{{/each}}
+
+**In Vivo Studies:**
+{{#each nonclinical_summary.pharmacology.primary.in_vivo}}
+- **{{this.model}}:** {{this.result}}
+{{/each}}
+{{else}}
+**Mechanism of Action:** [Describe primary mechanism of action based on RLD data]
+
+**Target Receptors/Enzymes:** [List primary targets]
+
+**In Vitro Studies:** [Summarize key in vitro pharmacology studies]
+
+**In Vivo Studies:** [Summarize key in vivo pharmacology studies in animal models]
+{{/if}}
+
+### 4.1.2 Secondary Pharmacodynamics
+
+{{#if nonclinical_summary.pharmacology.secondary}}
+**Off-Target Effects:**
+{{#each nonclinical_summary.pharmacology.secondary.off_targets}}
+- {{this.target}}: {{this.effect}}
+{{/each}}
+
+**Secondary Activities:**
+{{#each nonclinical_summary.pharmacology.secondary.activities}}
+- {{this}}
+{{/each}}
+{{else}}
+**Off-Target Effects:** [Describe any known off-target pharmacological effects]
+
+**Secondary Activities:** [Describe secondary pharmacological activities]
+{{/if}}
+
+### 4.1.3 Safety Pharmacology
+
+{{#if nonclinical_summary.safety_pharmacology}}
+**Cardiovascular System:**
+{{#if nonclinical_summary.safety_pharmacology.cardiovascular}}
+{{nonclinical_summary.safety_pharmacology.cardiovascular}}
+{{else}}
+[Describe effects on cardiovascular system: heart rate, blood pressure, ECG, etc.]
+{{/if}}
+
+**Central Nervous System:**
+{{#if nonclinical_summary.safety_pharmacology.cns}}
+{{nonclinical_summary.safety_pharmacology.cns}}
+{{else}}
+[Describe effects on CNS: behavior, motor activity, coordination, etc.]
+{{/if}}
+
+**Respiratory System:**
+{{#if nonclinical_summary.safety_pharmacology.respiratory}}
+{{nonclinical_summary.safety_pharmacology.respiratory}}
+{{else}}
+[Describe effects on respiratory system: rate, tidal volume, etc.]
+{{/if}}
+
+**Renal System:**
+{{#if nonclinical_summary.safety_pharmacology.renal}}
+{{nonclinical_summary.safety_pharmacology.renal}}
+{{else}}
+[Describe effects on renal function if evaluated]
+{{/if}}
+
+**Gastrointestinal System:**
+{{#if nonclinical_summary.safety_pharmacology.gastrointestinal}}
+{{nonclinical_summary.safety_pharmacology.gastrointestinal}}
+{{else}}
+[Describe effects on GI system if evaluated]
+{{/if}}
+{{else}}
+**Safety Pharmacology Studies:**
+
+[Summarize safety pharmacology studies conducted on vital organ systems]
+
+- **Cardiovascular:** [Effects on heart rate, blood pressure, ECG]
+- **Central Nervous System:** [Effects on behavior, motor function]
+- **Respiratory:** [Effects on respiratory function]
+{{/if}}
+
+---
+
+## 4.2 Pharmacokinetics in Animals
+
+### 4.2.1 Absorption
+
+{{#if nonclinical_summary.pharmacokinetics.absorption}}
+**Bioavailability:**
+{{#each nonclinical_summary.pharmacokinetics.absorption.bioavailability}}
+- **{{this.species}}:** {{this.value}}% ({{this.route}})
+{{/each}}
+
+**Absorption Rate:**
+{{nonclinical_summary.pharmacokinetics.absorption.rate_description}}
+
+**Food Effects:**
+{{#if nonclinical_summary.pharmacokinetics.absorption.food_effect}}
+{{nonclinical_summary.pharmacokinetics.absorption.food_effect}}
+{{else}}
+[Describe food effects if studied]
+{{/if}}
+{{else}}
+**Bioavailability:** [Describe bioavailability in animal species]
+
+**Absorption Rate:** [Describe absorption characteristics]
+
+**Food Effects:** [Describe food effects if studied]
+{{/if}}
+
+### 4.2.2 Distribution
+
+{{#if nonclinical_summary.pharmacokinetics.distribution}}
+**Volume of Distribution:**
+{{#each nonclinical_summary.pharmacokinetics.distribution.volume}}
+- **{{this.species}}:** {{this.value}} L/kg
+{{/each}}
+
+**Protein Binding:**
+{{#each nonclinical_summary.pharmacokinetics.distribution.protein_binding}}
+- **{{this.species}}:** {{this.value}}%
+{{/each}}
+
+**Tissue Distribution:**
+{{nonclinical_summary.pharmacokinetics.distribution.tissue_description}}
+
+**Blood-Brain Barrier Penetration:**
+{{#if nonclinical_summary.pharmacokinetics.distribution.bbb_penetration}}
+{{nonclinical_summary.pharmacokinetics.distribution.bbb_penetration}}
+{{else}}
+[Describe BBB penetration if studied]
+{{/if}}
+{{else}}
+**Volume of Distribution:** [Describe Vd in animal species]
+
+**Protein Binding:** [Describe plasma protein binding]
+
+**Tissue Distribution:** [Describe tissue distribution patterns]
+
+**Blood-Brain Barrier:** [Describe BBB penetration if studied]
+{{/if}}
+
+### 4.2.3 Metabolism
+
+{{#if nonclinical_summary.pharmacokinetics.metabolism}}
+**Metabolic Pathways:**
+{{#each nonclinical_summary.pharmacokinetics.metabolism.pathways}}
+- {{this.pathway}}: {{this.description}}
+{{/each}}
+
+**Enzymes Involved:**
+{{#each nonclinical_summary.pharmacokinetics.metabolism.enzymes}}
+- {{this}}
+{{/each}}
+
+**Metabolites:**
+{{#each nonclinical_summary.pharmacokinetics.metabolism.metabolites}}
+- **{{this.name}}:** {{this.activity}} ({{this.percentage}}% of dose)
+{{/each}}
+
+**Species Differences:**
+{{#if nonclinical_summary.pharmacokinetics.metabolism.species_differences}}
+{{nonclinical_summary.pharmacokinetics.metabolism.species_differences}}
+{{else}}
+[Describe species differences in metabolism]
+{{/if}}
+{{else}}
+**Metabolic Pathways:** [Describe primary metabolic pathways]
+
+**Enzymes Involved:** [List metabolizing enzymes]
+
+**Metabolites:** [Describe major metabolites and their activity]
+
+**Species Differences:** [Describe differences between species]
+{{/if}}
+
+### 4.2.4 Elimination
+
+{{#if nonclinical_summary.pharmacokinetics.elimination}}
+**Half-Life:**
+{{#each nonclinical_summary.pharmacokinetics.elimination.half_life}}
+- **{{this.species}}:** {{this.value}} hours
+{{/each}}
+
+**Clearance:**
+{{#each nonclinical_summary.pharmacokinetics.elimination.clearance}}
+- **{{this.species}}:** {{this.value}} mL/min/kg
+{{/each}}
+
+**Excretion Routes:**
+{{#each nonclinical_summary.pharmacokinetics.elimination.routes}}
+- **{{this.route}}:** {{this.percentage}}% of dose
+{{/each}}
+
+**Excretion Kinetics:**
+{{nonclinical_summary.pharmacokinetics.elimination.kinetics_description}}
+{{else}}
+**Half-Life:** [Describe elimination half-life in animal species]
+
+**Clearance:** [Describe clearance rates]
+
+**Excretion Routes:** [Describe primary excretion routes: renal, hepatic, biliary]
+
+**Excretion Kinetics:** [Describe excretion kinetics]
+{{/if}}
+
+---
+
+## 4.3 Toxicology Studies
+
+### 4.3.1 Single-Dose Toxicity
+
+{{#if nonclinical_summary.toxicology.acute}}
+**Acute Toxicity Studies:**
+
+{{#each nonclinical_summary.toxicology.acute}}
+**{{this.species}} ({{this.route}}):**
+- **LD50:** {{this.ld50}}
+- **Findings:** {{this.findings}}
+- **NOAEL:** {{this.noael}}
+{{/each}}
+
+**Target Organs:** {{#if nonclinical_summary.toxicology.acute_target_organs}}{{join nonclinical_summary.toxicology.acute_target_organs ", "}}{{else}}[List target organs]{{/if}}
+{{else}}
+**Acute Toxicity Studies:**
+
+[Summarize acute toxicity studies in multiple species]
+
+- **Species:** [Species]
+- **Route:** [Route of administration]
+- **LD50:** [Lethal dose 50%]
+- **Findings:** [Key toxicity findings]
+{{/if}}
+
+### 4.3.2 Repeat-Dose Toxicity
+
+{{#if nonclinical_summary.toxicology.repeat_dose}}
+**Subacute/Subchronic Toxicity:**
+
+{{#each nonclinical_summary.toxicology.repeat_dose}}
+**{{this.species}} - {{this.duration}}:**
+- **Dose Levels:** {{join this.doses ", "}}
+- **NOAEL:** {{this.noael}}
+- **Target Organs:** {{join this.target_organs ", "}}
+- **Key Findings:** {{this.findings}}
+- **Reversibility:** {{this.reversibility}}
+{{/each}}
+
+**Chronic Toxicity:**
+{{#if nonclinical_summary.toxicology.chronic}}
+{{nonclinical_summary.toxicology.chronic}}
+{{else}}
+[Summarize chronic toxicity studies if conducted]
+{{/if}}
+{{else}}
+**Subacute/Subchronic Toxicity:**
+
+[Summarize repeat-dose toxicity studies]
+
+- **Duration:** [Study duration]
+- **Species:** [Species used]
+- **Dose Levels:** [Dose levels tested]
+- **NOAEL:** [No Observed Adverse Effect Level]
+- **Target Organs:** [Organs affected]
+- **Findings:** [Key toxicity findings]
+
+**Chronic Toxicity:**
+
+[Summarize chronic toxicity studies if conducted]
+{{/if}}
+
+### 4.3.3 Genotoxicity
+
+{{#if nonclinical_summary.toxicology.genotoxicity}}
+**In Vitro Studies:**
+{{#each nonclinical_summary.toxicology.genotoxicity.in_vitro}}
+- **{{this.test}}:** {{this.result}}
+{{/each}}
+
+**In Vivo Studies:**
+{{#each nonclinical_summary.toxicology.genotoxicity.in_vivo}}
+- **{{this.test}}:** {{this.result}}
+{{/each}}
+
+**Conclusion:** {{nonclinical_summary.toxicology.genotoxicity.conclusion}}
+{{else}}
+**In Vitro Studies:**
+- **Bacterial Mutation (Ames) Test:** [Result]
+- **Chromosomal Aberration Test:** [Result]
+- **Mouse Lymphoma Assay:** [Result]
+
+**In Vivo Studies:**
+- **Micronucleus Test:** [Result]
+- **Other:** [Additional tests if conducted]
+
+**Conclusion:** [Overall genotoxicity assessment]
+{{/if}}
+
+### 4.3.4 Carcinogenicity
+
+{{#if nonclinical_summary.toxicology.carcinogenicity}}
+**Carcinogenicity Studies:**
+
+{{#each nonclinical_summary.toxicology.carcinogenicity}}
+**{{this.species}} - {{this.duration}}:**
+- **Dose Levels:** {{join this.doses ", "}}
+- **Tumor Findings:** {{this.findings}}
+- **Conclusion:** {{this.conclusion}}
+{{/each}}
+
+**Overall Assessment:** {{nonclinical_summary.toxicology.carcinogenicity_assessment}}
+{{else}}
+**Carcinogenicity Studies:**
+
+[Summarize long-term carcinogenicity studies]
+
+- **Species:** [Species used]
+- **Duration:** [Study duration]
+- **Dose Levels:** [Dose levels tested]
+- **Findings:** [Tumor findings]
+- **Conclusion:** [Carcinogenic potential assessment]
+{{/if}}
+
+### 4.3.5 Reproductive and Developmental Toxicity
+
+{{#if nonclinical_summary.toxicology.reproductive}}
+**Fertility Studies:**
+{{#if nonclinical_summary.toxicology.reproductive.fertility}}
+{{nonclinical_summary.toxicology.reproductive.fertility}}
+{{else}}
+[Summarize fertility and early embryonic development studies]
+{{/if}}
+
+**Embryo-Fetal Development:**
+{{#if nonclinical_summary.toxicology.reproductive.embryofetal}}
+{{nonclinical_summary.toxicology.reproductive.embryofetal}}
+{{else}}
+[Summarize embryo-fetal development studies]
+{{/if}}
+
+**Pre- and Postnatal Development:**
+{{#if nonclinical_summary.toxicology.reproductive.postnatal}}
+{{nonclinical_summary.toxicology.reproductive.postnatal}}
+{{else}}
+[Summarize pre- and postnatal development studies]
+{{/if}}
+
+**Pregnancy Category:** {{#if nonclinical_summary.toxicology.reproductive.pregnancy_category}}{{nonclinical_summary.toxicology.reproductive.pregnancy_category}}{{else}}[FDA pregnancy category]{{/if}}
+{{else}}
+**Fertility Studies:** [Summarize effects on fertility]
+
+**Embryo-Fetal Development:** [Summarize teratogenicity studies]
+
+**Pre- and Postnatal Development:** [Summarize peri/postnatal studies]
+
+**Pregnancy Category:** [FDA pregnancy category]
+{{/if}}
+
+### 4.3.6 Local Tolerance
+
+{{#if nonclinical_summary.toxicology.local_tolerance}}
+{{nonclinical_summary.toxicology.local_tolerance}}
+{{else}}
+[Describe local tolerance studies at site of administration]
+
+- **Route:** [Route of administration]
+- **Findings:** [Local irritation, sensitization findings]
+{{/if}}
+
+---
+
+## 4.4 Special Toxicology Studies
+
+### 4.4.1 Immunotoxicity
+
+{{#if nonclinical_summary.toxicology.immunotoxicity}}
+{{nonclinical_summary.toxicology.immunotoxicity}}
+{{else}}
+[Describe immunotoxicity studies if conducted]
+{{/if}}
+
+### 4.4.2 Phototoxicity
+
+{{#if nonclinical_summary.toxicology.phototoxicity}}
+{{nonclinical_summary.toxicology.phototoxicity}}
+{{else}}
+[Describe phototoxicity studies if conducted or if compound has photoreactive potential]
+{{/if}}
+
+### 4.4.3 Abuse Liability
+
+{{#if nonclinical_summary.toxicology.abuse_liability}}
+{{nonclinical_summary.toxicology.abuse_liability}}
+{{else}}
+[Describe abuse liability studies if applicable]
+{{/if}}
+
+### 4.4.4 Dependence Potential
+
+{{#if nonclinical_summary.toxicology.dependence}}
+{{nonclinical_summary.toxicology.dependence}}
+{{else}}
+[Describe physical and psychological dependence studies if applicable]
+{{/if}}
+
+---
+
+## 4.5 Summary of Nonclinical Findings
+
+### 4.5.1 Key Pharmacology Findings
+
+{{#if nonclinical_summary.key_findings.pharmacology}}
+{{nonclinical_summary.key_findings.pharmacology}}
+{{else}}
+[Summarize key pharmacology findings relevant to clinical use]
+{{/if}}
+
+### 4.5.2 Key Toxicology Findings
+
+{{#if nonclinical_summary.key_findings.toxicology}}
+{{nonclinical_summary.key_findings.toxicology}}
+{{else}}
+**Target Organs:** [List primary target organs]
+
+**Dose-Limiting Toxicities:** [Describe dose-limiting toxicities]
+
+**Reversibility:** [Describe reversibility of toxicities]
+
+**Safety Margins:** [Describe safety margins relative to clinical doses]
+{{/if}}
+
+### 4.5.3 Clinical Relevance
+
+{{#if nonclinical_summary.clinical_relevance}}
+{{nonclinical_summary.clinical_relevance}}
+{{else}}
+[Discuss clinical relevance of nonclinical findings]
+
+**Exposure Multiples:** [Compare animal exposures to human therapeutic exposures]
+
+**Translatability:** [Discuss translatability of animal findings to humans]
+
+**Risk Assessment:** [Overall nonclinical risk assessment]
+{{/if}}
+
+---
+
+## 4.6 Supporting Literature
+
+{{#if literature}}
+Key nonclinical publications:
+
+{{#each literature}}
+{{#if lte @index 4}}
+{{add @index 1}}. {{#each this.authors}}{{this}}{{#unless @last}}, {{/unless}}{{/each}}. {{this.title}}. *{{this.journal}}*{{#if this.publication_date}}. {{this.publication_date}}{{/if}}{{#if this.volume}};{{this.volume}}{{/if}}{{#if this.issue}}({{this.issue}}){{/if}}{{#if this.pages}}:{{this.pages}}{{/if}}. PMID: {{this.pmid}}.
+
+{{/if}}
+{{/each}}
+
+Additional references are provided in Section 10.
+{{else}}
+[List key nonclinical publications]
+
+1. [Reference 1]
+2. [Reference 2]
+3. [Reference 3]
+
+Complete references are provided in Section 10.
+{{/if}}
+
+---
+
+## 4.7 Conclusions
+
+{{#if nonclinical_summary.conclusions}}
+{{nonclinical_summary.conclusions}}
+{{else}}
+The nonclinical studies of {{compound_name}} demonstrate:
+
+1. **Pharmacology:** [Summary of pharmacological profile]
+2. **Safety:** [Summary of safety profile]
+3. **Toxicology:** [Summary of toxicological findings]
+4. **Clinical Implications:** [Implications for clinical use]
+
+{{#if eq product_type "generic"}}
+As a generic product bioequivalent to {{rld_brand_name}}, {{compound_name}} is expected to have the same nonclinical safety profile as the RLD. The extensive nonclinical database for the RLD supports the safe use of this generic formulation.
+{{/if}}
+
+The nonclinical data support the clinical development and use of {{compound_name}} with appropriate monitoring and risk management strategies.
+{{/if}}
+
+---
+
+## 4.8 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if nonclinical_summary}}
+- **Nonclinical Summary:** {{nonclinical_summary.source}} (Retrieved: {{date nonclinical_summary.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if label}}
+- **FDA Label:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+{{#if literature}}
+- **Literature:** {{length literature}} nonclinical articles from PubMed
+{{/if}}
+{{#if eq product_type "generic"}}
+- **RLD Information:** Based on approved labeling for {{rld_brand_name}}
+{{/if}}
+
+**Confidence Level:** {{#if nonclinical_summary.confidence}}{{capitalize nonclinical_summary.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) and ICH M3(R2) guidelines for Investigator's Brochure content.*

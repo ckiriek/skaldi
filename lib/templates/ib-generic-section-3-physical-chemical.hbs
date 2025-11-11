@@ -1,0 +1,506 @@
+{{!--
+  Investigator's Brochure - Generic Product
+  Section 3: Physical, Chemical, and Pharmaceutical Properties
+  
+  Template for ICH E6 (R2) compliant IB Section 3
+  
+  Data Sources:
+  - compound (chemical structure, properties)
+  - product (formulation, excipients)
+  - label (pharmaceutical information)
+  
+  Variables:
+  - compound_name: string
+  - generic_name: string
+  - compound: Compound
+  - product: Product
+  - label: Label
+--}}
+
+# 3. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES
+
+## 3.1 Chemical Structure and Nomenclature
+
+### 3.1.1 Chemical Name
+
+{{#if compound}}
+**IUPAC Name:** {{#if compound.name}}{{compound.name}}{{else}}[IUPAC chemical name]{{/if}}
+
+**Generic Name:** {{#if generic_name}}{{generic_name}}{{else}}{{compound_name}}{{/if}}
+
+**Chemical Formula:** {{#if compound.molecular_formula}}{{compound.molecular_formula}}{{else}}[Molecular formula]{{/if}}
+
+**CAS Registry Number:** {{#if compound.cas_number}}{{compound.cas_number}}{{else}}[CAS number]{{/if}}
+{{else}}
+**IUPAC Name:** [IUPAC chemical name]
+
+**Generic Name:** {{#if generic_name}}{{generic_name}}{{else}}{{compound_name}}{{/if}}
+
+**Chemical Formula:** [Molecular formula]
+
+**CAS Registry Number:** [CAS number]
+{{/if}}
+
+### 3.1.2 Structural Formula
+
+{{#if compound}}
+**Molecular Weight:** {{#if compound.molecular_weight}}{{decimal compound.molecular_weight 2}} g/mol{{else}}[Weight] g/mol{{/if}}
+
+**InChIKey:** {{#if compound.inchikey}}{{compound.inchikey}}{{else}}[InChIKey]{{/if}}
+
+**SMILES Notation:** {{#if compound.smiles}}{{compound.smiles}}{{else}}[SMILES]{{/if}}
+
+{{#if compound.chemical_structure_url}}
+**Structural Diagram:**
+
+![Chemical Structure]({{compound.chemical_structure_url}})
+
+*Figure 3.1: Chemical structure of {{compound_name}}*
+{{else}}
+**Structural Diagram:** [Insert chemical structure diagram]
+{{/if}}
+{{else}}
+**Molecular Weight:** [Weight] g/mol
+
+**InChIKey:** [InChIKey]
+
+**SMILES Notation:** [SMILES]
+
+**Structural Diagram:** [Insert chemical structure diagram]
+{{/if}}
+
+### 3.1.3 Stereochemistry
+
+{{#if compound.stereochemistry}}
+{{compound.stereochemistry}}
+{{else}}
+[Describe stereochemical features: chiral centers, enantiomers, diastereomers, etc.]
+
+**Chirality:** [Chiral/Achiral]
+
+**Enantiomers:** [Describe if applicable]
+
+**Specific Rotation:** [Value if applicable]
+{{/if}}
+
+---
+
+## 3.2 Physical Properties
+
+### 3.2.1 Appearance
+
+{{#if product.physical_description}}
+{{product.physical_description}}
+{{else}}
+{{#if compound.appearance}}
+{{compound.appearance}}
+{{else}}
+**Physical State:** [Solid/Liquid/Gas]
+
+**Color:** [Color description]
+
+**Odor:** [Odor description]
+
+**Taste:** [Taste description if applicable]
+{{/if}}
+{{/if}}
+
+### 3.2.2 Melting Point
+
+{{#if compound.melting_point}}
+**Melting Point:** {{compound.melting_point}}°C
+{{else}}
+**Melting Point:** [Temperature]°C
+{{/if}}
+
+### 3.2.3 Boiling Point
+
+{{#if compound.boiling_point}}
+**Boiling Point:** {{compound.boiling_point}}°C at {{#if compound.boiling_point_pressure}}{{compound.boiling_point_pressure}}{{else}}760{{/if}} mmHg
+{{else}}
+**Boiling Point:** [Temperature]°C at 760 mmHg
+{{/if}}
+
+### 3.2.4 Density
+
+{{#if compound.density}}
+**Density:** {{compound.density}} g/cm³ at {{#if compound.density_temperature}}{{compound.density_temperature}}{{else}}25{{/if}}°C
+{{else}}
+**Density:** [Value] g/cm³ at 25°C
+{{/if}}
+
+### 3.2.5 Solubility
+
+{{#if compound.solubility}}
+**Aqueous Solubility:** {{compound.solubility.water}}
+
+**Organic Solvents:**
+{{#each compound.solubility.organic}}
+- **{{this.solvent}}:** {{this.solubility}}
+{{/each}}
+
+**pH-Dependent Solubility:** {{#if compound.solubility.ph_dependent}}Yes - {{compound.solubility.ph_description}}{{else}}Not significantly pH-dependent{{/if}}
+{{else}}
+**Aqueous Solubility:** [Solubility in water at 25°C]
+
+**Organic Solvents:**
+- **Ethanol:** [Solubility]
+- **Methanol:** [Solubility]
+- **Acetone:** [Solubility]
+- **Chloroform:** [Solubility]
+
+**pH-Dependent Solubility:** [Describe pH effects on solubility]
+{{/if}}
+
+### 3.2.6 Partition Coefficient
+
+{{#if compound.log_p}}
+**Log P (octanol/water):** {{decimal compound.log_p 2}}
+
+**Lipophilicity:** {{#if gte compound.log_p 3}}Highly lipophilic{{else}}{{#if gte compound.log_p 1}}Moderately lipophilic{{else}}Hydrophilic{{/if}}{{/if}}
+{{else}}
+**Log P (octanol/water):** [Value]
+
+**Lipophilicity:** [Classification]
+{{/if}}
+
+### 3.2.7 Dissociation Constants
+
+{{#if compound.pka}}
+**pKa Values:**
+{{#each compound.pka}}
+- pKa{{add @index 1}}: {{this.value}} ({{this.type}})
+{{/each}}
+
+**Ionization:** {{compound.ionization_description}}
+{{else}}
+**pKa Values:** [List pKa values]
+
+**Ionization:** [Describe ionization behavior at physiological pH]
+{{/if}}
+
+---
+
+## 3.3 Chemical Properties
+
+### 3.3.1 Stability
+
+{{#if compound.stability}}
+**Chemical Stability:** {{compound.stability.description}}
+
+**Degradation Pathways:**
+{{#each compound.stability.degradation_pathways}}
+- {{this}}
+{{/each}}
+
+**Incompatibilities:**
+{{#each compound.stability.incompatibilities}}
+- {{this}}
+{{/each}}
+{{else}}
+**Chemical Stability:** [Describe stability under various conditions]
+
+**Degradation Pathways:** [List known degradation pathways]
+
+**Incompatibilities:** [List chemical incompatibilities]
+{{/if}}
+
+### 3.3.2 Polymorphism
+
+{{#if compound.polymorphism}}
+{{compound.polymorphism}}
+{{else}}
+[Describe polymorphic forms if applicable, including crystal structures, stability, and bioavailability implications]
+{{/if}}
+
+### 3.3.3 Hygroscopicity
+
+{{#if compound.hygroscopic}}
+**Hygroscopicity:** {{compound.hygroscopic_description}}
+{{else}}
+**Hygroscopicity:** [Describe moisture absorption properties]
+{{/if}}
+
+---
+
+## 3.4 Pharmaceutical Formulation
+
+### 3.4.1 Dosage Form
+
+{{#if product}}
+**Formulation Type:** {{#if product.dosage_form}}{{product.dosage_form}}{{else}}[Dosage form]{{/if}}
+
+**Route of Administration:** {{#if product.route}}{{product.route}}{{else}}[Route]{{/if}}
+
+**Strength(s):** {{#if product.strength}}{{product.strength}}{{else}}[Strength]{{/if}}
+{{else}}
+**Formulation Type:** [Dosage form]
+
+**Route of Administration:** [Route]
+
+**Strength(s):** [Strength]
+{{/if}}
+
+### 3.4.2 Composition
+
+{{#if product}}
+**Active Pharmaceutical Ingredient (API):**
+- {{compound_name}}: {{#if product.api_content}}{{product.api_content}}{{else}}[amount per unit]{{/if}}
+
+**Inactive Ingredients (Excipients):**
+{{#if product.inactive_ingredients}}
+{{#each product.inactive_ingredients}}
+- {{this.name}}{{#if this.function}} ({{this.function}}){{/if}}{{#if this.amount}}: {{this.amount}}{{/if}}
+{{/each}}
+{{else}}
+[List all excipients with their functions and quantities]
+{{/if}}
+
+**Excipient Functions:**
+{{#if product.excipient_functions}}
+- **Fillers/Diluents:** {{join product.excipient_functions.fillers ", "}}
+- **Binders:** {{join product.excipient_functions.binders ", "}}
+- **Disintegrants:** {{join product.excipient_functions.disintegrants ", "}}
+- **Lubricants:** {{join product.excipient_functions.lubricants ", "}}
+- **Coatings:** {{join product.excipient_functions.coatings ", "}}
+{{else}}
+- **Fillers/Diluents:** [List]
+- **Binders:** [List]
+- **Disintegrants:** [List]
+- **Lubricants:** [List]
+- **Coatings:** [List if applicable]
+{{/if}}
+{{else}}
+**Active Pharmaceutical Ingredient (API):**
+- {{compound_name}}: [amount per unit]
+
+**Inactive Ingredients (Excipients):**
+[List all excipients with their functions and quantities]
+{{/if}}
+
+### 3.4.3 Manufacturing Process
+
+{{#if product.manufacturing_process}}
+{{product.manufacturing_process}}
+{{else}}
+[Describe manufacturing process: granulation, compression, coating, etc.]
+
+**Key Manufacturing Steps:**
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+4. [Step 4]
+
+**Critical Process Parameters:**
+[List critical parameters that affect product quality]
+{{/if}}
+
+### 3.4.4 Quality Control
+
+{{#if product.quality_control}}
+**Quality Standards:** {{product.quality_control.standards}}
+
+**Testing Methods:**
+{{#each product.quality_control.tests}}
+- **{{this.test}}:** {{this.method}} (Specification: {{this.specification}})
+{{/each}}
+{{else}}
+**Quality Standards:** USP/NF, ICH Q6A
+
+**Testing Methods:**
+- **Identity:** [Method and specification]
+- **Assay:** [Method and specification]
+- **Dissolution:** [Method and specification]
+- **Impurities:** [Method and specification]
+- **Content Uniformity:** [Method and specification]
+{{/if}}
+
+---
+
+## 3.5 Pharmaceutical Properties
+
+### 3.5.1 Dissolution Profile
+
+{{#if product.dissolution}}
+**Dissolution Medium:** {{product.dissolution.medium}}
+
+**Apparatus:** {{product.dissolution.apparatus}}
+
+**Dissolution Profile:**
+
+| Time (min) | % Dissolved |
+|------------|-------------|
+{{#each product.dissolution.profile}}
+| {{this.time}} | {{this.percent}} |
+{{/each}}
+
+**Dissolution Rate:** {{product.dissolution.rate_description}}
+{{else}}
+**Dissolution Medium:** [Medium composition]
+
+**Apparatus:** [USP Apparatus type]
+
+**Dissolution Profile:** [Provide dissolution data]
+
+**Dissolution Rate:** [Describe dissolution characteristics]
+{{/if}}
+
+### 3.5.2 Bioavailability Considerations
+
+{{#if product.bioavailability}}
+{{product.bioavailability}}
+{{else}}
+[Describe factors affecting bioavailability: particle size, crystal form, excipients, etc.]
+
+**Particle Size:** [Impact on bioavailability]
+
+**Crystal Form:** [Impact on bioavailability]
+
+**Excipient Effects:** [Impact on bioavailability]
+{{/if}}
+
+### 3.5.3 Drug Release Mechanism
+
+{{#if product.release_mechanism}}
+{{product.release_mechanism}}
+{{else}}
+[Describe drug release mechanism: immediate release, extended release, delayed release, etc.]
+
+**Release Type:** [Immediate/Extended/Delayed/Modified]
+
+**Release Kinetics:** [Zero-order/First-order/etc.]
+
+**Release Modifiers:** [List if applicable]
+{{/if}}
+
+---
+
+## 3.6 Stability and Storage
+
+### 3.6.1 Stability Studies
+
+{{#if product.stability_studies}}
+**Study Conditions:**
+{{#each product.stability_studies}}
+- **{{this.condition}}:** {{this.temperature}}, {{this.humidity}}, {{this.duration}}
+  - Results: {{this.results}}
+{{/each}}
+
+**Degradation Products:** {{#if product.degradation_products}}{{join product.degradation_products ", "}}{{else}}None detected under recommended storage conditions{{/if}}
+{{else}}
+**Study Conditions:**
+- **Long-term:** 25°C ± 2°C / 60% RH ± 5% RH for [duration]
+- **Accelerated:** 40°C ± 2°C / 75% RH ± 5% RH for [duration]
+- **Intermediate:** 30°C ± 2°C / 65% RH ± 5% RH for [duration]
+
+**Results:** [Summarize stability study results]
+
+**Degradation Products:** [List if any]
+{{/if}}
+
+### 3.6.2 Storage Conditions
+
+{{#if label.sections.storage_and_handling}}
+{{label.sections.storage_and_handling}}
+{{else}}
+**Recommended Storage:**
+- Temperature: Store at 20°C to 25°C (68°F to 77°F)
+- Excursions permitted: 15°C to 30°C (59°F to 86°F)
+- Humidity: Protect from moisture
+- Light: [Protect from light if applicable]
+
+**Shelf Life:** {{#if product.shelf_life}}{{product.shelf_life}}{{else}}[Duration] months/years{{/if}}
+
+**Special Precautions:** [List any special storage or handling requirements]
+{{/if}}
+
+### 3.6.3 Packaging
+
+{{#if product.packaging}}
+**Primary Packaging:** {{product.packaging.primary}}
+
+**Secondary Packaging:** {{product.packaging.secondary}}
+
+**Container Closure System:** {{product.packaging.container_closure}}
+
+**Barrier Properties:** {{product.packaging.barrier_properties}}
+{{else}}
+**Primary Packaging:** [Describe immediate container]
+
+**Secondary Packaging:** [Describe outer packaging]
+
+**Container Closure System:** [Describe closure system]
+
+**Barrier Properties:** [Describe protection from moisture, light, oxygen]
+{{/if}}
+
+---
+
+## 3.7 Pharmaceutical Equivalence
+
+{{#if eq product_type "generic"}}
+### 3.7.1 Comparison to Reference Listed Drug
+
+**Pharmaceutical Equivalence Criteria:**
+
+| Parameter | Generic Product | RLD ({{rld_brand_name}}) | Equivalent |
+|-----------|----------------|--------------------------|------------|
+| Active Ingredient | {{compound_name}} | {{compound_name}} | ✓ Yes |
+| Strength | {{#if product.strength}}{{product.strength}}{{else}}[strength]{{/if}} | [RLD strength] | ✓ Yes |
+| Dosage Form | {{#if product.dosage_form}}{{product.dosage_form}}{{else}}[form]{{/if}} | [RLD form] | ✓ Yes |
+| Route | {{#if product.route}}{{product.route}}{{else}}[route]{{/if}} | [RLD route] | ✓ Yes |
+
+**Quality Standards:** Both products meet USP/NF standards and ICH quality guidelines.
+
+**Dissolution Comparison:**
+{{#if product.dissolution_comparison}}
+{{product.dissolution_comparison}}
+{{else}}
+[Provide comparative dissolution data showing similarity to RLD]
+{{/if}}
+
+### 3.7.2 Excipient Comparison
+
+{{#if product.excipient_comparison}}
+{{product.excipient_comparison}}
+{{else}}
+[Compare excipients between generic and RLD, noting any differences and their impact]
+{{/if}}
+{{/if}}
+
+---
+
+## 3.8 Summary
+
+{{compound_name}} is a {{#if compound.molecular_formula}}{{compound.molecular_formula}}{{else}}[formula]{{/if}} compound with a molecular weight of {{#if compound.molecular_weight}}{{decimal compound.molecular_weight 2}}{{else}}[weight]{{/if}} g/mol. The compound exhibits {{#if compound.solubility}}{{compound.solubility.water}}{{else}}[solubility characteristics]{{/if}} and is formulated as {{#if product.dosage_form}}{{product.dosage_form}}{{else}}[dosage form]{{/if}} for {{#if product.route}}{{product.route}}{{else}}[route]{{/if}} administration.
+
+**Key Pharmaceutical Properties:**
+- **Molecular Weight:** {{#if compound.molecular_weight}}{{decimal compound.molecular_weight 2}} g/mol{{else}}[weight] g/mol{{/if}}
+- **Log P:** {{#if compound.log_p}}{{decimal compound.log_p 2}}{{else}}[value]{{/if}}
+- **pKa:** {{#if compound.pka}}{{compound.pka.[0].value}}{{else}}[value]{{/if}}
+- **Solubility:** {{#if compound.solubility}}{{compound.solubility.water}}{{else}}[solubility]{{/if}}
+- **Stability:** {{#if compound.stability}}{{compound.stability.description}}{{else}}Stable under recommended storage conditions{{/if}}
+
+The product is manufactured according to cGMP standards and meets all applicable quality specifications.
+
+---
+
+## 3.9 Data Sources
+
+This section was compiled from the following sources:
+
+{{#if compound}}
+- **Chemical Data:** {{compound.source}} (Retrieved: {{date compound.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if product}}
+- **Pharmaceutical Data:** {{product.source}} (Retrieved: {{date product.retrieved_at "YYYY-MM-DD"}})
+{{/if}}
+{{#if label}}
+- **Regulatory Information:** {{label.source}} ({{label.effective_date}})
+{{/if}}
+
+**Confidence Level:** {{#if compound.confidence}}{{capitalize compound.confidence}}{{else}}High{{/if}}
+
+---
+
+*This section complies with ICH E6 (R2) guidelines for Investigator's Brochure content.*
