@@ -12,6 +12,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { workflowEngine } from '@/lib/workflow/engine'
 import type { CreateWorkflowExecutionInput } from '@/lib/types/workflow'
+import { handleApiError, validateRequiredFields } from '@/lib/middleware/error-handler'
+import { createApiError, ErrorCodes } from '@/lib/types/errors'
 
 /**
  * POST /api/v1/workflow
@@ -38,20 +40,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
 
-    // Validate required fields
-    if (!body.project_id) {
-      return NextResponse.json(
-        { success: false, error: 'project_id is required' },
-        { status: 400 }
-      )
-    }
-
-    if (!body.document_type) {
-      return NextResponse.json(
-        { success: false, error: 'document_type is required' },
-        { status: 400 }
-      )
-    }
+    // Validate required fields using standardized validation
+    validateRequiredFields(
+      body,
+      ['project_id', 'document_type'],
+      'WorkflowOrchestrator',
+      'create_execution'
+    )
 
     // Default workflow name based on document type
     const workflowName = body.workflow_name || `${body.document_type}-generation`
@@ -72,15 +67,8 @@ export async function POST(request: NextRequest) {
       success: true,
       data: execution,
     })
-  } catch (error: any) {
-    console.error('Failed to create workflow execution:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to create workflow execution',
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleApiError(error, 'WorkflowOrchestrator', 'create_execution')
   }
 }
 
@@ -111,19 +99,28 @@ export async function GET(request: NextRequest) {
     const includeSteps = searchParams.get('include_steps') !== 'false'
     const includeEvents = searchParams.get('include_events') === 'true'
 
-    if (!executionId) {
-      return NextResponse.json(
-        { success: false, error: 'execution_id is required' },
-        { status: 400 }
-      )
-    }
+    // Validate required parameter
+    validateRequiredFields(
+      { execution_id: executionId },
+      ['execution_id'],
+      'WorkflowOrchestrator',
+      'get_execution'
+    )
 
     // Get execution
-    const execution = await workflowEngine.getExecution(executionId)
+    const execution = await workflowEngine.getExecution(executionId!)
 
     if (!execution) {
       return NextResponse.json(
-        { success: false, error: 'Workflow execution not found' },
+        createApiError(
+          ErrorCodes.NOT_FOUND,
+          'Workflow execution not found',
+          {
+            category: 'not_found',
+            severity: 'error',
+            details: { execution_id: executionId },
+          }
+        ),
         { status: 404 }
       )
     }
@@ -131,13 +128,13 @@ export async function GET(request: NextRequest) {
     // Get steps if requested
     let steps
     if (includeSteps) {
-      steps = await workflowEngine.getSteps(executionId)
+      steps = await workflowEngine.getSteps(executionId!)
     }
 
     // Get events if requested
     let events
     if (includeEvents) {
-      events = await workflowEngine.getEvents(executionId)
+      events = await workflowEngine.getEvents(executionId!)
     }
 
     return NextResponse.json({
@@ -148,14 +145,7 @@ export async function GET(request: NextRequest) {
         events,
       },
     })
-  } catch (error: any) {
-    console.error('Failed to get workflow execution:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to get workflow execution',
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleApiError(error, 'WorkflowOrchestrator', 'get_execution')
   }
 }

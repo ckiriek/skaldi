@@ -10,6 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { workflowEngine } from '@/lib/workflow/engine'
+import { handleApiError, validateRequiredFields } from '@/lib/middleware/error-handler'
 
 /**
  * POST /api/v1/workflow/control
@@ -37,19 +38,12 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
 
     // Validate required fields
-    if (!body.execution_id) {
-      return NextResponse.json(
-        { success: false, error: 'execution_id is required' },
-        { status: 400 }
-      )
-    }
-
-    if (!body.action) {
-      return NextResponse.json(
-        { success: false, error: 'action is required' },
-        { status: 400 }
-      )
-    }
+    validateRequiredFields(
+      body,
+      ['execution_id', 'action'],
+      'WorkflowOrchestrator',
+      'control_execution'
+    )
 
     const { execution_id, action, actor_id, step_id, error_code, error_message } = body
 
@@ -65,44 +59,34 @@ export async function POST(request: NextRequest) {
         break
 
       case 'retry':
-        if (!step_id) {
-          return NextResponse.json(
-            { success: false, error: 'step_id is required for retry action' },
-            { status: 400 }
-          )
-        }
+        validateRequiredFields(
+          body,
+          ['step_id'],
+          'WorkflowOrchestrator',
+          'retry_step'
+        )
         result = await workflowEngine.retryStep(step_id)
         break
 
       case 'fail':
-        if (!error_code || !error_message) {
-          return NextResponse.json(
-            { success: false, error: 'error_code and error_message are required for fail action' },
-            { status: 400 }
-          )
-        }
+        validateRequiredFields(
+          body,
+          ['error_code', 'error_message'],
+          'WorkflowOrchestrator',
+          'fail_execution'
+        )
         result = await workflowEngine.failExecution(execution_id, error_code, error_message)
         break
 
       default:
-        return NextResponse.json(
-          { success: false, error: `Invalid action: ${action}` },
-          { status: 400 }
-        )
+        throw new Error(`Invalid action: ${action}`)
     }
 
     return NextResponse.json({
       success: true,
       data: result,
     })
-  } catch (error: any) {
-    console.error('Failed to control workflow:', error)
-    return NextResponse.json(
-      {
-        success: false,
-        error: error.message || 'Failed to control workflow',
-      },
-      { status: 500 }
-    )
+  } catch (error) {
+    return handleApiError(error, 'WorkflowOrchestrator', 'control_execution')
   }
 }
