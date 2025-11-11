@@ -4,26 +4,77 @@
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 221.2 83.2% 53.3%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 221.2 83.2% 53.3%;
-    --radius: 0.5rem;
+    /* ===== Base Colors ===== */
+    --background: 0 0% 100%;              /* #FFFFFF - Pure white */
+    --foreground: 220 13% 13%;            /* #1F2937 - Almost black */
+    
+    /* ===== Primary (Medical Trust Blue) ===== */
+    --primary: 199 89% 48%;               /* #0EA5E9 - Sky blue (medical trust) */
+    --primary-hover: 199 89% 42%;         /* #0284C7 - Darker on hover */
+    --primary-foreground: 0 0% 100%;      /* #FFFFFF - White text */
+    
+    /* ===== Secondary (Neutral) ===== */
+    --secondary: 210 40% 96%;             /* #F2F4F7 - Very light gray */
+    --secondary-hover: 210 40% 92%;       /* #E4E7EC - Darker on hover */
+    --secondary-foreground: 220 13% 20%;  /* #344054 - Dark gray */
+    
+    /* ===== Status Colors ===== */
+    --success: 142 71% 45%;               /* #27AE60 - Natural green */
+    --success-bg: 142 76% 96%;            /* #ECFDF3 - Light green bg */
+    --success-foreground: 142 71% 35%;    /* #1E8449 - Dark green text */
+    
+    --warning: 38 92% 50%;                /* #F2994A - Amber */
+    --warning-bg: 48 100% 96%;            /* #FFFAF0 - Light amber bg */
+    --warning-foreground: 38 92% 40%;     /* #C27803 - Dark amber text */
+    
+    --error: 0 72% 51%;                   /* #EB5757 - Red */
+    --error-bg: 0 86% 97%;                /* #FEF3F2 - Light red bg */
+    --error-foreground: 0 72% 41%;        /* #B91C1C - Dark red text */
+    
+    --info: 199 89% 48%;                  /* #2D9CDB - Blue (same as primary) */
+    --info-bg: 199 95% 97%;               /* #F0F9FF - Light blue bg */
+    --info-foreground: 199 89% 38%;       /* #0369A1 - Dark blue text */
+    
+    /* ===== Neutral Grays (8-step scale) ===== */
+    --gray-50: 210 40% 98%;               /* #FCFCFD */
+    --gray-100: 210 40% 96%;              /* #F9FAFB */
+    --gray-200: 214 32% 91%;              /* #EAECF0 */
+    --gray-300: 213 27% 84%;              /* #D0D5DD */
+    --gray-400: 215 20% 65%;              /* #98A2B3 */
+    --gray-500: 215 16% 47%;              /* #667085 */
+    --gray-600: 215 19% 35%;              /* #475467 */
+    --gray-700: 217 19% 27%;              /* #344054 */
+    --gray-800: 215 25% 17%;              /* #1D2939 */
+    --gray-900: 220 13% 13%;              /* #101828 */
+    
+    /* ===== UI Elements ===== */
+    --card: 0 0% 100%;                    /* #FFFFFF - White */
+    --card-foreground: 220 13% 13%;       /* #101828 - Dark text */
+    --popover: 0 0% 100%;                 /* #FFFFFF - White */
+    --popover-foreground: 220 13% 13%;    /* #101828 - Dark text */
+    --muted: 210 40% 96%;                 /* #F9FAFB - Light gray */
+    --muted-foreground: 215 16% 47%;      /* #667085 - Medium gray */
+    --accent: 199 95% 97%;                /* #F0F9FF - Very light blue */
+    --accent-foreground: 199 89% 38%;     /* #0369A1 - Dark blue */
+    
+    /* ===== Borders & Inputs ===== */
+    --border: 214 32% 91%;                /* #EAECF0 - Light gray border */
+    --input: 214 32% 91%;                 /* #EAECF0 - Light gray border */
+    --ring: 199 89% 48%;                  /* #0EA5E9 - Focus ring (primary) */
+    
+    /* ===== Destructive (Danger) ===== */
+    --destructive: 0 72% 51%;             /* #EB5757 - Red */
+    --destructive-foreground: 0 0% 100%;  /* #FFFFFF - White text */
+    
+    /* ===== Border Radius (8px system) ===== */
+    --radius: 8px;                        /* Base radius */
+    --radius-sm: 4px;                     /* Small radius */
+    --radius-md: 8px;                     /* Medium radius */
+    --radius-lg: 12px;                    /* Large radius */
+    --radius-xl: 16px;                    /* Extra large radius */
+    
+    /* ===== Spacing (8px grid) ===== */
+    --spacing-unit: 8px;                  /* Base unit */
   }
 
   .dark {
@@ -54,6 +105,88 @@
     @apply border-border;
   }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+  
+  /* ===== Typography Hierarchy ===== */
+  h1 {
+    @apply text-4xl font-semibold tracking-tight;
+    /* 32px, 600 weight */
+  }
+  
+  h2 {
+    @apply text-3xl font-semibold tracking-tight;
+    /* 24px, 600 weight */
+  }
+  
+  h3 {
+    @apply text-xl font-semibold tracking-tight;
+    /* 20px, 600 weight */
+  }
+  
+  h4 {
+    @apply text-lg font-semibold tracking-tight;
+    /* 18px, 600 weight */
+  }
+  
+  p {
+    @apply text-base leading-relaxed;
+    /* 16px, line-height 1.75 */
+  }
+  
+  small {
+    @apply text-sm;
+    /* 14px */
+  }
+}
+
+/* ===== Custom Utility Classes ===== */
+@layer utilities {
+  /* Status Badge Utilities */
+  .badge-success {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+    background-color: hsl(var(--success-bg));
+    color: hsl(var(--success-foreground));
+  }
+  
+  .badge-warning {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+    background-color: hsl(var(--warning-bg));
+    color: hsl(var(--warning-foreground));
+  }
+  
+  .badge-error {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+    background-color: hsl(var(--error-bg));
+    color: hsl(var(--error-foreground));
+  }
+  
+  .badge-info {
+    @apply inline-flex items-center rounded-md px-2 py-1 text-xs font-medium;
+    background-color: hsl(var(--info-bg));
+    color: hsl(var(--info-foreground));
+  }
+  
+  /* Spacing Utilities (8px grid) */
+  .spacing-1 { @apply p-2; }      /* 8px */
+  .spacing-2 { @apply p-4; }      /* 16px */
+  .spacing-3 { @apply p-6; }      /* 24px */
+  .spacing-4 { @apply p-8; }      /* 32px */
+  .spacing-5 { @apply p-10; }     /* 40px */
+  .spacing-6 { @apply p-12; }     /* 48px */
+  
+  /* Focus Ring Utility */
+  .focus-ring {
+    @apply focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2;
+  }
+  
+  /* Hover Lift Effect */
+  .hover-lift {
+    @apply transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  
+  /* Smooth Transitions */
+  .transition-smooth {
+    @apply transition-all duration-200 ease-in-out;
   }
 }
