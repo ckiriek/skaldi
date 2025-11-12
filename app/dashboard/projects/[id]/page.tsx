@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, FlaskConical, MapPin, Calendar, Database, FileText } from 'lucide-react'
+import { ArrowLeft, FlaskConical, MapPin, Database, FileText } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -138,10 +138,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           {documents && documents.length > 0 ? (
             <div className="space-y-3">
               {documents.map((doc) => (
-                <Link
+                <div
                   key={doc.id}
-                  href={`/dashboard/documents/${doc.id}`}
-                  className="block p-4 border rounded-lg hover:bg-accent transition"
+                  className="block p-4 border rounded-lg"
                 >
                   <div className="flex items-center justify-between">
                     <div>
@@ -154,7 +153,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                       {doc.status}
                     </Badge>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           ) : (
