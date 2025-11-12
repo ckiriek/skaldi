@@ -15,14 +15,15 @@ import { FileUpload } from '@/components/file-upload'
 import { ProjectFilesList } from '@/components/project-files-list'
 import { EntitiesDisplay } from '@/components/entities-display'
 
-export default async function ProjectPage({ params }: { params: { id: string } }) {
+export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Fetch project
   const { data: project, error } = await supabase
     .from('projects')
     .select('*')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !project) {
@@ -33,27 +34,27 @@ export default async function ProjectPage({ params }: { params: { id: string } }
   const { data: documents } = await supabase
     .from('documents')
     .select('*')
-    .eq('project_id', params.id)
+    .eq('project_id', id)
     .order('created_at', { ascending: false })
 
   // Fetch entities
   const { data: entities } = await supabase
     .from('entities_corpus')
     .select('*')
-    .eq('project_id', params.id)
+    .eq('project_id', id)
 
   // Fetch evidence sources
   const { data: evidenceSources } = await supabase
     .from('evidence_sources')
     .select('*')
-    .eq('project_id', params.id)
+    .eq('project_id', id)
     .order('created_at', { ascending: false })
 
   // Fetch uploaded files
   const { data: projectFiles } = await supabase
     .from('project_files')
     .select('*')
-    .eq('project_id', params.id)
+    .eq('project_id', id)
     .order('uploaded_at', { ascending: false })
 
   const designJson = project.design_json as any
