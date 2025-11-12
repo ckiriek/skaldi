@@ -16,6 +16,20 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
     return <div className="p-8">Project not found. Error: {JSON.stringify(error)}</div>
   }
 
+  // Fetch documents
+  const { data: documents } = await supabase
+    .from('documents')
+    .select('*')
+    .eq('project_id', id)
+    .order('created_at', { ascending: false })
+
+  // Fetch evidence sources
+  const { data: evidenceSources } = await supabase
+    .from('evidence_sources')
+    .select('*')
+    .eq('project_id', id)
+    .order('created_at', { ascending: false })
+
   return (
     <div className="p-8 space-y-6">
       <div>
@@ -50,6 +64,24 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
           {project.countries && project.countries.length > 0 
             ? project.countries.join(', ') 
             : 'No countries specified'}
+        </p>
+      </div>
+
+      <div className="p-4 border rounded-lg">
+        <h3 className="font-semibold mb-2">Documents</h3>
+        <p className="text-sm text-gray-600">
+          {documents && documents.length > 0 
+            ? `${documents.length} documents generated` 
+            : 'No documents yet'}
+        </p>
+      </div>
+
+      <div className="p-4 border rounded-lg">
+        <h3 className="font-semibold mb-2">External Evidence</h3>
+        <p className="text-sm text-gray-600">
+          {evidenceSources && evidenceSources.length > 0 
+            ? `${evidenceSources.length} evidence sources` 
+            : 'No evidence yet'}
         </p>
       </div>
     </div>
