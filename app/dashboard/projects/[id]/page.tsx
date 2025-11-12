@@ -1,13 +1,15 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { ArrowLeft, FlaskConical, MapPin, Calendar, Database, FileText } from 'lucide-react'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 
-export default async function ProjectPageMinimal({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const supabase = await createClient()
-
-  // Check current user
-  const { data: { user } } = await supabase.auth.getUser()
-  console.log('Current user:', user?.id, user?.email)
 
   // Fetch project
   const { data: project, error } = await supabase
@@ -17,89 +19,197 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
     .single()
 
   if (error || !project) {
-    return <div className="p-8">Project not found. Error: {JSON.stringify(error)}</div>
+    notFound()
   }
 
-  console.log('Project org_id:', project.org_id)
-
   // Fetch documents
-  const { data: documents, error: docsError } = await supabase
+  const { data: documents } = await supabase
     .from('documents')
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
-  console.log('Documents query:', { count: documents?.length, error: docsError })
-
   // Fetch evidence sources
-  const { data: evidenceSources, error: evidenceError } = await supabase
+  const { data: evidenceSources } = await supabase
     .from('evidence_sources')
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
-  console.log('Evidence query:', { count: evidenceSources?.length, error: evidenceError })
+  const hasExternalData = evidenceSources && evidenceSources.length > 0
 
   return (
-    <div className="p-8 space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
-        <div className="flex gap-3 text-sm text-gray-600">
-          <span>Phase: {project.phase || 'N/A'}</span>
-          <span>•</span>
-          <span>Indication: {project.indication || 'N/A'}</span>
-          <span>•</span>
-          <span>Product Type: {project.product_type}</span>
+    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center gap-4 mb-6">
+        <Link href="/dashboard/projects" className="hover:opacity-70 transition">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
+          <div className="flex flex-wrap gap-3 text-sm text-gray-600">
+            <span className="flex items-center gap-1">
+              <FlaskConical className="h-4 w-4" />
+              Phase: {project.phase || 'N/A'}
+            </span>
+            <span>•</span>
+            <span>Indication: {project.indication || 'N/A'}</span>
+            <span>•</span>
+            <Badge variant="outline">{project.product_type}</Badge>
+          </div>
         </div>
+        <Badge 
+          variant={
+            project.enrichment_status === 'completed' ? 'success' :
+            project.enrichment_status === 'in_progress' ? 'info' :
+            project.enrichment_status === 'failed' ? 'destructive' :
+            'secondary'
+          }
+        >
+          {project.enrichment_status || 'pending'}
+        </Badge>
       </div>
 
+      {/* Fetch Data Alert */}
+      {!hasExternalData && (
+        <Alert>
+          <Database className="h-5 w-5" />
+          <AlertTitle>📊 Fetch External Data</AlertTitle>
+          <AlertDescription>
+            Retrieve evidence from ClinicalTrials.gov, PubMed, and openFDA to enrich your project with safety data and clinical context.
+          </AlertDescription>
+          <div className="mt-4">
+            <FetchExternalDataButton projectId={project.id} />
+          </div>
+        </Alert>
+      )}
+
+      {/* Project Details Grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="p-4 border rounded-lg">
-          <h3 className="font-semibold mb-2">Compound</h3>
-          <p className="text-sm text-gray-600">{project.compound_name || 'N/A'}</p>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <h3 className="font-semibold mb-2">RLD Brand</h3>
-          <p className="text-sm text-gray-600">{project.rld_brand_name || 'N/A'}</p>
-        </div>
-        <div className="p-4 border rounded-lg">
-          <h3 className="font-semibold mb-2">Status</h3>
-          <p className="text-sm text-gray-600">{project.enrichment_status || 'pending'}</p>
-        </div>
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Compound</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">{project.compound_name || 'N/A'}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">RLD Brand</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">{project.rld_brand_name || 'N/A'}</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <MapPin className="h-4 w-4" />
+              Countries
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-gray-600">
+              {project.countries && project.countries.length > 0 
+                ? project.countries.join(', ') 
+                : 'No countries specified'}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-2">Countries</h3>
-        <p className="text-sm text-gray-600">
-          {project.countries && project.countries.length > 0 
-            ? project.countries.join(', ') 
-            : 'No countries specified'}
-        </p>
-      </div>
+      {/* Documents */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5" />
+                Documents
+              </CardTitle>
+              <CardDescription>Generated regulatory documents</CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {documents && documents.length > 0 ? (
+            <div className="space-y-3">
+              {documents.map((doc) => (
+                <Link
+                  key={doc.id}
+                  href={`/dashboard/documents/${doc.id}`}
+                  className="block p-4 border rounded-lg hover:bg-accent transition"
+                >
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-semibold">{doc.type} - Version {doc.version}</p>
+                      <p className="text-sm text-muted-foreground">
+                        Created {new Date(doc.created_at).toLocaleDateString()}
+                      </p>
+                    </div>
+                    <Badge variant={doc.status === 'approved' ? 'success' : 'secondary'}>
+                      {doc.status}
+                    </Badge>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No documents yet. Fetch external data first, then generate documents.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-2">Documents</h3>
-        <p className="text-sm text-gray-600">
-          {documents && documents.length > 0 
-            ? `${documents.length} documents generated` 
-            : 'No documents yet'}
-        </p>
-        {docsError && (
-          <p className="text-xs text-red-600 mt-2">Error: {JSON.stringify(docsError)}</p>
-        )}
-      </div>
-
-      <div className="p-4 border rounded-lg">
-        <h3 className="font-semibold mb-2">External Evidence</h3>
-        <p className="text-sm text-gray-600">
-          {evidenceSources && evidenceSources.length > 0 
-            ? `${evidenceSources.length} evidence sources` 
-            : 'No evidence yet'}
-        </p>
-        {evidenceError && (
-          <p className="text-xs text-red-600 mt-2">Error: {JSON.stringify(evidenceError)}</p>
-        )}
-      </div>
+      {/* External Evidence */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            External Evidence
+          </CardTitle>
+          <CardDescription>
+            Data from ClinicalTrials.gov, PubMed, and openFDA
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {evidenceSources && evidenceSources.length > 0 ? (
+            <div>
+              <p className="text-sm font-medium mb-4">
+                {evidenceSources.length} evidence sources retrieved
+              </p>
+              <div className="grid grid-cols-3 gap-4">
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-gray-500">Clinical Trials</p>
+                  <p className="text-2xl font-bold">
+                    {evidenceSources.filter(e => e.source === 'ClinicalTrials.gov').length}
+                  </p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-gray-500">Publications</p>
+                  <p className="text-2xl font-bold">
+                    {evidenceSources.filter(e => e.source === 'PubMed').length}
+                  </p>
+                </div>
+                <div className="p-3 border rounded-lg">
+                  <p className="text-xs text-gray-500">Safety Reports</p>
+                  <p className="text-2xl font-bold">
+                    {evidenceSources.filter(e => e.source === 'openFDA').length}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              No evidence yet. Click "Fetch External Data" above to retrieve evidence.
+            </p>
+          )}
+        </CardContent>
+      </Card>
     </div>
   )
 }
