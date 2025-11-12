@@ -136,9 +136,8 @@ export function validateProjectForEnrichment(project: Partial<Project>): {
     if (!project.rld_brand_name) {
       errors.push('RLD brand name is required for generic products')
     }
-    if (!project.rld_application_number) {
-      errors.push('RLD application number is required for generic products')
-    }
+    // Note: rld_application_number and te_code are auto-fetched from FDA Orange Book
+    // based on rld_brand_name, so they are not required in the intake request
   }
   
   return {
