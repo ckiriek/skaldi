@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     try {
       console.log('🔬 Searching ClinicalTrials.gov for:', drug)
       const ctResponse = await fetch(
-        `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=20&fields=ProtocolSection/ConditionsModule/Conditions`
+        `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=20`
       )
 
       if (ctResponse.ok) {

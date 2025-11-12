@@ -302,22 +302,6 @@ export default function NewProjectPage() {
               )}
             </div>
 
-            {/* Drug Class / Active Ingredient */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Drug Class / Active Ingredient
-              </label>
-              <FieldAutocomplete
-                value={formData.drug_class}
-                onChange={(value) => setFormData({ ...formData, drug_class: value })}
-                endpoint="/api/v1/autocomplete/drug-class"
-                placeholder="e.g., metformin, DPP-4 inhibitor, SGLT2 inhibitor"
-              />
-              <p className="mt-1 text-xs text-gray-500">
-                Used for safety data search. For investigational drugs, specify the drug class or similar approved drug.
-              </p>
-            </div>
-
             {/* Countries */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
