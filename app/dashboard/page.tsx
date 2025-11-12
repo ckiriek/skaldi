@@ -162,7 +162,8 @@ export default async function DashboardPage() {
           </Card>
         </Link>
 
-        <Link href="/dashboard/documents">
+        {/* Temporarily disabled - page not yet implemented */}
+        {/* <Link href="/dashboard/documents">
           <Card className="hover-lift cursor-pointer">
             <CardContent className="pt-4 pb-4">
               <div className="flex items-center gap-3">
@@ -176,7 +177,7 @@ export default async function DashboardPage() {
               </div>
             </CardContent>
           </Card>
-        </Link>
+        </Link> */}
 
         <Link href="/dashboard/projects">
           <Card className="hover-lift cursor-pointer">

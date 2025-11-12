@@ -111,7 +111,6 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors">
                   <Avatar className="h-7 w-7">
-                    <AvatarImage src="/avatar.png" alt="User" />
                     <AvatarFallback className="text-xs">AD</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left">
