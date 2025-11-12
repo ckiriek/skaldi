@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
     const type = searchParams.get('type') || 'brand' // 'brand' or 'application'
     const limit = parseInt(searchParams.get('limit') || '10')
 
+    console.log('🔶 RLD autocomplete API called:', { query, type, limit })
+
     validateRequiredFields(
       { q: query },
       ['q'],
@@ -45,7 +47,9 @@ export async function GET(request: NextRequest) {
 
     if (type === 'brand') {
       // Search by brand name
+      console.log('🔶 Searching Orange Book for brand:', query)
       const rldResults = await orangeBook.searchRLDByBrandName(query!)
+      console.log('🔶 Orange Book returned', rldResults.length, 'results')
       
       for (const rld of rldResults.slice(0, limit)) {
         results.push({
@@ -79,6 +83,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    console.log('✅ RLD autocomplete returning', results.length, 'results')
+
     return NextResponse.json({
       success: true,
       data: results,
@@ -87,6 +93,7 @@ export async function GET(request: NextRequest) {
       total: results.length
     })
   } catch (error) {
+    console.error('❌ RLD autocomplete error:', error)
     return handleApiError(error, 'AutocompleteAPI', 'rld')
   }
 }
