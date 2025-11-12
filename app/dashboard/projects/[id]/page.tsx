@@ -17,18 +17,22 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
   }
 
   // Fetch documents
-  const { data: documents } = await supabase
+  const { data: documents, error: docsError } = await supabase
     .from('documents')
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
+  console.log('Documents query:', { count: documents?.length, error: docsError })
+
   // Fetch evidence sources
-  const { data: evidenceSources } = await supabase
+  const { data: evidenceSources, error: evidenceError } = await supabase
     .from('evidence_sources')
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
+
+  console.log('Evidence query:', { count: evidenceSources?.length, error: evidenceError })
 
   return (
     <div className="p-8 space-y-6">
@@ -74,6 +78,9 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
             ? `${documents.length} documents generated` 
             : 'No documents yet'}
         </p>
+        {docsError && (
+          <p className="text-xs text-red-600 mt-2">Error: {JSON.stringify(docsError)}</p>
+        )}
       </div>
 
       <div className="p-4 border rounded-lg">
@@ -83,6 +90,9 @@ export default async function ProjectPageMinimal({ params }: { params: Promise<{
             ? `${evidenceSources.length} evidence sources` 
             : 'No evidence yet'}
         </p>
+        {evidenceError && (
+          <p className="text-xs text-red-600 mt-2">Error: {JSON.stringify(evidenceError)}</p>
+        )}
       </div>
     </div>
   )
