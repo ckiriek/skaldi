@@ -16,19 +16,21 @@ import { ProjectFilesList } from '@/components/project-files-list'
 import { EntitiesDisplay } from '@/components/entities-display'
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
-  const { id } = await params
-  const supabase = await createClient()
+  try {
+    const { id } = await params
+    const supabase = await createClient()
 
-  // Fetch project
-  const { data: project, error } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .single()
+    // Fetch project
+    const { data: project, error } = await supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .single()
 
-  if (error || !project) {
-    notFound()
-  }
+    if (error || !project) {
+      console.error('Project fetch error:', error)
+      notFound()
+    }
 
   // Fetch documents
   const { data: documents } = await supabase
@@ -500,4 +502,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       )}
     </div>
   )
+  } catch (error) {
+    console.error('Project page error:', error)
+    return (
+      <div className="p-8">
+        <h2 className="text-2xl font-bold mb-4">Error loading project</h2>
+        <pre className="bg-red-50 p-4 rounded overflow-auto text-sm">
+          {error instanceof Error ? error.message : 'Unknown error'}
+        </pre>
+        <pre className="bg-gray-100 p-4 rounded overflow-auto text-xs mt-4">
+          {error instanceof Error ? error.stack : JSON.stringify(error, null, 2)}
+        </pre>
+      </div>
+    )
+  }
 }
