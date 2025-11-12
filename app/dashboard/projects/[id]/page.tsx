@@ -5,7 +5,7 @@ import { ArrowLeft, FlaskConical, MapPin, Database, FileText } from 'lucide-reac
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
+// import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -78,9 +78,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <AlertDescription>
             Retrieve evidence from ClinicalTrials.gov, PubMed, and openFDA to enrich your project with safety data and clinical context.
           </AlertDescription>
-          <div className="mt-4">
+          {/* <div className="mt-4">
             <FetchExternalDataButton projectId={project.id} />
-          </div>
+          </div> */}
         </Alert>
       )}
 
