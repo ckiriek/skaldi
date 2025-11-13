@@ -50,6 +50,9 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
     const payload = evidence.payload_json as any
     const nctUrl = `https://clinicaltrials.gov/study/${evidence.external_id}`
     
+    // Extract phase - can be array or string
+    const phase = Array.isArray(payload?.phase) ? payload.phase[0] : payload?.phase
+    
     return (
       <div key={evidence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition">
         <div className="flex items-start justify-between mb-2">
@@ -58,14 +61,14 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
               <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded font-medium">
                 {evidence.external_id}
               </span>
-              {payload?.phase && (
+              {phase && phase !== 'NA' && (
                 <span className="text-xs px-2 py-0.5 bg-purple-100 text-purple-700 rounded">
-                  {payload.phase}
+                  {phase}
                 </span>
               )}
-              {payload?.overall_status && (
+              {payload?.status && (
                 <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded">
-                  {payload.overall_status}
+                  {payload.status}
                 </span>
               )}
             </div>
@@ -73,22 +76,17 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
               href={`/dashboard/evidence/${evidence.id}`}
               className="font-semibold text-blue-600 hover:underline block mb-1"
             >
-              {payload?.official_title || evidence.title}
+              {payload?.title || evidence.external_id}
             </Link>
-            {payload?.brief_summary && (
-              <p className="text-sm text-gray-600 line-clamp-2 mb-2">
-                {payload.brief_summary}
-              </p>
-            )}
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
-              {payload?.start_date && (
-                <span>Started: {payload.start_date}</span>
+              {payload?.startDate && (
+                <span>Started: {payload.startDate}</span>
               )}
               {payload?.sponsor && (
                 <span>Sponsor: {payload.sponsor}</span>
               )}
-              {payload?.condition && Array.isArray(payload.condition) && (
-                <span>Conditions: {payload.condition.slice(0, 2).join(', ')}</span>
+              {payload?.conditions && Array.isArray(payload.conditions) && (
+                <span>Conditions: {payload.conditions.slice(0, 2).join(', ')}</span>
               )}
             </div>
           </div>
@@ -117,15 +115,15 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
               <span className="text-xs px-2 py-0.5 bg-green-100 text-green-700 rounded font-medium">
                 PMID: {evidence.external_id}
               </span>
-              {payload?.publication_year && (
-                <span className="text-xs text-gray-500">{payload.publication_year}</span>
+              {payload?.year && (
+                <span className="text-xs text-gray-500">{payload.year}</span>
               )}
             </div>
             <Link 
               href={`/dashboard/evidence/${evidence.id}`}
               className="font-semibold text-blue-600 hover:underline block mb-1"
             >
-              {payload?.article_title || evidence.title}
+              {payload?.title || evidence.external_id}
             </Link>
             {payload?.authors && Array.isArray(payload.authors) && (
               <p className="text-sm text-gray-600 mb-1">
@@ -136,7 +134,7 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
             {payload?.journal && (
               <p className="text-sm text-gray-500 italic mb-2">
                 {payload.journal}
-                {payload.publication_year && ` (${payload.publication_year})`}
+                {payload?.year && ` (${payload.year})`}
               </p>
             )}
             {payload?.abstract && (
@@ -161,6 +159,9 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
   const renderSafetyReport = (evidence: EvidenceSource) => {
     const payload = evidence.payload_json as any
     
+    // Check if serious based on seriousness field
+    const isSerious = payload?.seriousness?.toLowerCase().includes('serious')
+    
     return (
       <div key={evidence.id} className="p-4 border rounded-lg hover:bg-gray-50 transition">
         <div className="flex items-start justify-between mb-2">
@@ -169,7 +170,7 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
               <span className="text-xs px-2 py-0.5 bg-red-100 text-red-700 rounded font-medium">
                 FDA Report
               </span>
-              {payload?.serious && (
+              {isSerious && (
                 <span className="text-xs px-2 py-0.5 bg-red-600 text-white rounded">
                   Serious
                 </span>
@@ -179,26 +180,26 @@ export function EvidenceDisplay({ evidenceSources }: EvidenceDisplayProps) {
               href={`/dashboard/evidence/${evidence.id}`}
               className="font-semibold text-blue-600 hover:underline block mb-1"
             >
-              {payload?.openfda?.brand_name?.[0] || payload?.openfda?.generic_name?.[0] || evidence.title}
+              {payload?.drugName || evidence.external_id}
             </Link>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500 mb-2">
-              {payload?.receivedate && (
-                <span>Reported: {payload.receivedate}</span>
+              {payload?.receiptDate && (
+                <span>Reported: {payload.receiptDate}</span>
               )}
-              {payload?.patient?.patientonsetage && (
-                <span>Patient Age: {payload.patient.patientonsetage}</span>
+              {payload?.patientSex && (
+                <span>Sex: {payload.patientSex}</span>
               )}
-              {payload?.patient?.patientsex && (
-                <span>Sex: {payload.patient.patientsex === '1' ? 'Male' : 'Female'}</span>
+              {payload?.seriousness && (
+                <span>{payload.seriousness}</span>
               )}
             </div>
-            {payload?.patient?.reaction && Array.isArray(payload.patient.reaction) && (
+            {payload?.reactions && Array.isArray(payload.reactions) && (
               <div className="mb-2">
                 <p className="text-xs font-semibold text-gray-700 mb-1">Reactions:</p>
                 <div className="flex flex-wrap gap-1">
-                  {payload.patient.reaction.slice(0, 5).map((reaction: any, idx: number) => (
+                  {payload.reactions.slice(0, 5).map((reaction: string, idx: number) => (
                     <span key={idx} className="text-xs px-2 py-0.5 bg-orange-100 text-orange-700 rounded">
-                      {reaction.reactionmeddrapt}
+                      {reaction}
                     </span>
                   ))}
                 </div>
