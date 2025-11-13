@@ -341,17 +341,6 @@ export default async function EvidencePage({ params }: { params: Promise<{ id: s
         </>
       )}
 
-      {/* Full JSON Payload */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Full Data (JSON)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <pre className="text-xs bg-gray-50 p-4 rounded overflow-auto max-h-96">
-            {JSON.stringify(payload, null, 2)}
-          </pre>
-        </CardContent>
-      </Card>
     </div>
   )
 }
