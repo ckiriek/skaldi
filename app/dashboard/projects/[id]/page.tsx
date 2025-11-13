@@ -1,9 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
 import { Database } from 'lucide-react'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
+import { EvidenceDisplay } from '@/components/evidence-display'
+import { GenerateDocumentButton } from '@/components/generate-document-button'
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -98,8 +99,15 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       {/* Documents */}
       <Card>
         <CardHeader>
-          <CardTitle>Documents</CardTitle>
-          <CardDescription>Generated regulatory documents</CardDescription>
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle>Documents</CardTitle>
+              <CardDescription>Generated regulatory documents</CardDescription>
+            </div>
+            {hasExternalData && (
+              <GenerateDocumentButton projectId={project.id} />
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {documents && documents.length > 0 ? (
@@ -124,9 +132,11 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           ) : (
-            <p className="text-sm text-gray-500 text-center py-8">
-              No documents yet. Fetch external data first, then generate documents.
-            </p>
+            <div className="text-center py-8">
+              <p className="text-sm text-gray-500 mb-4">
+                No documents yet. {hasExternalData ? 'Generate your first document.' : 'Fetch external data first, then generate documents.'}
+              </p>
+            </div>
           )}
         </CardContent>
       </Card>
@@ -141,66 +151,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </CardHeader>
         <CardContent>
           {evidenceSources && evidenceSources.length > 0 ? (
-            <div>
-              <p className="text-sm font-medium mb-4">
-                {evidenceSources.length} evidence sources retrieved
-              </p>
-              <div className="grid grid-cols-3 gap-4">
-                <div className="p-3 border rounded-lg">
-                  <p className="text-xs text-gray-500">Clinical Trials</p>
-                  <p className="text-2xl font-bold">
-                    {evidenceSources.filter(e => e.source === 'ClinicalTrials.gov').length}
-                  </p>
-                </div>
-                <div className="p-3 border rounded-lg">
-                  <p className="text-xs text-gray-500">Publications</p>
-                  <p className="text-2xl font-bold">
-                    {evidenceSources.filter(e => e.source === 'PubMed').length}
-                  </p>
-                </div>
-                <div className="p-3 border rounded-lg">
-                  <p className="text-xs text-gray-500">Safety Reports</p>
-                  <p className="text-2xl font-bold">
-                    {evidenceSources.filter(e => e.source === 'openFDA').length}
-                  </p>
-                </div>
-              </div>
-              
-              {/* Evidence List */}
-              <div className="mt-6 space-y-3">
-                <h4 className="font-semibold text-sm">Recent Evidence</h4>
-                {evidenceSources.slice(0, 5).map((evidence) => (
-                  <div
-                    key={evidence.id}
-                    className="p-3 border rounded-lg hover:bg-gray-50 transition"
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-700 rounded">
-                            {evidence.source}
-                          </span>
-                          {evidence.external_id && (
-                            <span className="text-xs text-gray-500">{evidence.external_id}</span>
-                          )}
-                        </div>
-                        <p className="text-sm font-medium">{evidence.title}</p>
-                        {evidence.snippet && (
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-                            {evidence.snippet}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-                {evidenceSources.length > 5 && (
-                  <p className="text-xs text-gray-500 text-center">
-                    And {evidenceSources.length - 5} more...
-                  </p>
-                )}
-              </div>
-            </div>
+            <EvidenceDisplay evidenceSources={evidenceSources} />
           ) : (
             <p className="text-sm text-gray-500 text-center py-8">
               No evidence yet. Click "Fetch External Data" above to retrieve evidence.
