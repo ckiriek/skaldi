@@ -8,10 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FieldAutocomplete } from '@/components/forms/field-autocomplete'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { cn } from '@/lib/utils'
 
 export default function NewProjectPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const [submitError, setSubmitError] = useState<string | null>(null)
   const [suggestedIndications, setSuggestedIndications] = useState<Array<{indication: string, source: string, count?: number}>>([])
   const [formData, setFormData] = useState({
     title: '',
@@ -31,6 +34,7 @@ export default function NewProjectPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    setSubmitError(null)
     setLoading(true)
 
     try {
@@ -66,19 +70,14 @@ export default function NewProjectPage() {
       const result = await response.json()
 
       if (!result.success) {
-        alert(result.errors?.join('\n') || 'Failed to create project')
+        setSubmitError(result.errors?.join('\n') || 'Failed to create project')
         return
-      }
-
-      // Show success message
-      if (result.enrichment_triggered) {
-        alert('✅ Project created! Regulatory data enrichment started in background.')
       }
 
       router.push(`/dashboard/projects/${result.project_id}`)
     } catch (error) {
       console.error('Error creating project:', error)
-      alert('Failed to create project. Please try again.')
+      setSubmitError('Failed to create project. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -128,11 +127,16 @@ export default function NewProjectPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-5 pt-0">
+            {submitError && (
+              <Alert variant="error">
+                <AlertDescription>{submitError}</AlertDescription>
+              </Alert>
+            )}
             {/* Product Type Selection */}
             <div className="space-y-3">
               <div>
                 <Label className="text-base font-semibold">Product Type *</Label>
-                <p className="text-sm text-gray-500 mt-1">Select the type of product for this project</p>
+                <p className="text-sm text-muted-foreground mt-1">Select the type of product for this project</p>
               </div>
               <RadioGroup
                 value={formData.product_type}
@@ -140,34 +144,55 @@ export default function NewProjectPage() {
                   setFormData({ ...formData, product_type: value })
                 }
               >
-                <div className="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                <div
+                  className={cn(
+                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
+                    formData.product_type === 'innovator'
+                      ? 'border-primary/60 bg-primary/5'
+                      : 'border-border hover:bg-muted/50'
+                  )}
+                >
                   <RadioGroupItem value="innovator" id="innovator" className="mt-1" />
                   <div className="flex-1">
                     <Label htmlFor="innovator" className="cursor-pointer">
-                      <div className="font-semibold text-gray-900">Innovator / Original Compound</div>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <div className="font-semibold text-foreground">Innovator / Original Compound</div>
+                      <p className="text-sm text-muted-foreground mt-1">
                         New drug with full nonclinical and clinical data from sponsor
                       </p>
                     </Label>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                <div
+                  className={cn(
+                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
+                    formData.product_type === 'generic'
+                      ? 'border-primary/60 bg-primary/5'
+                      : 'border-border hover:bg-muted/50'
+                  )}
+                >
                   <RadioGroupItem value="generic" id="generic" className="mt-1" />
                   <div className="flex-1">
                     <Label htmlFor="generic" className="cursor-pointer">
-                      <div className="font-semibold text-gray-900">Generic Drug</div>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <div className="font-semibold text-foreground">Generic Drug</div>
+                      <p className="text-sm text-muted-foreground mt-1">
                         Based on existing approved product (RLD) — we'll auto-fetch data from FDA/EMA
                       </p>
                     </Label>
                   </div>
                 </div>
-                <div className="flex items-start space-x-3 p-3 border rounded-md hover:bg-gray-50 cursor-pointer">
+                <div
+                  className={cn(
+                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
+                    formData.product_type === 'hybrid'
+                      ? 'border-primary/60 bg-primary/5'
+                      : 'border-border hover:bg-muted/50'
+                  )}
+                >
                   <RadioGroupItem value="hybrid" id="hybrid" className="mt-1" />
                   <div className="flex-1">
                     <Label htmlFor="hybrid" className="cursor-pointer">
-                      <div className="font-semibold text-gray-900">Hybrid / Combination Product</div>
-                      <p className="text-sm text-gray-500 mt-1">
+                      <div className="font-semibold text-foreground">Hybrid / Combination Product</div>
+                      <p className="text-sm text-muted-foreground mt-1">
                         Modified release, fixed-dose combination, or biosimilar
                       </p>
                     </Label>
@@ -178,7 +203,7 @@ export default function NewProjectPage() {
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Project Title *
               </label>
               <Input
@@ -191,7 +216,7 @@ export default function NewProjectPage() {
 
             {/* Compound Name */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Compound / Drug Name *
               </label>
               <FieldAutocomplete
@@ -202,7 +227,7 @@ export default function NewProjectPage() {
                 required
               />
               {formData.product_type === 'generic' && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   💡 Use the generic name (e.g., Metformin Hydrochloride, not Glucophage)
                 </p>
               )}
@@ -219,7 +244,7 @@ export default function NewProjectPage() {
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-2">
                       RLD Brand Name *
                     </label>
                     <FieldAutocomplete
@@ -229,7 +254,7 @@ export default function NewProjectPage() {
                       placeholder="e.g., GLUCOPHAGE"
                       required={formData.product_type === 'generic'}
                     />
-                    <p className="mt-1 text-xs text-gray-500">
+                    <p className="mt-1 text-xs text-muted-foreground">
                       We'll automatically fetch Application Number and TE Code from FDA Orange Book
                     </p>
                   </div>
@@ -243,7 +268,7 @@ export default function NewProjectPage() {
 
             {/* Phase */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Phase *
               </label>
               <select
@@ -261,7 +286,7 @@ export default function NewProjectPage() {
 
             {/* Indication */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Indication *
               </label>
               <FieldAutocomplete
@@ -300,7 +325,7 @@ export default function NewProjectPage() {
 
             {/* Countries */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-foreground mb-2">
                 Countries
               </label>
               <FieldAutocomplete
@@ -310,18 +335,18 @@ export default function NewProjectPage() {
                 placeholder="e.g., USA, Germany, Japan (comma-separated)"
                 minChars={2}
               />
-              <p className="mt-1 text-xs text-gray-500">
+              <p className="mt-1 text-xs text-muted-foreground">
                 💡 Type to search, select multiple countries separated by commas
               </p>
             </div>
 
             {/* Study Design */}
             <div className="pt-4">
-              <h3 className="text-base font-medium text-gray-900 mb-3">Study Design</h3>
+              <h3 className="text-base font-medium text-foreground mb-3">Study Design</h3>
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Design Type
                   </label>
                   <select
@@ -336,7 +361,7 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Blinding
                   </label>
                   <select
@@ -351,7 +376,7 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Number of Arms
                   </label>
                   <Input
@@ -363,7 +388,7 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-2">
                     Duration (weeks)
                   </label>
                   <Input
@@ -376,7 +401,7 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-foreground mb-2">
                   Primary Endpoint
                 </label>
                 <Input
@@ -384,7 +409,7 @@ export default function NewProjectPage() {
                   onChange={(e) => setFormData({ ...formData, primary_endpoint: e.target.value })}
                   placeholder="e.g., Change in HbA1c from baseline at Week 24"
                 />
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   💡 If left empty, we'll automatically use the most common endpoint from similar clinical trials for your indication.
                 </p>
               </div>

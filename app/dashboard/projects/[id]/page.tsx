@@ -1,10 +1,50 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Database } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { Database, FileText } from 'lucide-react'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { EvidenceDisplay } from '@/components/evidence-display'
 import { GenerateDocumentButton } from '@/components/generate-document-button'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+
+function getDocumentStatusMeta(status: string | null | undefined) {
+  const normalized = (status || '').toLowerCase()
+
+  if (normalized === 'approved') {
+    return { variant: 'success' as const, label: 'Approved' }
+  }
+  if (normalized === 'review' || normalized === 'in_review') {
+    return { variant: 'info' as const, label: 'In Review' }
+  }
+  if (normalized === 'draft') {
+    return { variant: 'secondary' as const, label: 'Draft' }
+  }
+  if (normalized === 'outdated' || normalized === 'archived') {
+    return { variant: 'warning' as const, label: 'Outdated' }
+  }
+
+  return { variant: 'secondary' as const, label: 'Unknown' }
+}
+
+function getEnrichmentStatusMeta(status: string | null | undefined) {
+  const normalized = (status || '').toLowerCase()
+
+  if (normalized === 'completed') {
+    return { variant: 'success' as const, label: 'Data Enriched' }
+  }
+  if (normalized === 'in_progress') {
+    return { variant: 'info' as const, label: 'Enriching…' }
+  }
+  if (normalized === 'failed') {
+    return { variant: 'error' as const, label: 'Enrichment Failed' }
+  }
+  if (normalized === 'skipped') {
+    return { variant: 'warning' as const, label: 'Enrichment Skipped' }
+  }
+
+  return { variant: 'secondary' as const, label: 'Pending' }
+}
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -38,127 +78,163 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const hasExternalData = evidenceSources && evidenceSources.length > 0
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
-          <p className="text-gray-600">
-            Phase: {project.phase || 'N/A'} • Indication: {project.indication || 'N/A'}
-          </p>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project</p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.title}</h1>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+            <span>Phase: {project.phase || 'N/A'}</span>
+            <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+            <span>Indication: {project.indication || 'N/A'}</span>
+          </div>
         </div>
-        {!hasExternalData && (
-          <FetchExternalDataButton projectId={project.id} />
-        )}
+        <div className="flex items-center gap-2">
+          {hasExternalData ? (
+            <GenerateDocumentButton projectId={project.id} />
+          ) : (
+            <FetchExternalDataButton projectId={project.id} />
+          )}
+        </div>
       </div>
 
       {/* Alert for no data */}
       {!hasExternalData && (
-        <div className="p-4 border border-blue-200 bg-blue-50 rounded-lg">
-          <div className="flex items-start gap-3">
-            <Database className="h-5 w-5 text-blue-600 mt-0.5" />
-            <div>
-              <h3 className="font-semibold text-blue-900">Fetch External Data</h3>
-              <p className="text-sm text-blue-700 mt-1">
-                Retrieve evidence from ClinicalTrials.gov, PubMed, and openFDA to enrich your project with safety data and clinical context.
-              </p>
-            </div>
+        <div className="flex items-start gap-3 rounded-md border border-blue-100 bg-blue-50 px-3 py-2">
+          <Database className="h-5 w-5 text-blue-600 mt-0.5" />
+          <div>
+            <h3 className="text-sm font-semibold text-blue-900">Fetch External Data</h3>
+            <p className="mt-1 text-xs text-blue-700">
+              Retrieve evidence from ClinicalTrials.gov, PubMed, and openFDA to enrich your project with safety data and clinical context.
+            </p>
           </div>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Compound</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{project.compound_name || 'N/A'}</p>
-          </CardContent>
-        </Card>
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="documents">Documents</TabsTrigger>
+          <TabsTrigger value="evidence">Evidence</TabsTrigger>
+        </TabsList>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">RLD Brand</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{project.rld_brand_name || 'N/A'}</p>
-          </CardContent>
-        </Card>
+        <TabsContent value="overview">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Compound</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{project.compound_name || 'N/A'}</p>
+              </CardContent>
+            </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Status</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm">{project.enrichment_status || 'pending'}</p>
-          </CardContent>
-        </Card>
-      </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">RLD Brand</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm">{project.rld_brand_name || 'N/A'}</p>
+              </CardContent>
+            </Card>
 
-      {/* Documents */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle>Documents</CardTitle>
-              <CardDescription>Generated regulatory documents</CardDescription>
-            </div>
-            {hasExternalData && (
-              <GenerateDocumentButton projectId={project.id} />
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {documents && documents.length > 0 ? (
-            <div className="space-y-3">
-              {documents.map((doc) => (
-                <div
-                  key={doc.id}
-                  className="p-4 border rounded-lg hover:bg-gray-50 transition"
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Status</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <Badge
+                  size="sm"
+                  variant={getEnrichmentStatusMeta(project.enrichment_status).variant}
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <p className="font-semibold">{doc.type} - Version {doc.version}</p>
-                      <p className="text-sm text-gray-600">
-                        Created {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <span className="text-xs px-2 py-1 bg-gray-100 rounded">
-                      {doc.status}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <p className="text-sm text-gray-500 mb-4">
-                No documents yet. {hasExternalData ? 'Generate your first document.' : 'Fetch external data first, then generate documents.'}
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  {getEnrichmentStatusMeta(project.enrichment_status).label}
+                </Badge>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-      {/* External Evidence */}
-      <Card>
-        <CardHeader>
-          <CardTitle>External Evidence</CardTitle>
-          <CardDescription>
-            Data from ClinicalTrials.gov, PubMed, and openFDA
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {evidenceSources && evidenceSources.length > 0 ? (
-            <EvidenceDisplay evidenceSources={evidenceSources} />
-          ) : (
-            <p className="text-sm text-gray-500 text-center py-8">
-              No evidence yet. Click "Fetch External Data" above to retrieve evidence.
-            </p>
-          )}
-        </CardContent>
-      </Card>
+        <TabsContent value="documents">
+          {/* Documents */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Documents</CardTitle>
+                  <CardDescription>Generated regulatory documents</CardDescription>
+                </div>
+                {hasExternalData && (
+                  <GenerateDocumentButton projectId={project.id} />
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {documents && documents.length > 0 ? (
+                <div className="space-y-2">
+                  {documents.map((doc) => (
+                    <div
+                      key={doc.id}
+                      className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
+                    >
+                      <div className="flex flex-col">
+                        <p className="text-sm font-medium">
+                          {doc.type} 
+                          <span className="text-xs text-muted-foreground"> · v{doc.version}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Created {new Date(doc.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <Badge
+                        size="sm"
+                        variant={getDocumentStatusMeta(doc.status).variant}
+                      >
+                        {getDocumentStatusMeta(doc.status).label}
+                      </Badge>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <FileText className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <h3 className="text-sm font-medium mb-1">No documents yet</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    {hasExternalData
+                      ? 'Generate your first regulatory document for this project.'
+                      : 'Fetch external data first, then generate documents.'}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="evidence">
+          {/* External Evidence */}
+          <Card>
+            <CardHeader>
+              <CardTitle>External Evidence</CardTitle>
+              <CardDescription>
+                Data from ClinicalTrials.gov, PubMed, and openFDA
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {evidenceSources && evidenceSources.length > 0 ? (
+                <EvidenceDisplay evidenceSources={evidenceSources} />
+              ) : (
+                <div className="text-center py-8">
+                  <Database className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+                  <h3 className="text-sm font-medium mb-1">No evidence yet</h3>
+                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
+                    Click "Fetch External Data" above to retrieve evidence for this project.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

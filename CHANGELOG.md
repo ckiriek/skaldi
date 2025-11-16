@@ -6,6 +6,27 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+ 
+### UI/UX
+- Updated dashboard shell to a Stripe-like layout:
+  - Widened and visually lightened sidebar navigation.
+  - Removed global search bar from the top header.
+  - Adjusted main content padding to match the new sidebar width.
+- Redesigned `/dashboard` home into a "Work hub" view without metrics, focusing on Continue work and recent lists of projects and documents.
+- Migrated projects/documents lists and detail pages to modern layouts:
+  - Summary headers + tabs on project and document detail pages.
+  - Table-based list views for projects and documents using shared `Table` components.
+- Unified feedback and system states across dashboard/projects/documents:
+  - Replaced blocking `alert()`/`confirm()` flows in core actions (Validate, Generate, Extract, Files) with toast notifications based on `useToast`.
+  - Standardized status badges for projects and documents using shared `Badge` variants.
+  - Added route-level loading skeletons and consistent empty states with clear icon + title + description + CTA patterns.
+- Refreshed auth and onboarding surfaces:
+  - Login/register pages converted to Stripe-like cards with clear error handling.
+  - New Project form layout simplified to a lighter, medical SaaS-style structure without changing backend contracts.
+- Accessibility & micro-interactions pass:
+  - Added ARIA labels for key icon-only actions (download, delete, print) and mobile sidebar controls.
+  - Improved keyboard focus visibility for navigation and content (TOC entries, primary links in tables, dialog actions) using consistent `focus-visible` ring tokens.
+  - Introduced a print-friendly toolbar and styles in `DocumentViewer` (Print button + hidden TOC and flattened card styling on print) aligned with the design-token-based color system.
 
 ### Week 1, Day 4 (Nov 12, 2025) - Validation & Completion
 - [ ] Validator Agent implementation
@@ -972,4 +993,4 @@ Log to ingestion_logs
 ---
 
 **Maintained by:** Cascade AI Engineer  
-**Last Updated:** 2025-11-11 21:15 UTC
+**Last Updated:** 2025-11-15 23:57 UTC

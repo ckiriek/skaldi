@@ -1,141 +1,122 @@
 import { createClient } from '@/lib/supabase/server'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, FolderOpen, CheckCircle, Clock } from 'lucide-react'
-import Link from 'next/link'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { StatsCard } from '@/components/ui/stats-card'
+import Link from 'next/link'
+import { Plus, FolderOpen } from 'lucide-react'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
 
-  // Fetch stats
-  const { data: projects } = await supabase
+  const { data: projects, error } = await supabase
     .from('projects')
-    .select('id')
-    .limit(100)
-
-  const { data: documents } = await supabase
-    .from('documents')
-    .select('id, status')
-    .limit(100)
-
-  const projectCount = projects?.length || 0
-  const documentCount = documents?.length || 0
-  const draftCount = documents?.filter(d => d.status === 'draft').length || 0
-  const approvedCount = documents?.filter(d => d.status === 'approved').length || 0
-
-  // Fetch recent projects
-  const { data: recentProjects } = await supabase
-    .from('projects')
-    .select('id, title, phase, indication, created_at')
+    .select(`
+      id,
+      title,
+      phase,
+      indication,
+      countries,
+      created_at,
+      documents (count)
+    `)
     .order('created_at', { ascending: false })
-    .limit(5)
 
   return (
-    <div className="space-y-3">
-      {/* Page Header */}
+    <div className="space-y-4">
+      {/* Compact Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Dashboard</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Welcome to Skaldi - Clinical Trial Documentation Platform
-          </p>
-        </div>
+        <h1 className="text-xl font-semibold tracking-tight">Projects</h1>
         <Link href="/dashboard/projects/new">
-          <Button size="default" className="gap-2">
-            <FolderOpen className="h-4 w-4" />
+          <Button size="sm" className="gap-1.5 h-7 px-2.5 text-xs">
+            <Plus className="h-3 w-3" />
             New Project
           </Button>
         </Link>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatsCard
-          title="Total Projects"
-          value={projectCount}
-          icon={<FolderOpen className="h-5 w-5" />}
-          description="Active clinical trials"
-        />
-
-        <StatsCard
-          title="Documents"
-          value={documentCount}
-          icon={<FileText className="h-5 w-5" />}
-          description="Total documents generated"
-        />
-
-        <StatsCard
-          title="In Draft"
-          value={draftCount}
-          icon={<Clock className="h-5 w-5" />}
-          description="Pending review"
-        />
-
-        <StatsCard
-          title="Approved"
-          value={approvedCount}
-          icon={<CheckCircle className="h-5 w-5" />}
-          description="Ready for submission"
-        />
-      </div>
-
-      {/* Recent Projects */}
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between pb-3">
-          <div>
-            <CardTitle className="text-lg">Recent Projects</CardTitle>
-            <CardDescription className="text-sm">Your latest clinical trial projects</CardDescription>
-          </div>
-          <Link href="/dashboard/projects">
-            <Button variant="outline" size="sm">
-              View All
+      {/* Compact Table - No Card Wrapper */}
+      {projects && projects.length > 0 ? (
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="h-9 text-xs">Project</TableHead>
+                <TableHead className="h-9 text-xs">Phase</TableHead>
+                <TableHead className="h-9 text-xs">Countries</TableHead>
+                <TableHead className="h-9 text-xs">Docs</TableHead>
+                <TableHead className="h-9 text-xs">Created</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {projects.map((project) => (
+                <TableRow key={project.id} className="group">
+                  <TableCell className="py-2">
+                    <div className="flex flex-col gap-0.5">
+                      <Link
+                        href={`/dashboard/projects/${project.id}`}
+                        className="text-sm font-medium hover:text-primary transition-colors rounded-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-1"
+                      >
+                        {project.title}
+                      </Link>
+                      {project.indication && (
+                        <span className="text-xs text-muted-foreground line-clamp-1">
+                          {project.indication}
+                        </span>
+                      )}
+                    </div>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {project.phase ? (
+                      <Badge size="sm" className="text-xs">{project.phase}</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {project.countries && project.countries.length > 0 ? (
+                      <span className="text-xs text-muted-foreground">
+                        {project.countries.slice(0, 2).join(', ')}
+                        {project.countries.length > 2 && ` +${project.countries.length - 2}`}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <span className="text-xs text-muted-foreground">
+                      {Array.isArray(project.documents) ? project.documents.length : 0}
+                    </span>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {new Date(project.created_at).toLocaleDateString('en-GB', { 
+                        day: '2-digit', 
+                        month: 'short', 
+                        year: 'numeric' 
+                      })}
+                    </span>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      ) : (
+        <div className="text-center py-12 border rounded-md">
+          <FolderOpen className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
+          <h3 className="text-sm font-medium mb-1">No projects yet</h3>
+          <p className="text-xs text-muted-foreground mb-4 max-w-sm mx-auto">
+            Create your first clinical trial project to start generating regulatory documents
+          </p>
+          <Link href="/dashboard/projects/new">
+            <Button size="sm" className="h-7 px-2.5 text-xs">
+              <Plus className="h-3 w-3 mr-1.5" />
+              Create Project
             </Button>
           </Link>
-        </CardHeader>
-        <CardContent className="pt-0">
-          {recentProjects && recentProjects.length > 0 ? (
-            <div className="space-y-3">
-              {recentProjects.map((project, index) => (
-                <Link
-                  key={project.id}
-                  href={`/dashboard/projects/${project.id}`}
-                  className="group flex items-center justify-between rounded-lg border bg-white/50 px-3 py-2 hover:bg-gray-50 transition-smooth"
-                  style={{ animationDelay: `${index * 50}ms` }}
-                >
-                  <div className="flex items-center gap-3 flex-1">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-                      <FolderOpen className="h-5 w-5 text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm group-hover:text-primary transition-colors">
-                        {project.title}
-                      </h3>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {project.indication}
-                      </p>
-                    </div>
-                    <div className="text-xs text-muted-foreground">
-                      {new Date(project.created_at).toLocaleDateString()}
-                    </div>
-                  </div>
-                </Link>
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <FolderOpen className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-              <h3 className="text-base font-medium mb-1">No projects yet</h3>
-              <p className="text-muted-foreground mb-6">
-                Get started by creating your first clinical trial project
-              </p>
-              <Link href="/dashboard/projects/new">
-                <Button>Create Project</Button>
-              </Link>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        </div>
+      )}
     </div>
   )
 }

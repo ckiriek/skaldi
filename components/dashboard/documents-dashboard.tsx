@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Spinner } from '@/components/ui/spinner'
 import { FileText, Download, Edit, Rocket, Database, Settings } from 'lucide-react'
+import { useToast } from '@/components/ui/use-toast'
 
 interface Document {
   id: string
@@ -35,6 +36,7 @@ export function DocumentsDashboard({ projectId }: { projectId: string }) {
   const [project, setProject] = useState<Project | null>(null)
   const [documents, setDocuments] = useState<Document[]>([])
   const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -72,14 +74,23 @@ export function DocumentsDashboard({ projectId }: { projectId: string }) {
 
   const documentTypes = ['IB', 'Protocol', 'ICF', 'CSR', 'SAP']
 
-  const getStatusBadge = (status: string) => {
-    const badges: Record<string, { color: string; icon: string; text: string }> = {
-      draft: { color: 'gray', icon: '📝', text: 'Draft' },
-      review: { color: 'blue', icon: '👀', text: 'In Review' },
-      approved: { color: 'green', icon: '✅', text: 'Approved' },
-      outdated: { color: 'yellow', icon: '⚠️', text: 'Outdated' },
+  const getDocumentStatusMeta = (status: string | null | undefined) => {
+    const normalized = (status || '').toLowerCase()
+
+    if (normalized === 'approved') {
+      return { variant: 'success' as const, label: 'Approved' }
     }
-    return badges[status] || badges.draft
+    if (normalized === 'review' || normalized === 'in_review') {
+      return { variant: 'info' as const, label: 'In Review' }
+    }
+    if (normalized === 'draft') {
+      return { variant: 'secondary' as const, label: 'Draft' }
+    }
+    if (normalized === 'outdated' || normalized === 'archived') {
+      return { variant: 'warning' as const, label: 'Outdated' }
+    }
+
+    return { variant: 'secondary' as const, label: 'Unknown' }
   }
 
   return (
@@ -102,7 +113,7 @@ export function DocumentsDashboard({ projectId }: { projectId: string }) {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
         {documentTypes.map((docType, index) => {
           const doc = documents.find((d) => d.type === docType)
-          const badge = doc ? getStatusBadge(doc.status) : null
+          const statusMeta = doc ? getDocumentStatusMeta(doc.status) : null
 
           return (
             <Card
@@ -126,16 +137,12 @@ export function DocumentsDashboard({ projectId }: { projectId: string }) {
                       </CardDescription>
                     </div>
                   </div>
-                  {badge && (
+                  {statusMeta && (
                     <Badge
-                      variant={
-                        badge.color === 'green' ? 'success' :
-                        badge.color === 'blue' ? 'info' :
-                        badge.color === 'yellow' ? 'warning' : 'secondary'
-                      }
+                      variant={statusMeta.variant}
                       size="sm"
                     >
-                      {badge.text}
+                      {statusMeta.label}
                     </Badge>
                   )}
                 </div>
@@ -254,9 +261,18 @@ export function DocumentsDashboard({ projectId }: { projectId: string }) {
                       }),
                     })
                   }
-                  alert('All workflows started!')
+                  toast({
+                    variant: 'success',
+                    title: 'Workflows started',
+                    description: 'All document workflows have been started in the background.',
+                  })
                 } catch (error) {
                   console.error('Failed to start workflows:', error)
+                  toast({
+                    variant: 'error',
+                    title: 'Failed to start workflows',
+                    description: 'Please try again or check the logs.',
+                  })
                 }
               }}
               size="lg"

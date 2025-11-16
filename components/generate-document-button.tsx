@@ -4,10 +4,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, Book, FileCheck, FileSignature, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/use-toast'
 
 export function GenerateDocumentButton({ projectId }: { projectId: string }) {
   const router = useRouter()
   const [loadingType, setLoadingType] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis') => {
     setLoadingType(documentType)
@@ -32,11 +34,19 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
         router.push(`/dashboard/documents/${data.document.id}`)
         router.refresh()
       } else {
-        alert('Document generation failed')
+        toast({
+          variant: 'error',
+          title: 'Document generation failed',
+          description: 'The document could not be generated. Please try again.',
+        })
       }
     } catch (error) {
       console.error('Error generating document:', error)
-      alert('Failed to generate document. Please try again.')
+      toast({
+        variant: 'error',
+        title: 'Error generating document',
+        description: 'Failed to generate document. Please try again.',
+      })
     } finally {
       setLoadingType(null)
     }

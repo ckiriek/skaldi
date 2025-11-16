@@ -7,6 +7,8 @@ import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Printer } from 'lucide-react'
 import 'highlight.js/styles/github.css'
 
 interface DocumentViewerProps {
@@ -73,14 +75,14 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
   }
 
   return (
-    <div className="flex gap-6">
+    <div className="flex gap-6 print:block">
       {/* Table of Contents - Sidebar */}
       {toc.length > 0 && (
-        <aside className="hidden lg:block w-64 flex-shrink-0">
+        <aside className="hidden lg:block w-64 flex-shrink-0 print:hidden">
           <div className="sticky top-4">
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold text-sm mb-3 text-gray-900">
+                <h3 className="font-semibold text-sm mb-3 text-foreground">
                   Table of Contents
                 </h3>
                 <nav className="space-y-1">
@@ -89,15 +91,15 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                       key={item.id}
                       onClick={() => scrollToSection(item.id)}
                       className={`
-                        block w-full text-left text-sm py-1.5 px-2 rounded transition-colors
+                        block w-full text-left text-sm py-1.5 px-2 rounded transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/70 focus-visible:ring-offset-2 focus-visible:ring-offset-background
                         ${item.level === 1 ? 'font-semibold' : ''}
                         ${item.level === 2 ? 'pl-4' : ''}
                         ${item.level === 3 ? 'pl-6 text-xs' : ''}
                         ${item.level >= 4 ? 'pl-8 text-xs' : ''}
                         ${
                           activeSection === item.id
-                            ? 'bg-blue-50 text-blue-700 font-medium'
-                            : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+                            ? 'bg-primary/10 text-primary font-medium'
+                            : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                         }
                       `}
                     >
@@ -113,8 +115,23 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
 
       {/* Main Content */}
       <div className="flex-1 min-w-0">
-        <Card>
-          <CardContent className="p-8">
+        <Card className="print:shadow-none print:border-0">
+          <CardContent className="p-8 print:p-0">
+            <div className="flex items-center justify-between mb-4 print:hidden">
+              <p className="text-sm text-muted-foreground">
+                {documentType ? `${documentType} preview` : 'Document preview'}
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label="Print document"
+                onClick={() => typeof window !== 'undefined' && window.print()}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print
+              </Button>
+            </div>
             <div className="prose prose-slate max-w-none">
               <ReactMarkdown
                 remarkPlugins={[remarkGfm]}
@@ -127,7 +144,7 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                     return (
                       <h1 
                         data-heading-id={id} 
-                        className="text-3xl font-bold mt-8 mb-4 text-gray-900 border-b pb-2"
+                        className="text-3xl font-bold mt-8 mb-4 text-foreground border-b border-border pb-2"
                         {...props}
                       >
                         {children}
@@ -140,7 +157,7 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                     return (
                       <h2 
                         data-heading-id={id} 
-                        className="text-2xl font-semibold mt-6 mb-3 text-gray-900"
+                        className="text-2xl font-semibold mt-6 mb-3 text-foreground"
                         {...props}
                       >
                         {children}
@@ -153,7 +170,7 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                     return (
                       <h3 
                         data-heading-id={id} 
-                        className="text-xl font-semibold mt-5 mb-2 text-gray-800"
+                        className="text-xl font-semibold mt-5 mb-2 text-foreground"
                         {...props}
                       >
                         {children}
@@ -166,7 +183,7 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                     return (
                       <h4 
                         data-heading-id={id} 
-                        className="text-lg font-semibold mt-4 mb-2 text-gray-800"
+                        className="text-lg font-semibold mt-4 mb-2 text-foreground"
                         {...props}
                       >
                         {children}
@@ -176,23 +193,23 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                   // Style tables
                   table: ({ node, ...props }) => (
                     <div className="overflow-x-auto my-6">
-                      <table className="min-w-full divide-y divide-gray-200 border" {...props} />
+                      <table className="min-w-full divide-y divide-border border" {...props} />
                     </div>
                   ),
                   thead: ({ node, ...props }) => (
-                    <thead className="bg-gray-50" {...props} />
+                    <thead className="bg-muted" {...props} />
                   ),
                   th: ({ node, ...props }) => (
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider border-b" {...props} />
+                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider border-b border-border" {...props} />
                   ),
                   td: ({ node, ...props }) => (
-                    <td className="px-4 py-3 text-sm text-gray-900 border-b" {...props} />
+                    <td className="px-4 py-3 text-sm text-foreground border-b border-border" {...props} />
                   ),
                   // Style code blocks
                   code: ({ node, inline, className, children, ...props }: any) => {
                     if (inline) {
                       return (
-                        <code className="bg-gray-100 text-red-600 px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
+                        <code className="bg-muted text-destructive px-1.5 py-0.5 rounded text-sm font-mono" {...props}>
                           {children}
                         </code>
                       )
@@ -205,29 +222,29 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
                   },
                   // Style blockquotes
                   blockquote: ({ node, ...props }) => (
-                    <blockquote className="border-l-4 border-blue-500 pl-4 py-2 my-4 bg-blue-50 text-gray-700 italic" {...props} />
+                    <blockquote className="border-l-4 border-primary pl-4 py-2 my-4 bg-primary/5 text-muted-foreground italic" {...props} />
                   ),
                   // Style lists
                   ul: ({ node, ...props }) => (
-                    <ul className="list-disc list-inside my-4 space-y-2 text-gray-700" {...props} />
+                    <ul className="list-disc list-inside my-4 space-y-2 text-muted-foreground" {...props} />
                   ),
                   ol: ({ node, ...props }) => (
-                    <ol className="list-decimal list-inside my-4 space-y-2 text-gray-700" {...props} />
+                    <ol className="list-decimal list-inside my-4 space-y-2 text-muted-foreground" {...props} />
                   ),
                   li: ({ node, ...props }) => (
                     <li className="ml-4" {...props} />
                   ),
                   // Style links
                   a: ({ node, ...props }) => (
-                    <a className="text-blue-600 hover:text-blue-800 underline" {...props} />
+                    <a className="text-primary hover:text-primary/80 underline" {...props} />
                   ),
                   // Style paragraphs
                   p: ({ node, ...props }) => (
-                    <p className="my-4 text-gray-700 leading-relaxed" {...props} />
+                    <p className="my-4 text-muted-foreground leading-relaxed" {...props} />
                   ),
                   // Style horizontal rules
                   hr: ({ node, ...props }) => (
-                    <hr className="my-8 border-gray-300" {...props} />
+                    <hr className="my-8 border-border" {...props} />
                   ),
                 }}
               >

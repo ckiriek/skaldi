@@ -8,7 +8,44 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Download, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
 import { ValidateDocumentButton } from '@/components/validate-document-button'
+import { DownloadMarkdownButton } from '@/components/download-markdown-button'
 import { DocumentViewer } from '@/components/document-viewer'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+
+function getDocumentStatusMeta(status: string | null | undefined) {
+  const normalized = (status || '').toLowerCase()
+
+  if (normalized === 'approved') {
+    return { variant: 'success' as const, label: 'Approved' }
+  }
+  if (normalized === 'review' || normalized === 'in_review') {
+    return { variant: 'info' as const, label: 'In Review' }
+  }
+  if (normalized === 'draft') {
+    return { variant: 'secondary' as const, label: 'Draft' }
+  }
+  if (normalized === 'outdated' || normalized === 'archived') {
+    return { variant: 'warning' as const, label: 'Outdated' }
+  }
+
+  return { variant: 'secondary' as const, label: 'Unknown' }
+}
+
+function getValidationStatusMeta(status: string | null | undefined) {
+  const normalized = (status || '').toLowerCase()
+
+  if (normalized === 'approved') {
+    return { variant: 'success' as const, label: 'Approved' }
+  }
+  if (normalized === 'review') {
+    return { variant: 'info' as const, label: 'In Review' }
+  }
+  if (normalized === 'needs_revision') {
+    return { variant: 'error' as const, label: 'Needs Revision' }
+  }
+
+  return { variant: 'secondary' as const, label: 'Unknown' }
+}
 
 export default async function DocumentPage({ params }: { params: { id: string } }) {
   const supabase = await createClient()
@@ -45,7 +82,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
       <div>
         <Link href={`/dashboard/projects/${(document as any).projects?.id}`}>
@@ -56,7 +93,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
         </Link>
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="text-4xl font-semibold tracking-tight">
+            <h1 className="text-2xl font-semibold tracking-tight">
               {document.type}
             </h1>
             <div className="flex items-center gap-3 mt-3">
@@ -69,6 +106,11 @@ export default async function DocumentPage({ params }: { params: { id: string } 
             <ValidateDocumentButton 
               documentId={document.id}
               documentType={document.type}
+            />
+            <DownloadMarkdownButton
+              content={(document as any).content || ''}
+              documentType={document.type}
+              filename={`${document.type || 'document'}-v${document.version}.md`}
             />
             <a href={`/api/documents/${document.id}/export/docx`} download>
               <Button 
@@ -97,7 +139,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
       <Separator />
 
       {/* Document Info */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -119,13 +161,10 @@ export default async function DocumentPage({ params }: { params: { id: string } 
             <div className="flex justify-between items-center">
               <span className="text-muted-foreground">Status:</span>
               <Badge 
-                variant={
-                  document.status === 'approved' ? 'success' :
-                  document.status === 'review' ? 'info' : 'secondary'
-                }
+                variant={getDocumentStatusMeta(document.status).variant}
                 size="sm"
               >
-                {document.status}
+                {getDocumentStatusMeta(document.status).label}
               </Badge>
             </div>
           </CardContent>
@@ -151,7 +190,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
           </CardContent>
         </Card>
 
-        <Card className="hover-lift">
+        <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
               <Calendar className="h-5 w-5 text-primary" />
@@ -176,119 +215,127 @@ export default async function DocumentPage({ params }: { params: { id: string } 
         </Card>
       </div>
 
-      {/* Document Content */}
-      {(document as any).content ? (
-        <DocumentViewer 
-          content={(document as any).content} 
-          documentType={document.type}
-        />
-      ) : (
-        <Card>
-          <CardContent className="text-center py-8">
-            <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-            <h3 className="text-base font-medium mb-1">No content generated yet</h3>
-            <p className="text-muted-foreground mb-4 max-w-md mx-auto">
-              Click 'Generate Document' on the project page to create content using AI.
-            </p>
-            <Link href={`/dashboard/projects/${(document as any).project_id}`}>
-              <Button>Go to Project</Button>
-            </Link>
-          </CardContent>
-        </Card>
-      )}
+      <Tabs defaultValue="content" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="content">Content</TabsTrigger>
+          <TabsTrigger value="validation">Validation</TabsTrigger>
+        </TabsList>
 
-      {/* Validation Results */}
-      <Card className="hover-lift">
-        <CardHeader>
-          <CardTitle className="text-xl">Validation Results</CardTitle>
-          <CardDescription>
-            ICH/FDA compliance checks
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {validationResults ? (
-            <div className="space-y-6">
-              {/* Summary */}
-              <div className="grid grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Completeness Score</p>
-                  <p className="text-3xl font-semibold">{validationResults.completeness_score}%</p>
-                  <Progress 
-                    value={validationResults.completeness_score} 
-                    variant={
-                      validationResults.completeness_score >= 80 ? 'success' :
-                      validationResults.completeness_score >= 60 ? 'warning' : 'error'
-                    }
-                    showLabel
-                  />
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge 
-                    variant={
-                      validationResults.status === 'approved' ? 'success' : 
-                      validationResults.status === 'review' ? 'info' : 'error'
-                    }
-                    size="lg"
-                  >
-                    {validationResults.status}
-                  </Badge>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">Checks Passed</p>
-                  <p className="text-3xl font-semibold">{validationResults.passed}/{validationResults.total_rules}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {Math.round((validationResults.passed / validationResults.total_rules) * 100)}% success rate
-                  </p>
-                </div>
-              </div>
+        <TabsContent value="content">
+          {/* Document Content */}
+          {(document as any).content ? (
+            <DocumentViewer 
+              content={(document as any).content} 
+              documentType={document.type}
+            />
+          ) : (
+            <Card>
+              <CardContent className="text-center py-8">
+                <FileText className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                <h3 className="text-base font-medium mb-1">No content generated yet</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                  Click 'Generate Document' on the project page to create content using AI.
+                </p>
+                <Link href={`/dashboard/projects/${(document as any).project_id}`}>
+                  <Button>Go to Project</Button>
+                </Link>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
 
-              <Separator />
-
-              {/* Detailed Results */}
-              <div className="space-y-3">
-                <h3 className="font-semibold text-base">Detailed Checks</h3>
-                {(validationResults.results as any[]).map((result: any, index: number) => (
-                  <div 
-                    key={index} 
-                    className={`p-4 rounded-lg border transition-smooth ${
-                      result.passed 
-                        ? 'bg-success/5 border-success/20' 
-                        : 'bg-error/5 border-error/20'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex-1">
-                        <p className="font-semibold text-sm">{result.rule_name}</p>
-                        <p className="text-xs text-muted-foreground mt-1">{result.section_ref}</p>
-                        <p className="text-sm mt-2">{result.message}</p>
-                      </div>
+        <TabsContent value="validation">
+          {/* Validation Results */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-xl">Validation Results</CardTitle>
+              <CardDescription>
+                ICH/FDA compliance checks
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {validationResults ? (
+                <div className="space-y-6">
+                  {/* Summary */}
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Completeness Score</p>
+                      <p className="text-3xl font-semibold">{validationResults.completeness_score}%</p>
+                      <Progress 
+                        value={validationResults.completeness_score} 
+                        variant={
+                          validationResults.completeness_score >= 80 ? 'success' :
+                          validationResults.completeness_score >= 60 ? 'warning' : 'error'
+                        }
+                        showLabel
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Status</p>
                       <Badge 
-                        variant={result.passed ? 'success' : 'error'} 
-                        size="sm"
+                        variant={getValidationStatusMeta(validationResults.status).variant}
+                        size="lg"
                       >
-                        {result.passed ? 'Passed' : 'Failed'}
+                        {getValidationStatusMeta(validationResults.status).label}
                       </Badge>
                     </div>
+                    <div className="space-y-2">
+                      <p className="text-sm text-muted-foreground">Checks Passed</p>
+                      <p className="text-3xl font-semibold">{validationResults.passed}/{validationResults.total_rules}</p>
+                      <p className="text-sm text-muted-foreground">
+                        {Math.round((validationResults.passed / validationResults.total_rules) * 100)}% success rate
+                      </p>
+                    </div>
                   </div>
-                ))}
-              </div>
 
-              <p className="text-xs text-muted-foreground mt-4">
-                Last validated: {new Date(validationResults.validation_date).toLocaleString()}
-              </p>
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <CheckCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-              <h3 className="text-base font-medium mb-1">No validation results yet</h3>
-              <p className="text-muted-foreground">
-                Click 'Validate' to check document compliance with ICH/FDA guidelines
-              </p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                  <Separator />
+
+                  {/* Detailed Results */}
+                  <div className="space-y-3">
+                    <h3 className="font-semibold text-base">Detailed Checks</h3>
+                    {(validationResults.results as any[]).map((result: any, index: number) => (
+                      <div 
+                        key={index} 
+                        className={`p-4 rounded-lg border transition-smooth ${
+                          result.passed 
+                            ? 'bg-success/5 border-success/20' 
+                            : 'bg-error/5 border-error/20'
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex-1">
+                            <p className="font-semibold text-sm">{result.rule_name}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{result.section_ref}</p>
+                            <p className="text-sm mt-2">{result.message}</p>
+                          </div>
+                          <Badge 
+                            variant={result.passed ? 'success' : 'error'} 
+                            size="sm"
+                          >
+                            {result.passed ? 'Passed' : 'Failed'}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <p className="text-xs text-muted-foreground mt-4">
+                    Last validated: {new Date(validationResults.validation_date).toLocaleString()}
+                  </p>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <CheckCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
+                  <h3 className="text-base font-medium mb-1">No validation results yet</h3>
+                  <p className="text-muted-foreground">
+                    Click 'Validate' to check document compliance with ICH/FDA guidelines
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }

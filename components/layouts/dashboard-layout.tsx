@@ -2,6 +2,7 @@
 
 import * as React from 'react'
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
@@ -9,7 +10,6 @@ import {
   FileText,
   FolderOpen,
   Settings,
-  Search,
   Menu,
   X,
   User,
@@ -34,8 +34,6 @@ interface DashboardLayoutProps {
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { name: 'Projects', href: '/dashboard/projects', icon: FolderOpen },
-  { name: 'Documents', href: '/dashboard/documents', icon: FileText },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ]
 
@@ -44,7 +42,7 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-background">
       {/* Mobile sidebar backdrop */}
       {sidebarOpen && (
         <div
@@ -56,45 +54,54 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 w-48 transform bg-white border-r transition-transform duration-200 ease-in-out lg:translate-x-0',
+          'fixed inset-y-0 left-0 z-50 w-48 transform bg-card border-r border-border transition-transform duration-200 ease-in-out lg:translate-x-0',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
         )}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
-          <div className="flex h-14 items-center justify-between px-4 border-b">
-            <Link href="/dashboard" className="flex items-center gap-2">
-              <div className="h-7 w-7 rounded-lg bg-primary flex items-center justify-center">
-                <span className="text-white font-bold text-sm">S</span>
-              </div>
-              <span className="font-semibold text-base">Skaldi</span>
+          <div className="flex h-16 items-center justify-between px-3 border-b border-border">
+            <Link href="/dashboard" className="flex items-center">
+              <Image 
+                src="/logo.png" 
+                alt="Skaldi" 
+                width={120} 
+                height={120}
+                className="object-contain"
+              />
             </Link>
             <Button
               variant="ghost"
               size="sm"
               className="lg:hidden"
               onClick={() => setSidebarOpen(false)}
+              aria-label="Close sidebar"
             >
               <X className="h-5 w-5" />
             </Button>
           </div>
 
           {/* Navigation */}
-          <nav className="flex-1 space-y-0.5 px-2 py-3">
+          <nav
+            className="flex-1 space-y-0.5 px-2 py-2 overflow-y-auto"
+            aria-label="Main navigation"
+          >
             {navigation.map((item) => {
-              const isActive = pathname === item.href || pathname.startsWith(item.href + '/')
+              const isActive = item.href === '/dashboard' 
+                ? pathname === '/dashboard'
+                : pathname.startsWith(item.href)
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   className={cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
+                    'flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs font-medium text-muted-foreground transition-colors border-l-2 border-transparent',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-muted text-foreground border-primary'
+                      : 'hover:bg-muted/50 hover:text-foreground'
                   )}
                 >
-                  <item.icon className="h-4 w-4" />
+                  <item.icon className="h-3.5 w-3.5" />
                   {item.name}
                 </Link>
               )
@@ -104,18 +111,18 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           <Separator />
 
           {/* User menu */}
-          <div className="p-3">
+          <div className="p-2">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-gray-100 transition-colors">
-                  <Avatar className="h-7 w-7">
-                    <AvatarFallback className="text-xs">AD</AvatarFallback>
+                <button className="flex w-full items-center gap-1.5 rounded-lg px-1.5 py-1 text-xs hover:bg-muted transition-colors">
+                  <Avatar className="h-5 w-5">
+                    <AvatarFallback className="text-[10px]">AD</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 text-left">
-                    <p className="font-medium text-sm">Admin User</p>
-                    <p className="text-xs text-gray-500">admin@skaldi.com</p>
+                    <p className="font-medium text-xs">Admin User</p>
+                    <p className="text-[10px] text-muted-foreground">admin@skaldi.com</p>
                   </div>
-                  <ChevronDown className="h-3 w-3 text-gray-500" />
+                  <ChevronDown className="h-2.5 w-2.5 text-muted-foreground" />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -143,25 +150,26 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Main content */}
       <div className="lg:pl-48">
         {/* Top bar */}
-        <header className="sticky top-0 z-30 flex h-12 items-center gap-3 border-b bg-white px-3">
+        <header className="sticky top-0 z-30 flex h-10 items-center gap-2 border-b bg-background/80 backdrop-blur-sm px-3 lg:px-4">
           <Button
             variant="ghost"
             size="sm"
             className="lg:hidden"
             onClick={() => setSidebarOpen(true)}
+            aria-label="Open sidebar"
           >
             <Menu className="h-5 w-5" />
           </Button>
 
           {/* Search */}
-          <div className="flex-1 max-w-sm">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-500" />
-              <input
-                type="search"
-                placeholder="Search..."
-                className="w-full rounded-md border border-input bg-background pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+          <div className="flex flex-1 items-center justify-between">
+            <div className="flex items-center gap-2 lg:hidden">
+              <Link href="/dashboard" className="flex items-center gap-2">
+                <div className="h-6 w-6 rounded-md bg-primary flex items-center justify-center">
+                  <span className="text-xs font-bold text-primary-foreground">S</span>
+                </div>
+                <span className="text-sm font-semibold tracking-tight">Skaldi</span>
+              </Link>
             </div>
           </div>
 

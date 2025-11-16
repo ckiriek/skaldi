@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { CheckCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { useToast } from '@/components/ui/use-toast'
 
 export function ValidateDocumentButton({
   documentId,
@@ -14,6 +15,7 @@ export function ValidateDocumentButton({
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const { toast } = useToast()
 
   const handleValidate = async () => {
     setLoading(true)
@@ -29,7 +31,11 @@ export function ValidateDocumentButton({
       const content = doc.content || ''
       
       if (!content || content.length < 10) {
-        alert('Document is empty or too short to validate. Please generate content first.')
+        toast({
+          variant: 'warning',
+          title: 'Document not ready for validation',
+          description: 'Generate document content before running validation.',
+        })
         return
       }
 
@@ -50,14 +56,26 @@ export function ValidateDocumentButton({
       const data = await response.json()
       
       if (data.success) {
-        alert(`Validation complete!\nCompleteness Score: ${data.completeness_score}%\nPassed: ${data.passed}/${data.total_rules}`)
+        toast({
+          variant: 'success',
+          title: 'Validation complete',
+          description: `Completeness score: ${data.completeness_score}% • Passed ${data.passed}/${data.total_rules} checks.`,
+        })
         router.refresh()
       } else {
-        alert('Validation failed')
+        toast({
+          variant: 'error',
+          title: 'Validation failed',
+          description: 'Validation could not be completed. Please try again.',
+        })
       }
     } catch (error) {
       console.error('Error validating document:', error)
-      alert('Failed to validate document. Please try again.')
+      toast({
+        variant: 'error',
+        title: 'Error validating document',
+        description: 'Failed to validate document. Please try again.',
+      })
     } finally {
       setLoading(false)
     }

@@ -37,7 +37,7 @@ const entityTypeColors: Record<string, string> = {
   population: 'bg-pink-100 text-pink-800',
   study_design: 'bg-indigo-100 text-indigo-800',
   location: 'bg-orange-100 text-orange-800',
-  date: 'bg-gray-100 text-gray-800',
+  date: 'bg-muted text-foreground',
   sponsor: 'bg-teal-100 text-teal-800',
   regulatory: 'bg-red-100 text-red-800'
 }
@@ -45,7 +45,7 @@ const entityTypeColors: Record<string, string> = {
 const confidenceColors: Record<string, string> = {
   high: 'text-green-600',
   medium: 'text-yellow-600',
-  low: 'text-gray-500'
+  low: 'text-muted-foreground'
 }
 
 export function EntitiesDisplay({ entities }: EntitiesDisplayProps) {
@@ -77,16 +77,16 @@ export function EntitiesDisplay({ entities }: EntitiesDisplayProps) {
           {sortedTypes.map(type => (
             <div key={type}>
               <h3 className="text-sm font-semibold mb-3 flex items-center gap-2">
-                <span className={`px-2 py-1 rounded text-xs ${entityTypeColors[type] || 'bg-gray-100'}`}>
+                <span className={`px-2 py-1 rounded text-xs ${entityTypeColors[type] || 'bg-muted'}`}>
                   {entityTypeLabels[type] || type}
                 </span>
-                <span className="text-gray-500">({groupedEntities[type].length})</span>
+                <span className="text-muted-foreground">({groupedEntities[type].length})</span>
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {groupedEntities[type].map(entity => (
                   <div
                     key={entity.id}
-                    className="p-3 border rounded-lg hover:bg-gray-50 transition"
+                    className="p-3 border border-border rounded-lg hover:bg-muted/50 transition-colors"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
                       <p className="font-medium text-sm flex-1">
@@ -97,12 +97,12 @@ export function EntitiesDisplay({ entities }: EntitiesDisplayProps) {
                       </span>
                     </div>
                     {entity.context && (
-                      <p className="text-xs text-gray-600 line-clamp-2 mb-2">
+                      <p className="text-xs text-muted-foreground line-clamp-2 mb-2">
                         {entity.context}
                       </p>
                     )}
                     {entity.source_reference && (
-                      <p className="text-xs text-gray-500">
+                      <p className="text-xs text-muted-foreground">
                         From: {entity.source_reference}
                       </p>
                     )}
