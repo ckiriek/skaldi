@@ -226,11 +226,23 @@ ${promptContext.design?.primary_endpoint ? `
 **Primary Endpoint:** ${promptContext.design.primary_endpoint}
 ` : ''}
 
-## CRITICAL INSTRUCTIONS
-- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
-- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders like "[Insert Sponsor Name]"
-- Reference the clinical trials and publications listed above
-- If specific data is not available, state "Data not yet available" rather than using placeholders
+## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
+
+1. **COMPOUND NAME:** You MUST use "${promptContext.compoundName}" everywhere
+   - ❌ NEVER WRITE: "Investigational Compound", "Investigational Product", "[Drug Name]"
+   - ✅ ALWAYS WRITE: "${promptContext.compoundName}"
+   
+2. **SPONSOR NAME:** You MUST use "${promptContext.sponsor}" everywhere
+   - ❌ NEVER WRITE: "[Sponsor Name]", "[Insert Sponsor Name]", "Sponsor Organization"
+   - ✅ ALWAYS WRITE: "${promptContext.sponsor}"
+
+3. **NO PLACEHOLDERS ALLOWED:**
+   - ❌ NEVER use: [Insert...], [TBD], [To be determined], [Placeholder]
+   - ✅ If data is missing, write: "Data not yet available"
+
+4. **USE AVAILABLE EVIDENCE:**
+   - Reference the ${promptContext.clinicalTrials.length} clinical trials listed above
+   - Reference the ${promptContext.publications.length} publications listed above
 
 ## STRUCTURE (ICH E6 Section 7) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -303,10 +315,17 @@ Generate the complete IB in markdown format with proper numbering.`
 **Product Type:** ${promptContext.productType}
 **Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
 
-## CRITICAL INSTRUCTIONS
-- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
-- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
-- If specific data is not available, state "To be determined" rather than using placeholders
+## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
+
+1. **COMPOUND NAME:** You MUST use "${promptContext.compoundName}" everywhere
+   - ❌ NEVER WRITE: "Investigational Compound", "Investigational Product", "[Drug Name]"
+   - ✅ ALWAYS WRITE: "${promptContext.compoundName}"
+   
+2. **SPONSOR NAME:** You MUST use "${promptContext.sponsor}" everywhere
+   - ❌ NEVER WRITE: "[Sponsor Name]", "[Insert Sponsor Name]"
+   - ✅ ALWAYS WRITE: "${promptContext.sponsor}"
+
+3. **NO PLACEHOLDERS:** Never use [Insert...], [TBD], [To be determined]
 
 ## STRUCTURE (ICH E6 Section 6) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -412,11 +431,18 @@ Generate the complete protocol in markdown format with proper numbering.`
 **Phase:** ${promptContext.phase}
 **Sponsor:** ${promptContext.sponsor}
 
-## CRITICAL INSTRUCTIONS
-- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
-- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
-- Write in patient-friendly language (6th-8th grade reading level)
-- If specific data is not available, state "Your study doctor will discuss this with you" rather than using placeholders
+## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
+
+1. **DRUG NAME:** You MUST use "${promptContext.compoundName}" everywhere
+   - ❌ NEVER WRITE: "Investigational Compound", "study drug", "[Drug Name]"
+   - ✅ ALWAYS WRITE: "${promptContext.compoundName}"
+   
+2. **SPONSOR NAME:** You MUST use "${promptContext.sponsor}" everywhere
+   - ❌ NEVER WRITE: "[Sponsor Name]", "the sponsor"
+   - ✅ ALWAYS WRITE: "${promptContext.sponsor}"
+
+3. **PATIENT-FRIENDLY LANGUAGE:** 6th-8th grade reading level
+4. **NO PLACEHOLDERS:** If data missing, write "Your study doctor will discuss this with you"
 
 ## STRUCTURE (FDA 21 CFR 50.25) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -498,10 +524,28 @@ Generate the complete ICF in markdown format with proper numbering.`
 **Product Type:** ${promptContext.productType}
 **Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
 
-## CRITICAL INSTRUCTIONS
-- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
-- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
-- If specific data is not available, state "To be determined" rather than using placeholders
+## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
+
+1. **COMPOUND NAME:** You MUST use "${promptContext.compoundName}" everywhere
+   - ❌ NEVER WRITE: "Investigational Compound", "Investigational Product", "[Drug Name]"
+   - ✅ ALWAYS WRITE: "${promptContext.compoundName}"
+   
+2. **SPONSOR NAME:** You MUST use "${promptContext.sponsor}" everywhere
+   - ❌ NEVER WRITE: "[Sponsor Name]", "[Sponsor]", "Sponsor Organization"
+   - ✅ ALWAYS WRITE: "${promptContext.sponsor}"
+
+3. **INDICATION:** You MUST use "${promptContext.indication}"
+   - ❌ NEVER WRITE: "[Indication]", "Target Disease"
+   - ✅ ALWAYS WRITE: "${promptContext.indication}"
+
+4. **NO PLACEHOLDERS ALLOWED:**
+   - ❌ NEVER use: [Insert...], [TBD], [To be determined], [Placeholder]
+   - ✅ If data is missing, write: "Data not yet available"
+
+**EXAMPLE OF CORRECT FORMAT:**
+| 1.5 Sponsor | ${promptContext.sponsor} |
+| 1.6 Investigational Product | ${promptContext.compoundName} |
+| 1.7 Indication | ${promptContext.indication} |
 
 ## STRUCTURE (ICH E3 Section 2) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
