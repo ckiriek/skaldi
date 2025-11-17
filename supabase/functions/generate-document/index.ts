@@ -513,7 +513,12 @@ Generate the document with the following numbered structure:
 Generate the complete ICF in markdown format with proper numbering.`
 
     case 'SYNOPSIS':
-      return `You are an expert medical writer specializing in clinical study reports. Generate a Clinical Study Synopsis that complies with ICH E3 Section 2 requirements.
+      return `You are a senior clinical protocol writer with 15+ years of CRO/Pharma experience.
+Generate a REGULATORY-COMPLIANT PROTOCOL SYNOPSIS (pre-study), strictly following ICH E6 (R2) and ICH E8 (R1).
+
+⚠️ CRITICAL: This MUST be a PLANNED STUDY synopsis (pre-study document).
+This is NOT a Clinical Study Report (CSR) synopsis.
+You MUST NOT include any study results, outcomes, or completed data.
 
 ## CONTEXT
 **Study:** ${promptContext.projectTitle}
@@ -524,42 +529,46 @@ Generate the complete ICF in markdown format with proper numbering.`
 **Product Type:** ${promptContext.productType}
 **Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
 
-## AVAILABLE EVIDENCE - USE THIS DATA TO POPULATE THE SYNOPSIS
+## HOW TO USE EVIDENCE (${promptContext.clinicalTrials.length} trials, ${promptContext.publications.length} publications)
 
-**You have access to ${promptContext.clinicalTrials.length} similar clinical trials and ${promptContext.publications.length} publications.**
+You have access to ClinicalTrials.gov and PubMed data.
+Use evidence ONLY for:
+✅ Typical sample sizes in Phase ${promptContext.phase}
+✅ Common study duration and visit schedules
+✅ Common inclusion/exclusion criteria patterns
+✅ Common endpoints used in ${promptContext.indication}
+✅ Operational feasibility and design norms
+✅ Scientific rationale and background
 
 ${promptContext.clinicalTrials.length > 0 ? `
-**Similar Clinical Trials - USE THESE FOR CONTEXT:**
-${promptContext.clinicalTrials.slice(0, 5).map((trial: any) => {
+**Similar Clinical Trials (for design reference ONLY):**
+${promptContext.clinicalTrials.slice(0, 3).map((trial: any) => {
   const data = trial.data || {}
-  return `
-- **${trial.title || data.title || 'Untitled'}**
-  NCT ID: ${trial.source_id}
-  Phase: ${data.phase || 'Not specified'}
-  Status: ${data.status || 'Not specified'}
-  Enrollment: ${data.enrollment || 'Not specified'}
-  ${data.brief_summary ? `Summary: ${data.brief_summary.substring(0, 200)}...` : ''}
-`
+  return `- ${trial.title || data.title || 'Untitled'}
+  NCT: ${trial.source_id} | Phase: ${data.phase || 'N/A'} | N=${data.enrollment || 'N/A'}`
 }).join('\n')}
-
-**INSTRUCTION:** Use typical values from these trials for:
-- Sample size (Section 5.1, 6.1)
-- Study duration (Section 3.4)
-- Baseline demographics (Section 5.5)
-- Typical efficacy results (Section 7)
-- Common adverse events (Section 8)
 ` : ''}
 
 ${promptContext.publications.length > 0 ? `
-**Relevant Publications - CITE THESE:**
-${promptContext.publications.slice(0, 5).map((pub: any) => `
-- ${pub.title || 'Untitled'}
-  PMID: ${pub.source_id}
-  ${pub.data?.abstract ? pub.data.abstract.substring(0, 150) + '...' : ''}
-`).join('\n')}
+**Publications (for rationale ONLY):**
+${promptContext.publications.slice(0, 3).map((pub: any) => 
+  `- ${pub.title || 'Untitled'} (PMID: ${pub.source_id})`
+).join('\n')}
 ` : ''}
 
-**CRITICAL:** Do NOT write "Data not yet available" if you can infer typical values from the clinical trials above. Use evidence-based estimates.
+❌ STRICTLY FORBIDDEN - DO NOT GENERATE:
+- p-values (p=0.05, p<0.001, etc.)
+- Hazard ratios (HR=1.45, etc.)
+- Confidence intervals (95% CI: 1.10-1.90)
+- Odds ratios (OR=2.3)
+- AE percentages (headache 12%, nausea 8%)
+- Efficacy results (median time 4.2 days vs 5.8 days)
+- Safety results (no SAEs, no deaths)
+- Statistical outcomes
+- Completed study data
+- Any numerical results
+
+This is a PLANNED study. You are describing what WILL BE DONE, not what WAS DONE.
 
 ## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
 
@@ -584,58 +593,64 @@ ${promptContext.publications.slice(0, 5).map((pub: any) => `
 | 1.6 Investigational Product | ${promptContext.compoundName} |
 | 1.7 Indication | ${promptContext.indication} |
 
-## STRUCTURE (ICH E3 Section 2) - USE EXACT NUMBERING
-Generate the document with the following numbered structure:
+## STRUCTURE (ICH E6/E8 Protocol Synopsis) - USE EXACT NUMBERING
 
 1. SYNOPSIS HEADER (TABULAR FORMAT)
    1.1 Protocol Title
    1.2 Protocol Number
-   1.3 Study Phase
-   1.4 Study Dates
+   1.3 Phase
+   1.4 Planned Study Dates
    1.5 Sponsor
    1.6 Investigational Product
    1.7 Indication
-2. STUDY OBJECTIVES
-   2.1 Primary Objective
-   2.2 Secondary Objectives
-3. STUDY DESIGN
-   3.1 Overall Design
-   3.2 Study Schema
-   3.3 Randomization and Blinding
-   3.4 Study Duration
-4. STUDY ENDPOINTS
-   4.1 Primary Endpoint
-   4.2 Secondary Endpoints
-   4.3 Safety Endpoints
-5. STUDY POPULATION
-   5.1 Planned Number of Subjects
-   5.2 Key Inclusion Criteria
-   5.3 Key Exclusion Criteria
-   5.4 Subject Disposition
-   5.5 Demographics and Baseline Characteristics
-6. STATISTICAL METHODS
-   6.1 Sample Size Determination
-   6.2 Analysis Populations
-   6.3 Statistical Tests
-   6.4 Significance Level
-7. EFFICACY RESULTS
-   7.1 Primary Efficacy Analysis
-   7.2 Secondary Efficacy Analyses
-   7.3 Subgroup Analyses
-8. SAFETY RESULTS
-   8.1 Extent of Exposure
-   8.2 Adverse Events
-   8.3 Serious Adverse Events
-   8.4 Deaths
-   8.5 Laboratory Findings
-   8.6 Vital Signs and Physical Examinations
-9. PHARMACOKINETICS (if applicable)
-   9.1 PK Parameters
-   9.2 PK/PD Relationships
-10. CONCLUSIONS
-    10.1 Efficacy Conclusions
-    10.2 Safety Conclusions
-    10.3 Overall Benefit-Risk Assessment
+
+2. STUDY RATIONALE
+   2.1 Background (disease burden, unmet need, mechanism of action)
+   2.2 Rationale for Study Design
+   2.3 Rationale for Population
+
+3. STUDY OBJECTIVES
+   3.1 Primary Objective
+   3.2 Secondary Objectives
+   3.3 Exploratory Objectives (if applicable)
+
+4. STUDY DESIGN
+   4.1 Overall Design (phase, randomization, blinding, control)
+   4.2 Study Schema (screening, treatment, follow-up periods)
+   4.3 Randomization and Blinding
+   4.4 Study Duration (per subject and total)
+
+5. ENDPOINTS
+   5.1 Primary Endpoint
+   5.2 Secondary Endpoints
+   5.3 Exploratory Endpoints (if applicable)
+
+6. STUDY POPULATION
+   6.1 Planned Number of Subjects
+   6.2 Key Inclusion Criteria
+   6.3 Key Exclusion Criteria
+   6.4 Recruitment Feasibility
+
+7. TREATMENTS
+   7.1 Investigational Product (${promptContext.compoundName})
+   7.2 Dose and Administration
+   7.3 Treatment Duration
+   7.4 Concomitant Medications
+
+8. ASSESSMENTS
+   8.1 Efficacy Assessments (planned measures, no results)
+   8.2 Safety Assessments (planned monitoring, no results)
+   8.3 Other Assessments (PK, biomarkers, QoL)
+
+9. STATISTICAL CONSIDERATIONS
+   9.1 Sample Size Rationale (power calculation)
+   9.2 Populations for Analysis (ITT, PP, Safety)
+   9.3 General Statistical Approach (planned tests, no results)
+
+10. STUDY CONDUCT AND MONITORING
+    10.1 Monitoring Plan
+    10.2 Data Handling
+    10.3 Quality Assurance
 
 ## CRITICAL FORMATTING REQUIREMENTS
 - Use EXACT numbering as shown above (1, 2, 3, 4, 4.1, 4.2, etc.)
@@ -774,7 +789,41 @@ function validateGeneratedDocument(context: {
     }
   }
 
-  // 2. Check for project-specific data usage
+  // 2. Check for forbidden results (CRITICAL for Synopsis)
+  if (context.type.toLowerCase() === 'synopsis') {
+    const forbiddenResultPatterns = [
+      { pattern: /p\s*=\s*[0-9\.]+/gi, message: "Forbidden p-value detected" },
+      { pattern: /p-value/gi, message: "Forbidden statistical term 'p-value'" },
+      { pattern: /hazard ratio/gi, message: "Forbidden hazard ratio" },
+      { pattern: /HR\s*[=:]\s*[0-9\.]+/gi, message: "Forbidden HR value" },
+      { pattern: /confidence interval/gi, message: "Forbidden confidence interval" },
+      { pattern: /\d+%\s*CI/gi, message: "Forbidden CI notation" },
+      { pattern: /odds ratio/gi, message: "Forbidden odds ratio" },
+      { pattern: /OR\s*[=:]\s*[0-9\.]+/gi, message: "Forbidden OR value" },
+      { pattern: /AE[s]?:?\s*[0-9]{1,3}%/gi, message: "Forbidden AE percentage" },
+      { pattern: /headache\s*[0-9]+%/gi, message: "Forbidden AE result" },
+      { pattern: /nausea\s*[0-9]+%/gi, message: "Forbidden AE result" },
+      { pattern: /median\s+[a-z ]+:\s*[0-9]/gi, message: "Forbidden median result" },
+      { pattern: /mean\s+[a-z ]+:\s*[0-9]/gi, message: "Forbidden mean result" },
+      { pattern: /[0-9\.]+\s+days?\s+vs\s+[0-9\.]+\s+days?/gi, message: "Forbidden comparison result" },
+      { pattern: /no SAEs?/gi, message: "Forbidden safety result statement" },
+      { pattern: /no deaths?/gi, message: "Forbidden mortality result" },
+    ]
+
+    for (const { pattern, message } of forbiddenResultPatterns) {
+      const match = context.content.match(pattern)
+      if (match) {
+        issues.push({
+          severity: 'error',
+          message: `${message}: "${match[0]}"`,
+          location: 'Document content',
+          requirement: 'Protocol synopsis must NOT contain study results'
+        })
+      }
+    }
+  }
+
+  // 3. Check for project-specific data usage
   if (!context.content.includes(context.project.compound_name)) {
     issues.push({
       severity: 'error',
