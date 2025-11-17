@@ -30,6 +30,139 @@ interface GenerateRequest {
   userId: string
 }
 
+/**
+ * REGULATORY CORE v1 - Centralized regulatory rules and validation patterns
+ * Based on ICH E6 (R2), ICH E8 (R1), ICH E3, FDA 21 CFR Part 50
+ */
+const REGULATORY_CORE = {
+  documentTypes: {
+    SYNOPSIS: {
+      requiredSections: [
+        '1. SYNOPSIS HEADER',
+        '2. STUDY RATIONALE',
+        '3. STUDY OBJECTIVES',
+        '4. STUDY DESIGN',
+        '5. ENDPOINTS',
+        '6. STUDY POPULATION',
+        '7. TREATMENTS',
+        '8. ASSESSMENTS',
+        '9. STATISTICAL CONSIDERATIONS',
+        '10. STUDY CONDUCT AND MONITORING',
+      ],
+      allowResults: false,
+      allowQualitativeSafetyFromEvidence: true,
+      allowQuantitativeOutcomes: false,
+    },
+    PROTOCOL: {
+      requiredSections: [
+        '1. TITLE PAGE AND PROTOCOL SYNOPSIS',
+        '2. TABLE OF CONTENTS',
+        '3. LIST OF ABBREVIATIONS',
+        '4. INTRODUCTION',
+        '5. STUDY OBJECTIVES AND ENDPOINTS',
+        '6. STUDY DESIGN',
+        '7. STUDY POPULATION',
+        '8. STUDY TREATMENTS',
+        '9. STUDY PROCEDURES AND ASSESSMENTS',
+        '10. SAFETY MONITORING',
+        '11. STATISTICAL CONSIDERATIONS',
+        '12. QUALITY CONTROL AND QUALITY ASSURANCE',
+        '13. ETHICAL AND REGULATORY CONSIDERATIONS',
+        '14. STUDY ADMINISTRATION',
+        '15. REFERENCES',
+      ],
+      allowResults: false,
+      allowQualitativeSafetyFromEvidence: true,
+      allowQuantitativeOutcomes: false,
+    },
+    IB: {
+      requiredSections: [
+        '3. SUMMARY',
+        '4. INTRODUCTION',
+        '5. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES AND FORMULATION',
+        '6. NONCLINICAL STUDIES',
+        '7. EFFECTS IN HUMANS',
+        '8. SUMMARY AND GUIDANCE FOR THE INVESTIGATOR',
+        '9. REFERENCES',
+      ],
+      allowResults: true,
+      allowQualitativeSafetyFromEvidence: true,
+      allowQuantitativeOutcomes: true,
+    },
+    ICF: {
+      requiredSections: [
+        '1. TITLE PAGE',
+        '2. INTRODUCTION AND INVITATION',
+        '3. PURPOSE OF THE STUDY',
+        '4. WHAT WILL HAPPEN IF YOU TAKE PART',
+        '5. RISKS AND DISCOMFORTS',
+        '6. POSSIBLE BENEFITS',
+        '7. ALTERNATIVES TO PARTICIPATION',
+        '8. CONFIDENTIALITY',
+        '9. COSTS AND PAYMENTS',
+        '10. IN CASE OF INJURY',
+        '11. YOUR RIGHTS',
+        '12. CONTACT INFORMATION',
+        '13. CONSENT AND SIGNATURES',
+      ],
+      allowResults: false,
+      allowQualitativeSafetyFromEvidence: true,
+      allowQuantitativeOutcomes: false,
+    },
+  },
+
+  placeholders: [
+    /\[Insert[^\]]*\]/gi,
+    /\[TBD\]/gi,
+    /\[To be determined\]/gi,
+    /\[Placeholder\]/gi,
+    /Investigational Compound(?! \w)/g,
+    /Sponsor Name/g,
+    /\[Sponsor\]/gi,
+  ],
+
+  forbiddenResultPatterns: [
+    /p\s*=\s*[0-9\.]+/gi,
+    /p-value/gi,
+    /hazard ratio/gi,
+    /HR\s*[0-9\.]+/gi,
+    /confidence interval/gi,
+    /CI\s*\(?[0-9]/gi,
+    /odds ratio/gi,
+    /OR\s*[0-9\.]+/gi,
+    /risk ratio/gi,
+    /RR\s*[0-9\.]+/gi,
+    /AE[s]?:?\s*[0-9]{1,3}%/gi,
+    /serious adverse event[s]?/gi,
+    /death[s]?:?\s*[0-9]/gi,
+    /median\s+[a-z ]+:\s*[0-9]/gi,
+    /mean\s+[a-z ]+:\s*[0-9]/gi,
+  ],
+
+  forbiddenLanguage: [
+    /demonstrate (efficacy|safety)/gi,
+    /prove/gi,
+    /ensure/gi,
+    /guarantee/gi,
+    /confirm/gi,
+    /establish (superiority|efficacy)/gi,
+    /expected to improve/gi,
+    /will improve/gi,
+    /will reduce/gi,
+    /will show/gi,
+    /likely to result/gi,
+    /anticipated to/gi,
+    /adequate power/gi,
+    /powered to/gi,
+    /detect a difference/gi,
+    /detect treatment effect/gi,
+    /robust/gi,
+    /strong/gi,
+    /significant benefit/gi,
+    /meaningful benefit/gi,
+  ],
+} as const
+
 serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -766,69 +899,71 @@ function validateGeneratedDocument(context: {
   }
 }): ValidationResult {
   const issues: ValidationIssue[] = []
+  const docType = context.type.toUpperCase()
+  const rules = REGULATORY_CORE.documentTypes[docType as keyof typeof REGULATORY_CORE.documentTypes]
 
-  // 1. Check for placeholder text
-  const placeholderPatterns = [
-    /\[Insert[^\]]*\]/gi,
-    /\[TBD\]/gi,
-    /\[To be determined\]/gi,
-    /Investigational Compound(?! \w)/g,
-    /Sponsor Name/g,
-    /\[Sponsor\]/gi,
-  ]
-
-  for (const pattern of placeholderPatterns) {
-    const matches = context.content.match(pattern)
-    if (matches && matches.length > 0) {
+  // 1. Check for placeholder text (all document types)
+  for (const pattern of REGULATORY_CORE.placeholders) {
+    const match = context.content.match(pattern)
+    if (match) {
       issues.push({
         severity: 'error',
-        message: `Found placeholder text: "${matches[0]}"`,
+        message: `Found placeholder text: "${match[0]}"`,
         location: 'Document content',
-        requirement: 'All placeholders must be replaced with real data'
+        requirement: 'All placeholders must be replaced with real data',
       })
     }
   }
 
-  // 2. Check for forbidden results (CRITICAL for Synopsis)
-  if (context.type.toLowerCase() === 'synopsis') {
-    const forbiddenResultPatterns = [
-      { pattern: /p\s*=\s*[0-9\.]+/gi, message: "Forbidden p-value detected" },
-      { pattern: /p-value/gi, message: "Forbidden statistical term 'p-value'" },
-      { pattern: /hazard ratio/gi, message: "Forbidden hazard ratio" },
-      { pattern: /HR\s*[=:]\s*[0-9\.]+/gi, message: "Forbidden HR value" },
-      { pattern: /confidence interval/gi, message: "Forbidden confidence interval" },
-      { pattern: /\d+%\s*CI/gi, message: "Forbidden CI notation" },
-      { pattern: /odds ratio/gi, message: "Forbidden odds ratio" },
-      { pattern: /OR\s*[=:]\s*[0-9\.]+/gi, message: "Forbidden OR value" },
-      { pattern: /AE[s]?:?\s*[0-9]{1,3}%/gi, message: "Forbidden AE percentage" },
-      { pattern: /headache\s*[0-9]+%/gi, message: "Forbidden AE result" },
-      { pattern: /nausea\s*[0-9]+%/gi, message: "Forbidden AE result" },
-      { pattern: /median\s+[a-z ]+:\s*[0-9]/gi, message: "Forbidden median result" },
-      { pattern: /mean\s+[a-z ]+:\s*[0-9]/gi, message: "Forbidden mean result" },
-      { pattern: /[0-9\.]+\s+days?\s+vs\s+[0-9\.]+\s+days?/gi, message: "Forbidden comparison result" },
-      { pattern: /no SAEs?/gi, message: "Forbidden safety result statement" },
-      { pattern: /no deaths?/gi, message: "Forbidden mortality result" },
-    ]
-
-    for (const { pattern, message } of forbiddenResultPatterns) {
+  // 2. Check for forbidden result patterns (if document doesn't allow results)
+  if (rules && !rules.allowResults) {
+    for (const pattern of REGULATORY_CORE.forbiddenResultPatterns) {
       const match = context.content.match(pattern)
       if (match) {
         issues.push({
           severity: 'error',
-          message: `${message}: "${match[0]}"`,
+          message: `Forbidden statistical or outcome pattern: "${match[0]}"`,
           location: 'Document content',
-          requirement: 'Protocol synopsis must NOT contain study results'
+          requirement: 'Pre-study document must not contain study results',
         })
       }
     }
   }
 
-  // 3. Check for project-specific data usage
+  // 3. Check for forbidden language (all document types)
+  for (const pattern of REGULATORY_CORE.forbiddenLanguage) {
+    const match = context.content.match(pattern)
+    if (match) {
+      issues.push({
+        severity: 'error',
+        message: `Forbidden regulatory phrase detected: "${match[0]}"`,
+        location: 'Document content',
+        requirement: 'Avoid inferential or promotional language in regulatory documents',
+      })
+    }
+  }
+
+  // 4. Check for required sections (if defined for this document type)
+  if (rules && rules.requiredSections) {
+    for (const section of rules.requiredSections) {
+      if (!context.content.includes(section)) {
+        issues.push({
+          severity: 'warning',
+          message: `Missing or incorrectly formatted section: ${section}`,
+          location: 'Document structure',
+          requirement: 'Document should follow required regulatory structure',
+        })
+      }
+    }
+  }
+
+  // 5. Check for project-specific data usage
   if (!context.content.includes(context.project.compound_name)) {
     issues.push({
       severity: 'error',
       message: `Document does not mention compound "${context.project.compound_name}"`,
-      requirement: 'Must use project-specific compound name'
+      location: 'Document content',
+      requirement: 'Must use project-specific compound name',
     })
   }
 
@@ -836,7 +971,8 @@ function validateGeneratedDocument(context: {
     issues.push({
       severity: 'error',
       message: `Document does not mention sponsor "${context.project.sponsor}"`,
-      requirement: 'Must use project-specific sponsor name'
+      location: 'Document content',
+      requirement: 'Must use project-specific sponsor name',
     })
   }
 
@@ -844,11 +980,12 @@ function validateGeneratedDocument(context: {
     issues.push({
       severity: 'warning',
       message: `Document does not mention indication "${context.project.indication}"`,
-      requirement: 'Should reference target indication'
+      location: 'Document content',
+      requirement: 'Should reference target indication',
     })
   }
 
-  // 3. Calculate score
+  // 6. Calculate score
   const errors = issues.filter(i => i.severity === 'error').length
   const warnings = issues.filter(i => i.severity === 'warning').length
   const info = issues.filter(i => i.severity === 'info').length
