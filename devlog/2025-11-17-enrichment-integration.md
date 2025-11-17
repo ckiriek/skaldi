@@ -168,6 +168,152 @@ evidence: {
 
 ---
 
-**Timestamp:** 2025-11-17 14:45 UTC  
-**Status:** ✅ Phase 1 Complete  
-**Deployed:** enrich-data (72.02kB), generate-document (104.3kB)
+---
+
+## Phase 2: Auto-trigger + UI Indicators ✅
+
+### What Was Done
+
+#### 1. Updated Intake API
+
+**Changes:**
+- Auto-trigger enrichment on project creation
+- Call Edge Function directly (more reliable than API route)
+- Update status to `in_progress` BEFORE calling Edge Function
+- Better error handling and logging
+- Set status to `failed` if enrichment trigger fails
+
+**Code:**
+```typescript
+// Call Edge Function directly
+const edgeFunctionUrl = `${process.env.SUPABASE_URL}/functions/v1/enrich-data`
+const edgeFunctionKey = process.env.SUPABASE_ANON_KEY
+
+// Update status BEFORE calling
+await supabase
+  .from('projects')
+  .update({ 
+    enrichment_status: 'in_progress',
+    enrichment_metadata: {
+      started_at: new Date().toISOString(),
+    }
+  })
+  .eq('id', project.id)
+
+// Call Edge Function (non-blocking)
+fetch(edgeFunctionUrl, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${edgeFunctionKey}`,
+  },
+  body: JSON.stringify({ project_id: project.id }),
+})
+```
+
+#### 2. Updated Project Detail Page
+
+**Changes:**
+- Show enrichment status badge
+- Display enrichment data card when completed
+  * Clinical trials count
+  * Publications count
+  * Labels count
+  * Duration in seconds
+  * Sources used (badges)
+
+**UI:**
+```
+┌─────────────────────────────────────┐
+│ Enrichment Data                     │
+│ Data collected from external sources│
+├─────────────────────────────────────┤
+│ Clinical Trials: 20                 │
+│ Publications: 30                    │
+│ Labels: 1                           │
+│ Duration: 45s                       │
+│                                     │
+│ Sources:                            │
+│ [PubChem] [ClinicalTrials.gov]     │
+│ [PubMed] [DailyMed]                │
+└─────────────────────────────────────┘
+```
+
+---
+
+## Complete Data Flow
+
+```
+1. User fills "New Project" form
+   ↓
+2. Submit → /api/v1/intake
+   ↓
+3. Create project in database
+   ↓
+4. Check if enrichment needed
+   ↓
+5. Update status → 'in_progress'
+   ↓
+6. Call Edge Function: enrich-data
+   ↓
+7. Fetch from ClinicalTrials.gov (20 trials)
+   ↓
+8. Store in `trials` table
+   ↓
+9. Fetch from PubMed (30 publications)
+   ↓
+10. Store in `literature` table
+   ↓
+11. Update status → 'completed'
+   ↓
+12. User sees enrichment data in UI
+   ↓
+13. Generate document
+   ↓
+14. Fetch enriched data from database
+   ↓
+15. Pass to AI prompts
+   ↓
+16. Generate high-quality document
+```
+
+---
+
+## Benefits Summary
+
+**Before:**
+- Manual enrichment trigger
+- No UI feedback
+- Data not stored in database
+- No reuse of fetched data
+
+**After:**
+- ✅ Automatic enrichment on project creation
+- ✅ Real-time status updates in UI
+- ✅ Detailed enrichment metrics displayed
+- ✅ Data stored in database for reuse
+- ✅ Better context for AI generation
+- ✅ Higher quality documents
+
+---
+
+## Next Steps
+
+**Phase 3: Testing**
+- Create test project
+- Verify enrichment triggers automatically
+- Check data stored in database
+- Generate document and verify enriched data used
+- Test error handling
+
+**Phase 4: Full trial/publication data (optional)**
+- Fetch full trial details (not just IDs)
+- Fetch full publication abstracts
+- Store complete data in database
+
+---
+
+**Timestamp:** 2025-11-17 15:00 UTC  
+**Status:** ✅ Phase 1 & 2 Complete  
+**Deployed:** enrich-data (72.02kB), generate-document (104.3kB)  
+**Next:** End-to-end testing
