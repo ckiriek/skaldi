@@ -6,6 +6,24 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
 
+interface ValidationIssue {
+  severity: 'error' | 'warning' | 'info'
+  message: string
+  location?: string
+  requirement?: string
+}
+
+interface ValidationResult {
+  passed: boolean
+  score: number
+  issues: ValidationIssue[]
+  summary: {
+    errors: number
+    warnings: number
+    info: number
+  }
+}
+
 interface GenerateRequest {
   projectId: string
   documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis'
@@ -55,9 +73,12 @@ serve(async (req) => {
     const context = {
       project: {
         title: project.title,
-        phase: project.phase,
+        compound_name: project.compound_name || 'Investigational Compound',
         indication: project.indication,
+        phase: project.phase,
+        sponsor: project.sponsor || 'Sponsor Organization',
         countries: project.countries,
+        product_type: project.product_type,
         design: project.design_json,
       },
       entities: entities.reduce((acc, entity) => {
@@ -72,19 +93,42 @@ serve(async (req) => {
       },
     }
 
-    // 5. Call Azure OpenAI (placeholder - will implement in next step)
+    // 5. Call Azure OpenAI
     const generatedContent = await generateWithAI(documentType, context)
 
-    // 6. Create document record with content
+    // 6. Validate generated content
+    const validation = validateGeneratedDocument({
+      type: documentType,
+      content: generatedContent,
+      project: {
+        compound_name: context.project.compound_name,
+        sponsor: context.project.sponsor,
+        indication: context.project.indication,
+        phase: context.project.phase,
+      }
+    })
+
+    // 7. Determine status based on validation
+    const status = validation.passed ? 'draft' : 'needs_revision'
+
+    // 8. Create document record with content and validation
     const { data: document, error: docError } = await supabaseClient
       .from('documents')
       .insert({
         project_id: projectId,
         type: documentType,
         version: 1,
-        status: 'draft',
+        status,
         created_by: userId,
         content: generatedContent,
+        metadata: {
+          validation: {
+            passed: validation.passed,
+            score: validation.score,
+            issues: validation.issues,
+            validated_at: new Date().toISOString(),
+          }
+        }
       })
       .select()
       .single()
@@ -128,12 +172,14 @@ serve(async (req) => {
 function generatePrompt(documentType: string, context: any): string {
   const promptContext = {
     projectTitle: context.project.title,
-    compoundName: context.entities.compounds?.[0] || 'Investigational Compound',
+    compoundName: context.project.compound_name,
     indication: context.project.indication,
     phase: context.project.phase,
-    sponsor: 'Sponsor Name', // TODO: Add to project metadata
-    design: context.project.design, // Include design_json with primary_endpoint
-    entities: context.entities.all || [],
+    sponsor: context.project.sponsor,
+    productType: context.project.product_type,
+    countries: context.project.countries,
+    design: context.project.design,
+    entities: context.entities,
     clinicalTrials: context.evidence.clinical_trials || [],
     publications: context.evidence.publications || [],
     safetyData: context.evidence.safety_data || []
@@ -148,6 +194,43 @@ function generatePrompt(documentType: string, context: any): string {
 **Compound:** ${promptContext.compoundName}
 **Indication:** ${promptContext.indication}
 **Phase:** ${promptContext.phase}
+**Sponsor:** ${promptContext.sponsor}
+**Product Type:** ${promptContext.productType}
+**Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
+
+## AVAILABLE EVIDENCE
+**Clinical Trials:** ${promptContext.clinicalTrials.length} similar trials from ClinicalTrials.gov
+**Publications:** ${promptContext.publications.length} peer-reviewed articles from PubMed
+**Safety Data:** ${promptContext.safetyData.length > 0 ? 'FDA adverse event data available' : 'No FDA data available yet'}
+
+${promptContext.clinicalTrials.length > 0 ? `
+**Similar Clinical Trials:**
+${promptContext.clinicalTrials.slice(0, 3).map((trial: any) => `
+- ${trial.title || trial.data?.title || 'Untitled'}
+  NCT ID: ${trial.source_id}
+  ${trial.data?.phase ? `Phase: ${trial.data.phase}` : ''}
+  ${trial.data?.status ? `Status: ${trial.data.status}` : ''}
+`).join('\n')}
+` : ''}
+
+${promptContext.publications.length > 0 ? `
+**Relevant Publications:**
+${promptContext.publications.slice(0, 5).map((pub: any) => `
+- ${pub.title || 'Untitled'}
+  PMID: ${pub.source_id}
+  ${pub.data?.abstract ? pub.data.abstract.substring(0, 200) + '...' : ''}
+`).join('\n')}
+` : ''}
+
+${promptContext.design?.primary_endpoint ? `
+**Primary Endpoint:** ${promptContext.design.primary_endpoint}
+` : ''}
+
+## CRITICAL INSTRUCTIONS
+- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
+- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders like "[Insert Sponsor Name]"
+- Reference the clinical trials and publications listed above
+- If specific data is not available, state "Data not yet available" rather than using placeholders
 
 ## STRUCTURE (ICH E6 Section 7) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -216,6 +299,14 @@ Generate the complete IB in markdown format with proper numbering.`
 **Compound:** ${promptContext.compoundName}
 **Indication:** ${promptContext.indication}
 **Phase:** ${promptContext.phase}
+**Sponsor:** ${promptContext.sponsor}
+**Product Type:** ${promptContext.productType}
+**Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
+
+## CRITICAL INSTRUCTIONS
+- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
+- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
+- If specific data is not available, state "To be determined" rather than using placeholders
 
 ## STRUCTURE (ICH E6 Section 6) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -319,6 +410,13 @@ Generate the complete protocol in markdown format with proper numbering.`
 **Drug:** ${promptContext.compoundName}
 **Condition:** ${promptContext.indication}
 **Phase:** ${promptContext.phase}
+**Sponsor:** ${promptContext.sponsor}
+
+## CRITICAL INSTRUCTIONS
+- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
+- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
+- Write in patient-friendly language (6th-8th grade reading level)
+- If specific data is not available, state "Your study doctor will discuss this with you" rather than using placeholders
 
 ## STRUCTURE (FDA 21 CFR 50.25) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -396,6 +494,14 @@ Generate the complete ICF in markdown format with proper numbering.`
 **Compound:** ${promptContext.compoundName}
 **Indication:** ${promptContext.indication}
 **Phase:** ${promptContext.phase}
+**Sponsor:** ${promptContext.sponsor}
+**Product Type:** ${promptContext.productType}
+**Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
+
+## CRITICAL INSTRUCTIONS
+- Use ONLY the compound name "${promptContext.compoundName}" - DO NOT use "Investigational Compound"
+- Use ONLY the sponsor name "${promptContext.sponsor}" - DO NOT use placeholders
+- If specific data is not available, state "To be determined" rather than using placeholders
 
 ## STRUCTURE (ICH E3 Section 2) - USE EXACT NUMBERING
 Generate the document with the following numbered structure:
@@ -527,17 +633,104 @@ async function generateWithAI(documentType: string, context: any): Promise<strin
 function generatePlaceholder(documentType: string, context: any): string {
   return `# ${documentType} - ${context.project.title}
 
-## Generated Document (Placeholder)
+## Project Information
 
-This document will be generated using Azure OpenAI with the following context:
-- Project: ${context.project.title}
-- Phase: ${context.project.phase}
-- Indication: ${context.project.indication}
+**Compound:** ${context.project.compound_name}  
+**Indication:** ${context.project.indication}  
+**Phase:** ${context.project.phase}  
+**Sponsor:** ${context.project.sponsor}  
+**Product Type:** ${context.project.product_type}  
+**Countries:** ${context.project.countries?.join(', ') || 'Not specified'}
 
-Entities available: ${Object.keys(context.entities).join(', ')}
-Evidence sources: ${context.evidence.clinical_trials.length} clinical trials, ${context.evidence.publications.length} publications
+## Available Data
 
-Full AI generation will be implemented when Azure OpenAI credentials are configured.`
+**Entities:** ${Object.keys(context.entities).join(', ') || 'None extracted yet'}  
+**Clinical Trials:** ${context.evidence.clinical_trials.length} from ClinicalTrials.gov  
+**Publications:** ${context.evidence.publications.length} from PubMed  
+**Safety Data:** ${context.evidence.safety_data.length} from openFDA
+
+## Status
+
+This document will be generated using Azure OpenAI when credentials are configured.
+
+**Note:** All project-specific data is available and will be used in generation - no placeholders will be used.`
+}
+
+/**
+ * Validate generated document
+ */
+function validateGeneratedDocument(context: {
+  type: string
+  content: string
+  project: {
+    compound_name: string
+    sponsor: string
+    indication: string
+    phase: string
+  }
+}): ValidationResult {
+  const issues: ValidationIssue[] = []
+
+  // 1. Check for placeholder text
+  const placeholderPatterns = [
+    /\[Insert[^\]]*\]/gi,
+    /\[TBD\]/gi,
+    /\[To be determined\]/gi,
+    /Investigational Compound(?! \w)/g,
+    /Sponsor Name/g,
+    /\[Sponsor\]/gi,
+  ]
+
+  for (const pattern of placeholderPatterns) {
+    const matches = context.content.match(pattern)
+    if (matches && matches.length > 0) {
+      issues.push({
+        severity: 'error',
+        message: `Found placeholder text: "${matches[0]}"`,
+        location: 'Document content',
+        requirement: 'All placeholders must be replaced with real data'
+      })
+    }
+  }
+
+  // 2. Check for project-specific data usage
+  if (!context.content.includes(context.project.compound_name)) {
+    issues.push({
+      severity: 'error',
+      message: `Document does not mention compound "${context.project.compound_name}"`,
+      requirement: 'Must use project-specific compound name'
+    })
+  }
+
+  if (!context.content.includes(context.project.sponsor)) {
+    issues.push({
+      severity: 'error',
+      message: `Document does not mention sponsor "${context.project.sponsor}"`,
+      requirement: 'Must use project-specific sponsor name'
+    })
+  }
+
+  if (!context.content.includes(context.project.indication)) {
+    issues.push({
+      severity: 'warning',
+      message: `Document does not mention indication "${context.project.indication}"`,
+      requirement: 'Should reference target indication'
+    })
+  }
+
+  // 3. Calculate score
+  const errors = issues.filter(i => i.severity === 'error').length
+  const warnings = issues.filter(i => i.severity === 'warning').length
+  const info = issues.filter(i => i.severity === 'info').length
+
+  const score = Math.max(0, 100 - (errors * 20) - (warnings * 5))
+
+  return {
+    passed: errors === 0,
+    score,
+    issues,
+    summary: { errors, warnings, info }
+  }
 }
 
 function getSystemPrompt(documentType: string): string {

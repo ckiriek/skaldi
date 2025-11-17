@@ -25,6 +25,7 @@ interface IntakeRequest {
   title: string
   product_type: ProductType
   compound_name: string
+  sponsor?: string
   
   // Study info
   phase?: string
@@ -113,6 +114,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<IntakeRes
       title: body.title,
       product_type: body.product_type,
       compound_name: body.compound_name,
+      sponsor: body.sponsor || null,
       phase: body.phase || null,
       indication: body.indication || null,
       drug_class: body.drug_class || null,

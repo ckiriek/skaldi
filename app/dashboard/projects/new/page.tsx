@@ -20,6 +20,7 @@ export default function NewProjectPage() {
     title: '',
     product_type: 'innovator' as 'innovator' | 'generic' | 'hybrid',
     compound_name: '',
+    sponsor: '',
     phase: 'Phase 2',
     indication: '',
     countries: '',
@@ -59,6 +60,7 @@ export default function NewProjectPage() {
           title: formData.title,
           product_type: formData.product_type,
           compound_name: formData.compound_name,
+          sponsor: formData.sponsor,
           phase: formData.phase,
           indication: formData.indication,
           countries: countriesArray,
@@ -231,6 +233,22 @@ export default function NewProjectPage() {
                   💡 Use the generic name (e.g., Metformin Hydrochloride, not Glucophage)
                 </p>
               )}
+            </div>
+
+            {/* Sponsor */}
+            <div>
+              <label className="block text-sm font-medium text-foreground mb-2">
+                Sponsor Organization *
+              </label>
+              <Input
+                required
+                value={formData.sponsor}
+                onChange={(e) => setFormData({ ...formData, sponsor: e.target.value })}
+                placeholder="e.g., Biogen Inc., Pfizer, Novartis"
+              />
+              <p className="mt-1 text-xs text-muted-foreground">
+                The organization sponsoring this clinical trial
+              </p>
             </div>
 
             {/* Generic-specific: RLD Information */}
