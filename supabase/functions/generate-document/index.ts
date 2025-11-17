@@ -1,5 +1,6 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { promptSynopsisV2, promptProtocolV2, promptIBV2, promptICFV2 } from './prompt-builders.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -410,6 +411,46 @@ function getIBEvidenceSummary(e: EvidenceSummary) {
  * Generate specialized prompt based on document type
  */
 function generatePrompt(documentType: string, context: any): string {
+  // Extract structured evidence summary
+  const evidenceSummary = extractRegulatoryEvidence(context.evidence)
+  
+  const promptContext = {
+    projectTitle: context.project.title,
+    compoundName: context.project.compound_name,
+    indication: context.project.indication,
+    phase: context.project.phase,
+    sponsor: context.project.sponsor,
+    productType: context.project.product_type,
+    countries: context.project.countries,
+    design: context.project.design,
+    entities: context.entities,
+    clinicalTrials: context.evidence.clinical_trials || [],
+    publications: context.evidence.publications || [],
+    safetyData: context.evidence.safety_data || [],
+    evidenceSummaryForSynopsis: getSynopsisEvidenceSummary(evidenceSummary),
+    evidenceSummaryForIB: getIBEvidenceSummary(evidenceSummary),
+  }
+
+  const normalizedType = documentType.toUpperCase()
+
+  // Use specialized prompt functions for each document type
+  switch (normalizedType) {
+    case 'SYNOPSIS':
+      return promptSynopsisV2(promptContext)
+    case 'PROTOCOL':
+      return promptProtocolV2(promptContext)
+    case 'IB':
+      return promptIBV2(promptContext)
+    case 'ICF':
+      return promptICFV2(promptContext)
+    default:
+      // Fallback for unknown document types
+      return `Generate a ${documentType} document for ${promptContext.projectTitle} (${promptContext.compoundName} for ${promptContext.indication}).`
+  }
+}
+
+// Old switch statement - keeping for reference, will be removed after testing
+function generatePromptOld(documentType: string, context: any): string {
   const promptContext = {
     projectTitle: context.project.title,
     compoundName: context.project.compound_name,

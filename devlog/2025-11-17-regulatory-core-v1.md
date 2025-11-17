@@ -118,6 +118,75 @@ supabase functions deploy generate-document --project-ref qtlpjxjlwrjindgybsfd
 
 ---
 
-**Timestamp:** 2025-11-17 13:00 UTC
-**Status:** ✅ ФАЗА 2 ЗАВЕРШЕНА
-**Next:** ФАЗА 3 - Prompt Builder v2
+## ФАЗА 3: PROMPT BUILDER V2 ✅
+
+### Что сделано:
+
+1. **Создан отдельный файл `prompt-builders.ts`**
+   - Модульная архитектура для лучшей поддержки
+   - 4 специализированные функции промптов
+   - Экспорт для использования в `index.ts`
+
+2. **Добавлены специализированные промпты:**
+   - `promptSynopsisV2()` - Protocol Synopsis (ICH E6/E8)
+     * Использует evidence summary для design
+     * Строгий запрет результатов
+     * 10-секционная структура
+   
+   - `promptProtocolV2()` - Full Protocol (ICH E6 Section 6)
+     * 15-секционная структура ICH E6
+     * Evidence для реалистичного дизайна
+     * Audit-ready стиль
+   
+   - `promptIBV2()` - Investigator's Brochure (ICH E6 Section 7)
+     * Качественное описание данных
+     * Разделение nonclinical/clinical
+     * 9-секционная структура
+   
+   - `promptICFV2()` - Informed Consent (FDA 21 CFR 50)
+     * 6-8 grade reading level
+     * Patient-friendly язык
+     * 13-секционная структура
+
+3. **Обновлён `index.ts`:**
+   - Импорт новых функций из `prompt-builders.ts`
+   - Обновлён `generatePrompt()` для использования:
+     * `extractRegulatoryEvidence()` для структурирования данных
+     * `getSynopsisEvidenceSummary()` и `getIBEvidenceSummary()`
+     * Новые prompt builder функции через switch
+   - Старая функция сохранена как `generatePromptOld()` для reference
+
+### Улучшения:
+
+**До:**
+- Один большой файл с хардкодом промптов
+- Общие промпты для всех типов документов
+- Сырые JSON данные в промптах
+
+**После:**
+- Модульная архитектура (отдельный файл)
+- Специализированный промпт для каждого типа
+- Структурированный evidence summary
+- Регуляторно-специфичные инструкции
+
+### Деплой:
+
+```bash
+supabase functions deploy generate-document --project-ref qtlpjxjlwrjindgybsfd
+```
+
+✅ Успешно задеплоено (script size: 99.43kB)
+
+### Что дальше:
+
+**ФАЗА 4: SOA GENERATOR** (опционально)
+- Добавить типы SOA
+- Добавить `buildSOAFromSynopsis()`
+- Добавить `renderSOAAsMarkdown()`
+- Интегрировать в Protocol generation
+
+---
+
+**Timestamp:** 2025-11-17 14:00 UTC
+**Status:** ✅ ФАЗА 3 ЗАВЕРШЕНА
+**Next:** ФАЗА 4 - SOA Generator (optional)
