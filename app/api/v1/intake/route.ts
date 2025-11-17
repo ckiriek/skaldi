@@ -157,18 +157,18 @@ export async function POST(request: NextRequest): Promise<NextResponse<IntakeRes
     let enrichmentTriggered = false
     if (shouldTriggerEnrichment(project)) {
       try {
-        // Call enrichment API (non-blocking)
-        fetch(`${process.env.NEXT_PUBLIC_SITE_URL}/api/v1/enrich`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ project_id: project.id }),
-        }).catch(err => {
-          console.error('Failed to trigger enrichment:', err)
-        })
+        console.log('🚀 Triggering enrichment for project:', project.id)
         
-        enrichmentTriggered = true
+        // Call Edge Function directly (more reliable than API route)
+        const edgeFunctionUrl = `${process.env.SUPABASE_URL}/functions/v1/enrich-data`
+        const edgeFunctionKey = process.env.SUPABASE_ANON_KEY
         
-        // Update enrichment status to in_progress
+        if (!edgeFunctionUrl || !edgeFunctionKey) {
+          console.error('❌ Missing Supabase configuration for enrichment')
+          throw new Error('Supabase configuration missing')
+        }
+        
+        // Update enrichment status to in_progress BEFORE calling
         await supabase
           .from('projects')
           .update({ 
@@ -179,9 +179,29 @@ export async function POST(request: NextRequest): Promise<NextResponse<IntakeRes
           })
           .eq('id', project.id)
         
+        // Call Edge Function (non-blocking)
+        fetch(edgeFunctionUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${edgeFunctionKey}`,
+          },
+          body: JSON.stringify({ project_id: project.id }),
+        }).catch(err => {
+          console.error('❌ Failed to trigger enrichment:', err)
+        })
+        
+        enrichmentTriggered = true
+        console.log('✅ Enrichment triggered successfully')
+        
       } catch (enrichError) {
-        console.error('Error triggering enrichment:', enrichError)
+        console.error('❌ Error triggering enrichment:', enrichError)
         // Don't fail the request, just log the error
+        // Update status to failed
+        await supabase
+          .from('projects')
+          .update({ enrichment_status: 'failed' })
+          .eq('id', project.id)
       }
     }
     

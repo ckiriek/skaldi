@@ -120,38 +120,95 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </TabsList>
 
         <TabsContent value="overview">
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Compound</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{project.compound_name || 'N/A'}</p>
-              </CardContent>
-            </Card>
+          <div className="space-y-4">
+            {/* Basic Info */}
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Compound</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{project.compound_name || 'N/A'}</p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">RLD Brand</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm">{project.rld_brand_name || 'N/A'}</p>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">RLD Brand</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm">{project.rld_brand_name || 'N/A'}</p>
+                </CardContent>
+              </Card>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-base">Status</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Badge
-                  size="sm"
-                  variant={getEnrichmentStatusMeta(project.enrichment_status).variant}
-                >
-                  {getEnrichmentStatusMeta(project.enrichment_status).label}
-                </Badge>
-              </CardContent>
-            </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Enrichment Status</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Badge
+                    size="sm"
+                    variant={getEnrichmentStatusMeta(project.enrichment_status).variant}
+                  >
+                    {getEnrichmentStatusMeta(project.enrichment_status).label}
+                  </Badge>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Enrichment Details */}
+            {project.enrichment_status === 'completed' && project.enrichment_metadata && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Enrichment Data</CardTitle>
+                  <CardDescription>
+                    Data collected from external sources
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-2 gap-4 text-sm md:grid-cols-4">
+                    <div>
+                      <p className="text-muted-foreground">Clinical Trials</p>
+                      <p className="mt-1 font-semibold">
+                        {project.enrichment_metadata.records_fetched?.trials || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Publications</p>
+                      <p className="mt-1 font-semibold">
+                        {project.enrichment_metadata.records_fetched?.literature || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Labels</p>
+                      <p className="mt-1 font-semibold">
+                        {project.enrichment_metadata.records_fetched?.labels || 0}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-muted-foreground">Duration</p>
+                      <p className="mt-1 font-semibold">
+                        {project.enrichment_metadata.duration_ms 
+                          ? `${Math.round(project.enrichment_metadata.duration_ms / 1000)}s`
+                          : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  {project.enrichment_metadata.sources_used && (
+                    <div className="mt-4">
+                      <p className="text-xs text-muted-foreground">Sources:</p>
+                      <div className="mt-1 flex flex-wrap gap-1">
+                        {project.enrichment_metadata.sources_used.map((source: string) => (
+                          <Badge key={source} variant="secondary" size="sm">
+                            {source}
+                          </Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
