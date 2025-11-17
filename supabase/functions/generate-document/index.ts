@@ -111,7 +111,8 @@ serve(async (req) => {
     // 7. Determine status based on validation
     const status = validation.passed ? 'draft' : 'needs_revision'
 
-    // 8. Create document record with content and validation
+    // 8. Create document record with content
+    // TODO: Add metadata column to store validation results
     const { data: document, error: docError } = await supabaseClient
       .from('documents')
       .insert({
@@ -121,19 +122,18 @@ serve(async (req) => {
         status,
         created_by: userId,
         content: generatedContent,
-        metadata: {
-          validation: {
-            passed: validation.passed,
-            score: validation.score,
-            issues: validation.issues,
-            validated_at: new Date().toISOString(),
-          }
-        }
       })
       .select()
       .single()
 
     if (docError) throw docError
+    
+    // 9. Log validation results
+    console.log('Document validation:', {
+      passed: validation.passed,
+      score: validation.score,
+      issues: validation.issues.length,
+    })
 
     // 7. Log audit trail
     await supabaseClient.from('audit_log').insert({
