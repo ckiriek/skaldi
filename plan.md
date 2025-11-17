@@ -1,26 +1,41 @@
 # Skaldi Writer - Implementation Plan
 
-**Last Updated:** 2025-11-17 09:31 UTC  
+**Last Updated:** 2025-11-17 14:30 UTC  
 **Current Phase:** Week 1-2: Document Generation Quality Fix  
-**Status:** ✅ PROMPTS FIXED — Validation Added  
-**Progress:** 100% backend, 100% features, 60% UI/UX, 60% AI quality  
-**Timeline:** 6 weeks remaining to production-ready system  
-**Latest Achievement:** Fixed AI prompts to use real project data, added validation
+**Status:** ✅ REGULATORY CORE V1 COMPLETE — All 4 Phases Done!  
+**Progress:** 100% backend, 100% features, 60% UI/UX, 90% AI quality ⬆️  
+**Timeline:** 5 weeks remaining to production-ready system  
+**Latest Achievement:** Regulatory Core v1 - modular prompts, evidence extraction, SOA generator
 **Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
 
-## ✅ FIXED: Document Generation Quality (2025-11-17)
+## ✅ COMPLETED: Regulatory Core v1 (2025-11-17)
 
-**Problem Solved:** AI generation now uses real project data instead of placeholders
+**Achievement:** Complete refactoring of document generation engine to regulatory-compliant system
 
-**Changes:**
-- ✅ Added `sponsor` field to database and project creation form
-- ✅ Updated prompts to pass real compound_name, sponsor, indication
-- ✅ Added explicit "DO NOT use placeholders" instructions to AI
-- ✅ Created document validator to check for placeholder text
-- ✅ Integrated validation into generation pipeline
-- ✅ Documents auto-flagged as `needs_revision` if quality issues found
+### ФАЗА 1: REGULATORY CORE ✅
+- `REGULATORY_CORE` - централизованные правила (ICH E6, ICH E8, FDA 21 CFR 50)
+- Обновлённая валидация с проверкой placeholders, results, language
 
-**Next Steps:** See `/docs/ACTION_PLAN.md` for remaining 6 weeks
+### ФАЗА 2: EVIDENCE EXTRACTOR ✅
+- `extractRegulatoryEvidence()` - структурирование clinical trials и publications
+- Вычисление sample size range, phases, intervention models
+- Специализированные summary для Synopsis и IB
+
+### ФАЗА 3: PROMPT BUILDER V2 ✅
+- Модульная архитектура (`prompt-builders.ts`)
+- 4 специализированных промпта: Synopsis, Protocol, IB, ICF
+- Регуляторно-специфичные инструкции для каждого типа
+
+### ФАЗА 4: SOA GENERATOR ✅
+- Автогенерация Schedule of Activities (`soa-generator.ts`)
+- 8 visits, 19 ICH E6 compliant процедур
+- Автоматическая интеграция в Protocol Section 9
+
+**Files:** `index.ts`, `prompt-builders.ts`, `soa-generator.ts`  
+**Size:** 94.89kB → 103.6kB (+8.71kB)  
+**See:** `devlog/2025-11-17-regulatory-core-v1.md`
+
+**Next Steps:** Week 3-4 - Data Enrichment Pipeline (see `/docs/ACTION_PLAN.md`)
 **UX Baseline Rules (Stage 1):**
   - Global Spacing: 16px grid, 8px increments
   - Headings: Open Sans, font weights 400-700, line heights 1.2-1.5
