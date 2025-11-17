@@ -1,12 +1,23 @@
 # Skaldi Writer - Implementation Plan
 
-**Last Updated:** 2025-11-15 23:57 UTC  
-**Current Phase:** Bug Fixes + Project Page Redesign  
-**Status:** ✅ PROJECT PAGE WORKING — SIMPLIFIED VERSION  
-**Progress:** 100% backend, 100% features, 60% UI/UX improvements  
-**Timeline:** 6 weeks for complete UI/UX overhaul  
-**Achievement:** Fixed persistent "Application error" on project page by simplifying UI components
+**Last Updated:** 2025-11-17 00:00 UTC  
+**Current Phase:** 🚨 CRITICAL FIX: Document Generation Quality  
+**Status:** ⚠️ GENERATION BROKEN — PLACEHOLDER ISSUE  
+**Progress:** 100% backend, 100% features, 60% UI/UX, 20% AI quality  
+**Timeline:** 7 weeks to production-ready system  
+**Critical Issue:** Generated documents contain placeholder text instead of real project data
 **Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
+
+## 🚨 URGENT: Document Generation Quality Issue
+
+**Problem:** Current AI generation produces documents with placeholder text:
+- "[Insert Sponsor Name]" instead of real sponsor
+- "Investigational Compound" instead of actual drug name
+- No use of enriched data from PubMed, ClinicalTrials.gov, openFDA
+
+**Root Cause:** Prompts don't pass project context to AI
+
+**Action Plan:** See `/docs/ACTION_PLAN.md` for 7-week fix plan
 **UX Baseline Rules (Stage 1):**
   - Global Spacing: 16px grid, 8px increments
   - Headings: Open Sans, font weights 400-700, line heights 1.2-1.5
