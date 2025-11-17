@@ -3,6 +3,8 @@
  * Based on ICH E6 (R2), ICH E8 (R1), ICH E3, FDA 21 CFR Part 50
  */
 
+import { buildSOAFromSynopsis, renderSOAAsMarkdown } from './soa-generator.ts'
+
 /**
  * Synopsis Prompt v2 - Protocol Synopsis (ICH E6/E8)
  */
@@ -61,6 +63,11 @@ Generate the complete Protocol Synopsis now.`
  */
 export function promptProtocolV2(c: any): string {
   const evidenceSummary = c.evidenceSummaryForSynopsis || {}
+  
+  // Generate SOA table
+  const soa = buildSOAFromSynopsis(c)
+  const soaMarkdown = renderSOAAsMarkdown(soa)
+  
   return `You are a senior clinical protocol writer with extensive experience in Phase ${c.phase} trials.
 Generate a full Clinical Trial Protocol that complies with ICH E6 (R2) Section 6 and ICH E8 (R1).
 
@@ -99,6 +106,10 @@ Use evidence ONLY for designing a realistic and feasible protocol. DO NOT copy o
 7. STUDY POPULATION
 8. STUDY TREATMENTS
 9. STUDY PROCEDURES AND ASSESSMENTS
+   - Include the following Schedule of Activities table in Section 9:
+
+${soaMarkdown}
+
 10. SAFETY MONITORING
 11. STATISTICAL CONSIDERATIONS
 12. QUALITY CONTROL AND QUALITY ASSURANCE
@@ -106,7 +117,9 @@ Use evidence ONLY for designing a realistic and feasible protocol. DO NOT copy o
 14. STUDY ADMINISTRATION
 15. REFERENCES
 
-Generate the complete Protocol in Markdown with precise, operational, audit-ready style.`
+Generate the complete Protocol in Markdown with precise, operational, audit-ready style.
+
+IMPORTANT: Use the Schedule of Activities table provided above in Section 9. Do not modify the table structure.`
 }
 
 /**
