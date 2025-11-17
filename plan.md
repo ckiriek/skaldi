@@ -1,23 +1,26 @@
 # Skaldi Writer - Implementation Plan
 
-**Last Updated:** 2025-11-17 00:00 UTC  
-**Current Phase:** 🚨 CRITICAL FIX: Document Generation Quality  
-**Status:** ⚠️ GENERATION BROKEN — PLACEHOLDER ISSUE  
-**Progress:** 100% backend, 100% features, 60% UI/UX, 20% AI quality  
-**Timeline:** 7 weeks to production-ready system  
-**Critical Issue:** Generated documents contain placeholder text instead of real project data
+**Last Updated:** 2025-11-17 09:31 UTC  
+**Current Phase:** Week 1-2: Document Generation Quality Fix  
+**Status:** ✅ PROMPTS FIXED — Validation Added  
+**Progress:** 100% backend, 100% features, 60% UI/UX, 60% AI quality  
+**Timeline:** 6 weeks remaining to production-ready system  
+**Latest Achievement:** Fixed AI prompts to use real project data, added validation
 **Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
 
-## 🚨 URGENT: Document Generation Quality Issue
+## ✅ FIXED: Document Generation Quality (2025-11-17)
 
-**Problem:** Current AI generation produces documents with placeholder text:
-- "[Insert Sponsor Name]" instead of real sponsor
-- "Investigational Compound" instead of actual drug name
-- No use of enriched data from PubMed, ClinicalTrials.gov, openFDA
+**Problem Solved:** AI generation now uses real project data instead of placeholders
 
-**Root Cause:** Prompts don't pass project context to AI
+**Changes:**
+- ✅ Added `sponsor` field to database and project creation form
+- ✅ Updated prompts to pass real compound_name, sponsor, indication
+- ✅ Added explicit "DO NOT use placeholders" instructions to AI
+- ✅ Created document validator to check for placeholder text
+- ✅ Integrated validation into generation pipeline
+- ✅ Documents auto-flagged as `needs_revision` if quality issues found
 
-**Action Plan:** See `/docs/ACTION_PLAN.md` for 7-week fix plan
+**Next Steps:** See `/docs/ACTION_PLAN.md` for remaining 6 weeks
 **UX Baseline Rules (Stage 1):**
   - Global Spacing: 16px grid, 8px increments
   - Headings: Open Sans, font weights 400-700, line heights 1.2-1.5
