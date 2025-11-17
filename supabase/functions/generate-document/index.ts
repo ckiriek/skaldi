@@ -1,6 +1,5 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { promptSynopsisV2, promptProtocolV2, promptIBV2, promptICFV2 } from './prompt-builders.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -163,6 +162,386 @@ const REGULATORY_CORE = {
     /meaningful benefit/gi,
   ],
 } as const
+
+// ============================================================================
+// SOA GENERATOR - Schedule of Activities
+// ============================================================================
+
+interface StudyVisit {
+  id: string
+  label: string
+  day?: number | string
+  window?: string
+  period: 'screening' | 'baseline' | 'treatment' | 'followup' | 'eos'
+}
+
+interface Procedure {
+  id: string
+  label: string
+  category: 'efficacy' | 'safety' | 'other'
+}
+
+interface SOA {
+  visits: StudyVisit[]
+  procedures: Procedure[]
+  matrix: Record<string, Record<string, string>>
+}
+
+function buildSOAFromSynopsis(context: any): SOA {
+  const visits: StudyVisit[] = [
+    { id: 'SCR', label: 'Screening', day: '-14 to 0', period: 'screening' },
+    { id: 'D0', label: 'Day 0 / Randomization', day: 0, period: 'baseline' },
+    { id: 'W1', label: 'Week 1', day: 7, window: '±2 days', period: 'treatment' },
+    { id: 'W2', label: 'Week 2', day: 14, window: '±2 days', period: 'treatment' },
+    { id: 'W4', label: 'Week 4', day: 28, window: '±3 days', period: 'treatment' },
+    { id: 'W8', label: 'Week 8', day: 56, window: '±3 days', period: 'treatment' },
+    { id: 'W12', label: 'Week 12', day: 84, window: '±3 days', period: 'followup' },
+    { id: 'EOS', label: 'End of Study', day: 'Week 12 or Early Termination', period: 'eos' },
+  ]
+
+  const procedures: Procedure[] = [
+    { id: 'informed_consent', label: 'Informed Consent', category: 'other' },
+    { id: 'inclusion_exclusion', label: 'Inclusion/Exclusion Criteria', category: 'other' },
+    { id: 'demographics', label: 'Demographics', category: 'other' },
+    { id: 'medical_history', label: 'Medical History', category: 'other' },
+    { id: 'physical_exam', label: 'Physical Examination', category: 'safety' },
+    { id: 'vital_signs', label: 'Vital Signs', category: 'safety' },
+    { id: 'ecg', label: 'ECG (12-lead)', category: 'safety' },
+    { id: 'labs_hematology', label: 'Hematology', category: 'safety' },
+    { id: 'labs_chemistry', label: 'Clinical Chemistry', category: 'safety' },
+    { id: 'labs_urinalysis', label: 'Urinalysis', category: 'safety' },
+    { id: 'pregnancy_test', label: 'Pregnancy Test (WOCBP)', category: 'safety' },
+    { id: 'efficacy_primary', label: 'Primary Efficacy Assessment', category: 'efficacy' },
+    { id: 'efficacy_secondary', label: 'Secondary Efficacy Assessments', category: 'efficacy' },
+    { id: 'qol', label: 'Quality of Life Questionnaire', category: 'efficacy' },
+    { id: 'pk_sampling', label: 'PK Blood Sampling', category: 'other' },
+    { id: 'ae_collection', label: 'Adverse Events Collection', category: 'safety' },
+    { id: 'concomitant_meds', label: 'Concomitant Medications', category: 'other' },
+    { id: 'drug_dispense', label: 'Study Drug Dispensing', category: 'other' },
+    { id: 'drug_accountability', label: 'Drug Accountability', category: 'other' },
+  ]
+
+  const matrix: Record<string, Record<string, string>> = {}
+  for (const proc of procedures) {
+    matrix[proc.id] = {}
+    for (const visit of visits) {
+      matrix[proc.id][visit.id] = ''
+    }
+  }
+
+  // Fill matrix
+  matrix['informed_consent']['SCR'] = 'X'
+  matrix['inclusion_exclusion']['SCR'] = 'X'
+  matrix['inclusion_exclusion']['D0'] = 'X'
+  matrix['demographics']['SCR'] = 'X'
+  matrix['medical_history']['SCR'] = 'X'
+  matrix['physical_exam']['SCR'] = 'X'
+  matrix['physical_exam']['D0'] = 'X'
+  matrix['physical_exam']['EOS'] = 'X'
+  
+  for (const visit of visits) {
+    matrix['vital_signs'][visit.id] = 'X'
+  }
+  
+  matrix['ecg']['SCR'] = 'X'
+  matrix['ecg']['D0'] = 'X'
+  matrix['ecg']['W4'] = 'X'
+  matrix['ecg']['W8'] = 'X'
+  matrix['ecg']['EOS'] = 'X'
+  
+  const labVisits = ['SCR', 'D0', 'W4', 'W8', 'W12', 'EOS']
+  for (const visit of labVisits) {
+    matrix['labs_hematology'][visit] = 'X'
+    matrix['labs_chemistry'][visit] = 'X'
+    matrix['labs_urinalysis'][visit] = 'X'
+  }
+  
+  matrix['pregnancy_test']['SCR'] = 'X'
+  matrix['pregnancy_test']['D0'] = 'X'
+  matrix['pregnancy_test']['EOS'] = 'X'
+  
+  const efficacyVisits = ['D0', 'W1', 'W2', 'W4', 'W8', 'W12', 'EOS']
+  for (const visit of efficacyVisits) {
+    matrix['efficacy_primary'][visit] = 'X'
+    matrix['efficacy_secondary'][visit] = 'X'
+  }
+  
+  matrix['qol']['D0'] = 'X'
+  matrix['qol']['W4'] = 'X'
+  matrix['qol']['W8'] = 'X'
+  matrix['qol']['W12'] = 'X'
+  matrix['qol']['EOS'] = 'X'
+  
+  matrix['pk_sampling']['D0'] = 'O'
+  matrix['pk_sampling']['W1'] = 'O'
+  matrix['pk_sampling']['W2'] = 'O'
+  matrix['pk_sampling']['W4'] = 'O'
+  
+  for (const visit of visits) {
+    if (visit.period !== 'screening') {
+      matrix['ae_collection'][visit.id] = 'X'
+    }
+  }
+  
+  for (const visit of visits) {
+    matrix['concomitant_meds'][visit.id] = 'X'
+  }
+  
+  matrix['drug_dispense']['D0'] = 'X'
+  matrix['drug_accountability']['W1'] = 'X'
+  matrix['drug_accountability']['W2'] = 'X'
+  matrix['drug_accountability']['W4'] = 'X'
+  matrix['drug_accountability']['W8'] = 'X'
+  matrix['drug_accountability']['EOS'] = 'X'
+
+  return { visits, procedures, matrix }
+}
+
+function renderSOAAsMarkdown(soa: SOA): string {
+  const visitHeaders = soa.visits.map(v => {
+    if (v.window) {
+      return `${v.label}<br/>${v.window}`
+    }
+    return v.label
+  }).join(' | ')
+  
+  const headerLine = `| Procedure | ${visitHeaders} |`
+  const separatorLine = `| --- | ${soa.visits.map(() => '---').join(' | ')} |`
+
+  const rows: string[] = []
+  const categories = {
+    other: 'Administrative Procedures',
+    safety: 'Safety Assessments',
+    efficacy: 'Efficacy Assessments',
+  }
+
+  for (const [catKey, catLabel] of Object.entries(categories)) {
+    const categoryProcs = soa.procedures.filter(p => p.category === catKey)
+    if (categoryProcs.length > 0) {
+      rows.push(`| **${catLabel}** | ${soa.visits.map(() => '').join(' | ')} |`)
+      
+      for (const proc of categoryProcs) {
+        const cells = soa.visits.map(v => soa.matrix[proc.id][v.id] || '').join(' | ')
+        rows.push(`| ${proc.label} | ${cells} |`)
+      }
+    }
+  }
+
+  return `## Schedule of Activities
+
+${headerLine}
+${separatorLine}
+${rows.join('\n')}
+
+**Legend:**
+- **X** = Required
+- **O** = Optional (if applicable)
+- Blank = Not performed at this visit
+- **WOCBP** = Women of childbearing potential
+`
+}
+
+// ============================================================================
+// PROMPT BUILDERS V2 - Specialized prompts for each document type
+// ============================================================================
+
+function promptSynopsisV2(c: any): string {
+  const evidenceSummary = c.evidenceSummaryForSynopsis || {}
+  return `You are a senior clinical protocol writer with 15+ years of CRO/Pharma experience.
+Generate a REGULATORY-COMPLIANT PROTOCOL SYNOPSIS (pre-study), strictly following ICH E6 (R2) and ICH E8 (R1).
+
+⚠️ CRITICAL: This MUST be a PLANNED STUDY synopsis (pre-study document).
+This is NOT a Clinical Study Report (CSR) synopsis.
+You MUST NOT include any study results, outcomes, or completed data.
+
+## CONTEXT
+Study: ${c.projectTitle}
+Compound: ${c.compoundName}
+Indication: ${c.indication}
+Phase: ${c.phase}
+Sponsor: ${c.sponsor}
+Product Type: ${c.productType}
+Countries: ${c.countries?.join(', ') || 'Not specified'}
+
+## EVIDENCE SUMMARY
+- Similar trials: ${evidenceSummary.trialCount || 0}
+- Publications: ${evidenceSummary.publicationCount || 0}
+${evidenceSummary.typicalSampleSize ? `- Typical sample size range: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max} (median: ${evidenceSummary.typicalSampleSize.median})` : ''}
+${evidenceSummary.commonInterventionModels?.length ? `- Common intervention models: ${evidenceSummary.commonInterventionModels.join(', ')}` : ''}
+${evidenceSummary.commonMasking?.length ? `- Common masking: ${evidenceSummary.commonMasking.join(', ')}` : ''}
+
+Use evidence ONLY for: typical sample sizes, common duration, common endpoints, design norms, scientific rationale.
+
+❌ STRICTLY FORBIDDEN: p-values, HR, CI, OR, AE%, efficacy/safety results, statistical outcomes.
+
+## MANDATORY RULES
+1. COMPOUND NAME: Always use "${c.compoundName}"
+2. SPONSOR NAME: Always use "${c.sponsor}"
+3. NO PLACEHOLDERS
+4. NO RESULTS: This is a PLANNED study
+
+## STRUCTURE (ICH E6/E8)
+1. SYNOPSIS HEADER
+2. STUDY RATIONALE
+3. STUDY OBJECTIVES
+4. STUDY DESIGN
+5. ENDPOINTS
+6. STUDY POPULATION
+7. TREATMENTS
+8. ASSESSMENTS
+9. STATISTICAL CONSIDERATIONS
+10. STUDY CONDUCT AND MONITORING
+
+Generate the complete Protocol Synopsis now.`
+}
+
+function promptProtocolV2(c: any): string {
+  const evidenceSummary = c.evidenceSummaryForSynopsis || {}
+  const soa = buildSOAFromSynopsis(c)
+  const soaMarkdown = renderSOAAsMarkdown(soa)
+  
+  return `You are a senior clinical protocol writer with extensive experience in Phase ${c.phase} trials.
+Generate a full Clinical Trial Protocol that complies with ICH E6 (R2) Section 6 and ICH E8 (R1).
+
+This is a PLANNED protocol. You MUST NOT include study results, p-values, AE frequencies, or conclusions based on outcomes.
+
+## STUDY CONTEXT
+Study Title: ${c.projectTitle}
+Compound: ${c.compoundName}
+Indication: ${c.indication}
+Phase: ${c.phase}
+Sponsor: ${c.sponsor}
+Product Type: ${c.productType}
+Countries: ${c.countries?.join(', ') || 'Not specified'}
+
+## EVIDENCE SUMMARY
+- Similar trials: ${evidenceSummary.trialCount || 0}
+- Publications: ${evidenceSummary.publicationCount || 0}
+${evidenceSummary.typicalSampleSize ? `- Sample size range: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max}` : ''}
+${evidenceSummary.phases?.length ? `- Phases in evidence: ${evidenceSummary.phases.join(', ')}` : ''}
+
+Use evidence ONLY for designing a realistic and feasible protocol. DO NOT copy or fabricate numerical results.
+
+## MANDATORY RULES
+1. COMPOUND NAME: Always use "${c.compoundName}"
+2. SPONSOR NAME: Always use "${c.sponsor}"
+3. NO PLACEHOLDERS: If unknown, state "To be defined prior to first patient enrollment"
+4. NO RESULTS
+
+## REQUIRED PROTOCOL STRUCTURE (ICH E6 Section 6)
+1. TITLE PAGE AND PROTOCOL SYNOPSIS
+2. TABLE OF CONTENTS
+3. LIST OF ABBREVIATIONS
+4. INTRODUCTION
+5. STUDY OBJECTIVES AND ENDPOINTS
+6. STUDY DESIGN
+7. STUDY POPULATION
+8. STUDY TREATMENTS
+9. STUDY PROCEDURES AND ASSESSMENTS
+   - Include the following Schedule of Activities table in Section 9:
+
+${soaMarkdown}
+
+10. SAFETY MONITORING
+11. STATISTICAL CONSIDERATIONS
+12. QUALITY CONTROL AND QUALITY ASSURANCE
+13. ETHICAL AND REGULATORY CONSIDERATIONS
+14. STUDY ADMINISTRATION
+15. REFERENCES
+
+Generate the complete Protocol in Markdown with precise, operational, audit-ready style.
+
+IMPORTANT: Use the Schedule of Activities table provided above in Section 9. Do not modify the table structure.`
+}
+
+function promptIBV2(c: any): string {
+  const evidenceSummary = c.evidenceSummaryForIB || {}
+  return `You are an expert medical writer specializing in Investigator's Brochures for global clinical trials.
+Generate an Investigator's Brochure (IB) aligned with ICH E6 (R2) Section 7.
+
+This IB must summarize existing nonclinical and clinical data for ${c.compoundName}.
+It is NOT a protocol and NOT a CSR. Do NOT fabricate data.
+
+## CONTEXT
+Compound: ${c.compoundName}
+Indication: ${c.indication}
+Phase: ${c.phase}
+Sponsor: ${c.sponsor}
+Product Type: ${c.productType}
+
+## EVIDENCE USE POLICY
+From PubMed (${evidenceSummary.publicationCount || 0} publications): Summarize pharmacology, mechanism, nonclinical data, human PK/PD, safety profile qualitatively.
+From safety data (${evidenceSummary.safetyDataCount || 0} sources): Describe known or class-related risks.
+${evidenceSummary.phases?.length ? `From trials in phases: ${evidenceSummary.phases.join(', ')}` : ''}
+
+You MUST:
+- Keep descriptions qualitative unless you have concrete values from publications
+- Avoid inventing AE percentages, hazard ratios, p-values
+- If not supported by evidence, write "Not adequately characterized in available data"
+
+## MANDATORY STRUCTURE (ICH E6 Section 7)
+1. TITLE PAGE
+2. TABLE OF CONTENTS
+3. SUMMARY
+4. INTRODUCTION
+5. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES AND FORMULATION
+6. NONCLINICAL STUDIES
+7. EFFECTS IN HUMANS
+8. SUMMARY AND GUIDANCE FOR THE INVESTIGATOR
+9. REFERENCES
+
+Generate the complete IB in Markdown with clear distinction between nonclinical and clinical information.`
+}
+
+function promptICFV2(c: any): string {
+  return `You are an expert in writing patient-facing Informed Consent Forms (ICFs) for clinical trials.
+Generate an ICF that complies with FDA 21 CFR Part 50 and ICH E6 (R2).
+
+The language MUST be clear, direct, and understandable at approximately 6th to 8th grade reading level.
+
+## CONTEXT
+Study Title: ${c.projectTitle}
+Drug: ${c.compoundName}
+Condition: ${c.indication}
+Phase: ${c.phase}
+Sponsor: ${c.sponsor}
+Countries: ${c.countries?.join(', ') || 'Not specified'}
+
+## USE OF EVIDENCE
+You may use evidence ONLY to describe typical, known risks in simple language.
+You MUST:
+- Avoid technical terms or explain them in everyday language
+- NOT include p-values, hazard ratios, or statistical concepts
+- Use "common", "uncommon", "rare" instead of exact frequencies
+
+## MANDATORY CONTENT STRUCTURE
+1. TITLE PAGE
+2. INTRODUCTION AND INVITATION
+3. PURPOSE OF THE STUDY
+4. WHAT WILL HAPPEN IF YOU TAKE PART
+5. RISKS AND DISCOMFORTS
+6. POSSIBLE BENEFITS
+7. ALTERNATIVES TO PARTICIPATION
+8. CONFIDENTIALITY
+9. COSTS AND PAYMENTS
+10. IN CASE OF INJURY
+11. YOUR RIGHTS
+12. CONTACT INFORMATION
+13. CONSENT AND SIGNATURES
+
+## LANGUAGE AND STYLE RULES
+- Use "you" and "your", not "the subject"
+- Avoid medical jargon
+- No statistics, no p-values
+- Be transparent about risks and uncertainty
+- Emphasize voluntariness and right to withdraw
+
+Generate the complete ICF in Markdown.`
+}
+
+// ============================================================================
+// MAIN EDGE FUNCTION
+// ============================================================================
 
 serve(async (req) => {
   // Handle CORS preflight
