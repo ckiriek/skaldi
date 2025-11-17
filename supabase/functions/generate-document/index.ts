@@ -524,6 +524,29 @@ Generate the complete ICF in markdown format with proper numbering.`
 **Product Type:** ${promptContext.productType}
 **Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
 
+## AVAILABLE EVIDENCE
+**Clinical Trials:** ${promptContext.clinicalTrials.length} similar trials from ClinicalTrials.gov
+**Publications:** ${promptContext.publications.length} peer-reviewed articles from PubMed
+**Safety Data:** ${promptContext.safetyData.length > 0 ? 'FDA adverse event data available' : 'No FDA data available yet'}
+
+${promptContext.clinicalTrials.length > 0 ? `
+**Similar Clinical Trials (for context):**
+${promptContext.clinicalTrials.slice(0, 3).map((trial: any) => `
+- ${trial.title || trial.data?.title || 'Untitled'}
+  NCT ID: ${trial.source_id}
+  ${trial.data?.phase ? `Phase: ${trial.data.phase}` : ''}
+  ${trial.data?.status ? `Status: ${trial.data.status}` : ''}
+`).join('\n')}
+` : ''}
+
+${promptContext.publications.length > 0 ? `
+**Relevant Publications (for context):**
+${promptContext.publications.slice(0, 3).map((pub: any) => `
+- ${pub.title || 'Untitled'}
+  PMID: ${pub.source_id}
+`).join('\n')}
+` : ''}
+
 ## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
 
 1. **COMPOUND NAME:** You MUST use "${promptContext.compoundName}" everywhere
