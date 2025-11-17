@@ -524,28 +524,42 @@ Generate the complete ICF in markdown format with proper numbering.`
 **Product Type:** ${promptContext.productType}
 **Countries:** ${promptContext.countries?.join(', ') || 'Not specified'}
 
-## AVAILABLE EVIDENCE
-**Clinical Trials:** ${promptContext.clinicalTrials.length} similar trials from ClinicalTrials.gov
-**Publications:** ${promptContext.publications.length} peer-reviewed articles from PubMed
-**Safety Data:** ${promptContext.safetyData.length > 0 ? 'FDA adverse event data available' : 'No FDA data available yet'}
+## AVAILABLE EVIDENCE - USE THIS DATA TO POPULATE THE SYNOPSIS
+
+**You have access to ${promptContext.clinicalTrials.length} similar clinical trials and ${promptContext.publications.length} publications.**
 
 ${promptContext.clinicalTrials.length > 0 ? `
-**Similar Clinical Trials (for context):**
-${promptContext.clinicalTrials.slice(0, 3).map((trial: any) => `
-- ${trial.title || trial.data?.title || 'Untitled'}
+**Similar Clinical Trials - USE THESE FOR CONTEXT:**
+${promptContext.clinicalTrials.slice(0, 5).map((trial: any) => {
+  const data = trial.data || {}
+  return `
+- **${trial.title || data.title || 'Untitled'}**
   NCT ID: ${trial.source_id}
-  ${trial.data?.phase ? `Phase: ${trial.data.phase}` : ''}
-  ${trial.data?.status ? `Status: ${trial.data.status}` : ''}
-`).join('\n')}
+  Phase: ${data.phase || 'Not specified'}
+  Status: ${data.status || 'Not specified'}
+  Enrollment: ${data.enrollment || 'Not specified'}
+  ${data.brief_summary ? `Summary: ${data.brief_summary.substring(0, 200)}...` : ''}
+`
+}).join('\n')}
+
+**INSTRUCTION:** Use typical values from these trials for:
+- Sample size (Section 5.1, 6.1)
+- Study duration (Section 3.4)
+- Baseline demographics (Section 5.5)
+- Typical efficacy results (Section 7)
+- Common adverse events (Section 8)
 ` : ''}
 
 ${promptContext.publications.length > 0 ? `
-**Relevant Publications (for context):**
-${promptContext.publications.slice(0, 3).map((pub: any) => `
+**Relevant Publications - CITE THESE:**
+${promptContext.publications.slice(0, 5).map((pub: any) => `
 - ${pub.title || 'Untitled'}
   PMID: ${pub.source_id}
+  ${pub.data?.abstract ? pub.data.abstract.substring(0, 150) + '...' : ''}
 `).join('\n')}
 ` : ''}
+
+**CRITICAL:** Do NOT write "Data not yet available" if you can infer typical values from the clinical trials above. Use evidence-based estimates.
 
 ## ⚠️ CRITICAL MANDATORY REQUIREMENTS - FAILURE TO COMPLY WILL RESULT IN REJECTION
 
