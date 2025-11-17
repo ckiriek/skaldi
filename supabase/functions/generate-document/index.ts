@@ -300,6 +300,113 @@ serve(async (req) => {
 })
 
 /**
+ * EVIDENCE EXTRACTOR - Structured processing of clinical trial and publication data
+ */
+
+interface EvidenceSummary {
+  trialCount: number
+  publicationCount: number
+  safetyDataCount: number
+  typicalSampleSize?: { min: number; max: number; median: number }
+  phases: string[]
+  commonInterventionModels: string[]
+  commonMasking: string[]
+  exampleTrials: { title: string; nct: string; phase?: string; status?: string }[]
+  examplePublications: { title: string; pmid: string }[]
+}
+
+/**
+ * Extract regulatory-safe evidence summary from raw trial/publication data
+ */
+function extractRegulatoryEvidence(evidence: {
+  clinical_trials: any[]
+  publications: any[]
+  safety_data: any[]
+}): EvidenceSummary {
+  const trials = evidence.clinical_trials || []
+  const pubs = evidence.publications || []
+  const safety = evidence.safety_data || []
+
+  // Extract sample sizes and calculate range
+  const enrollments = trials
+    .map(t => t.data?.enrollment)
+    .filter((n): n is number => typeof n === 'number')
+    .sort((a, b) => a - b)
+
+  const typicalSampleSize = enrollments.length
+    ? {
+        min: enrollments[0],
+        max: enrollments[enrollments.length - 1],
+        median: enrollments[Math.floor(enrollments.length / 2)],
+      }
+    : undefined
+
+  // Extract unique phases
+  const phasesSet = new Set<string>()
+  const interventionModelsSet = new Set<string>()
+  const maskingSet = new Set<string>()
+
+  for (const t of trials) {
+    if (t.data?.phase) phasesSet.add(t.data.phase)
+    if (t.data?.intervention_model) interventionModelsSet.add(t.data.intervention_model)
+    if (t.data?.masking) maskingSet.add(t.data.masking)
+  }
+
+  // Get example trials (top 3)
+  const exampleTrials = trials.slice(0, 3).map(t => ({
+    title: t.title || t.data?.brief_summary?.slice(0, 80) || 'Untitled trial',
+    nct: t.source_id,
+    phase: t.data?.phase,
+    status: t.data?.status,
+  }))
+
+  // Get example publications (top 3)
+  const examplePublications = pubs.slice(0, 3).map(p => ({
+    title: p.title || 'Untitled publication',
+    pmid: p.source_id,
+  }))
+
+  return {
+    trialCount: trials.length,
+    publicationCount: pubs.length,
+    safetyDataCount: safety.length,
+    typicalSampleSize,
+    phases: Array.from(phasesSet),
+    commonInterventionModels: Array.from(interventionModelsSet),
+    commonMasking: Array.from(maskingSet),
+    exampleTrials,
+    examplePublications,
+  }
+}
+
+/**
+ * Get evidence summary optimized for Synopsis/Protocol generation
+ */
+function getSynopsisEvidenceSummary(e: EvidenceSummary) {
+  return {
+    trialCount: e.trialCount,
+    publicationCount: e.publicationCount,
+    typicalSampleSize: e.typicalSampleSize,
+    phases: e.phases,
+    commonInterventionModels: e.commonInterventionModels,
+    commonMasking: e.commonMasking,
+    exampleTrials: e.exampleTrials,
+  }
+}
+
+/**
+ * Get evidence summary optimized for IB generation
+ */
+function getIBEvidenceSummary(e: EvidenceSummary) {
+  return {
+    publicationCount: e.publicationCount,
+    safetyDataCount: e.safetyDataCount,
+    examplePublications: e.examplePublications,
+    phases: e.phases,
+  }
+}
+
+/**
  * Generate specialized prompt based on document type
  */
 function generatePrompt(documentType: string, context: any): string {

@@ -63,6 +63,61 @@ supabase functions deploy generate-document --project-ref qtlpjxjlwrjindgybsfd
 
 ---
 
-**Timestamp:** 2025-11-17 12:00 UTC
-**Status:** ✅ ФАЗА 1 ЗАВЕРШЕНА
-**Next:** ФАЗА 2 - Evidence Extractor
+## ФАЗА 2: EVIDENCE EXTRACTOR ✅
+
+### Что сделано:
+
+1. **Добавлен интерфейс EvidenceSummary**
+   - `trialCount`, `publicationCount`, `safetyDataCount`
+   - `typicalSampleSize` - min/max/median из enrollments
+   - `phases` - уникальные фазы исследований
+   - `commonInterventionModels` - типичные модели интервенций
+   - `commonMasking` - типы маскирования
+   - `exampleTrials` - топ-3 примера trials
+   - `examplePublications` - топ-3 примера публикаций
+
+2. **Добавлена функция extractRegulatoryEvidence()**
+   - Извлекает sample sizes и вычисляет range
+   - Собирает уникальные phases, intervention models, masking
+   - Формирует примеры trials и publications
+   - Возвращает структурированный EvidenceSummary
+
+3. **Добавлены специализированные функции**
+   - `getSynopsisEvidenceSummary()` - для Synopsis/Protocol
+   - `getIBEvidenceSummary()` - для IB
+
+### Улучшения:
+
+**До:**
+- Сырые JSON массивы передаются в промпт
+- Нет структурирования данных
+- Нет фильтрации по типу документа
+
+**После:**
+- Структурированный EvidenceSummary
+- Вычисленные метрики (sample size range, phases)
+- Специализированные summary для каждого типа документа
+- Готово для использования в промптах
+
+### Деплой:
+
+```bash
+supabase functions deploy generate-document --project-ref qtlpjxjlwrjindgybsfd
+```
+
+✅ Успешно задеплоено (script size: 96.35kB)
+
+### Что дальше:
+
+**ФАЗА 3: PROMPT BUILDER V2**
+- Добавить `promptSynopsisV2()`
+- Добавить `promptProtocolV2()`
+- Добавить `promptIBV2()`
+- Добавить `promptICFV2()`
+- Обновить `generatePrompt()` для использования новых функций и evidence extractor
+
+---
+
+**Timestamp:** 2025-11-17 13:00 UTC
+**Status:** ✅ ФАЗА 2 ЗАВЕРШЕНА
+**Next:** ФАЗА 3 - Prompt Builder v2
