@@ -681,13 +681,47 @@ Deno.serve(async (req) => {
     // ========================================================================
     console.log(`\n📍 STEP 5: ClinicalTrials.gov - Fetching trials`)
     const clinicaltrials = new ClinicalTrialsAdapter()
-    const nctIds = await clinicaltrials.searchTrialsByDrug(project.compound_name, 5)
+    const nctIds = await clinicaltrials.searchTrialsByDrug(project.compound_name, 20)
 
     if (nctIds.length > 0) {
       metrics.sources_used.push('ClinicalTrials.gov')
       metrics.records_fetched.trials = nctIds.length
-      metrics.coverage.clinical = Math.min(nctIds.length / 5, 1.0)
-      console.log(`✅ Found ${nctIds.length} trials`)
+      metrics.coverage.clinical = Math.min(nctIds.length / 20, 1.0)
+      
+      // Store trial IDs for later use
+      const trialsToStore = nctIds.map(nctId => ({
+        nct_id: nctId,
+        inchikey,
+        project_id,
+        title: `Clinical Trial ${nctId}`, // Will be updated with full data later
+        phase: null,
+        status: null,
+        enrollment: null,
+        design: {},
+        outcomes: {},
+        source: 'ClinicalTrials.gov',
+        source_url: `https://clinicaltrials.gov/study/${nctId}`,
+        retrieved_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }))
+      
+      // Upsert trials
+      const { error: trialsError } = await supabaseClient
+        .from('trials')
+        .upsert(trialsToStore, { onConflict: 'nct_id', ignoreDuplicates: false })
+      
+      if (trialsError) {
+        console.error('Error storing trials:', trialsError)
+        metrics.errors.push({
+          code: 'E501_TRIALS_STORAGE_FAILED',
+          message: `Failed to store trials: ${trialsError.message}`,
+          source: 'ClinicalTrials.gov',
+          severity: 'warning',
+        })
+      } else {
+        console.log(`✅ Stored ${nctIds.length} trials`)
+      }
     }
 
     // ========================================================================
@@ -695,13 +729,49 @@ Deno.serve(async (req) => {
     // ========================================================================
     console.log(`\n📍 STEP 6: PubMed - Fetching literature`)
     const pubmed = new PubMedAdapter()
-    const pmids = await pubmed.searchByDrug(project.compound_name, 10)
+    const pmids = await pubmed.searchByDrug(project.compound_name, 30)
 
     if (pmids.length > 0) {
       metrics.sources_used.push('PubMed')
       metrics.records_fetched.literature = pmids.length
-      metrics.coverage.literature = Math.min(pmids.length / 10, 1.0)
-      console.log(`✅ Found ${pmids.length} articles`)
+      metrics.coverage.literature = Math.min(pmids.length / 30, 1.0)
+      
+      // Store publication IDs for later use
+      const publicationsToStore = pmids.map(pmid => ({
+        pmid,
+        inchikey,
+        project_id,
+        title: `PubMed Article ${pmid}`, // Will be updated with full data later
+        authors: [],
+        journal: null,
+        publication_date: null,
+        abstract: null,
+        keywords: [],
+        mesh_terms: [],
+        doi: null,
+        source: 'PubMed',
+        source_url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+        retrieved_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }))
+      
+      // Upsert publications
+      const { error: pubsError } = await supabaseClient
+        .from('literature')
+        .upsert(publicationsToStore, { onConflict: 'pmid', ignoreDuplicates: false })
+      
+      if (pubsError) {
+        console.error('Error storing publications:', pubsError)
+        metrics.errors.push({
+          code: 'E601_LITERATURE_STORAGE_FAILED',
+          message: `Failed to store publications: ${pubsError.message}`,
+          source: 'PubMed',
+          severity: 'warning',
+        })
+      } else {
+        console.log(`✅ Stored ${pmids.length} publications`)
+      }
     }
 
     // ========================================================================

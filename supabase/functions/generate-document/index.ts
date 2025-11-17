@@ -195,7 +195,20 @@ serve(async (req) => {
 
     if (entitiesError) throw entitiesError
 
-    // 3. Fetch evidence sources
+    // 3. Fetch enriched data from database
+    const { data: trials, error: trialsError } = await supabaseClient
+      .from('trials')
+      .select('*')
+      .eq('project_id', projectId)
+      .limit(20)
+
+    const { data: publications, error: pubsError } = await supabaseClient
+      .from('literature')
+      .select('*')
+      .eq('project_id', projectId)
+      .limit(30)
+
+    // Fallback to evidence_sources if no enriched data
     const { data: evidence, error: evidenceError } = await supabaseClient
       .from('evidence_sources')
       .select('*')
@@ -221,8 +234,35 @@ serve(async (req) => {
         return acc
       }, {} as Record<string, any>),
       evidence: {
-        clinical_trials: evidence.filter(e => e.source === 'ClinicalTrials.gov'),
-        publications: evidence.filter(e => e.source === 'PubMed'),
+        // Use enriched data if available, fallback to evidence_sources
+        clinical_trials: trials && trials.length > 0 
+          ? trials.map(t => ({
+              nct_id: t.nct_id,
+              title: t.title,
+              phase: t.phase,
+              status: t.status,
+              enrollment: t.enrollment,
+              design: t.design,
+              outcomes: t.outcomes,
+              source: t.source,
+              source_url: t.source_url,
+            }))
+          : evidence.filter(e => e.source === 'ClinicalTrials.gov'),
+        publications: publications && publications.length > 0
+          ? publications.map(p => ({
+              pmid: p.pmid,
+              title: p.title,
+              authors: p.authors,
+              journal: p.journal,
+              publication_date: p.publication_date,
+              abstract: p.abstract,
+              keywords: p.keywords,
+              mesh_terms: p.mesh_terms,
+              doi: p.doi,
+              source: p.source,
+              source_url: p.source_url,
+            }))
+          : evidence.filter(e => e.source === 'PubMed'),
         safety_data: evidence.filter(e => e.source === 'openFDA'),
       },
     }
