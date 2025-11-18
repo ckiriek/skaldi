@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ValidatorAgent } from '@/lib/agents/validator'
+
+const validatorAgent = new ValidatorAgent()
 
 export async function POST(request: Request) {
   try {
@@ -20,6 +23,8 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    console.log(`📝 Generating ${documentType} for project ${projectId}`)
 
     // Call Supabase Edge Function
     const { data, error } = await supabase.functions.invoke('generate-document', {
@@ -47,6 +52,61 @@ export async function POST(request: Request) {
         details: data.details,
         context: 'Edge function execution failed'
       }, { status: 500 })
+    }
+
+    // Auto-validate the generated document
+    if (data.success && data.document && data.document.id) {
+      console.log(`🔍 Auto-validating generated document ${data.document.id}`)
+      
+      try {
+        // Fetch the generated content
+        const { data: versionData } = await supabase
+          .from('document_versions')
+          .select('content')
+          .eq('document_id', data.document.id)
+          .eq('is_current', true)
+          .single()
+
+        const content = versionData?.content || (data.document as any).content
+
+        if (content && content.length > 100) {
+          // Run validation
+          const validationResult = await validatorAgent.validate({
+            content,
+            section_id: 'full-document',
+            document_type: documentType,
+            validation_level: 'standard',
+          })
+
+          // Save validation results
+          await supabase
+            .from('validation_results')
+            .insert({
+              document_id: data.document.id,
+              completeness_score: Math.round(validationResult.score),
+              status: validationResult.passed ? 'approved' : 'review',
+              total_rules: validationResult.issues.length,
+              passed: validationResult.issues.filter(i => i.type !== 'error').length,
+              failed: validationResult.summary.errors,
+              issues: validationResult.issues,
+              summary: validationResult.summary,
+              validation_date: new Date().toISOString(),
+            })
+
+          console.log(`✅ Auto-validation complete: ${validationResult.score}% (${validationResult.passed ? 'PASSED' : 'FAILED'})`)
+          
+          // Add validation info to response
+          data.validation = {
+            score: Math.round(validationResult.score),
+            passed: validationResult.passed,
+            errors: validationResult.summary.errors,
+            warnings: validationResult.summary.warnings,
+          }
+        }
+      } catch (validationError) {
+        console.error('Auto-validation failed:', validationError)
+        // Don't fail the whole request if validation fails
+      }
     }
 
     return NextResponse.json(data)

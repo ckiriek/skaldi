@@ -52,6 +52,25 @@ export function GenerateDocumentButton({
       const data = await response.json()
       
       if (data.success && data.document) {
+        // Show success toast with validation info if available
+        if (data.validation) {
+          const validationMsg = data.validation.passed 
+            ? `✓ Validation passed (${data.validation.score}%)`
+            : `⚠ ${data.validation.errors} errors, ${data.validation.warnings} warnings (${data.validation.score}%)`
+          
+          toast({
+            variant: data.validation.passed ? 'success' : 'warning',
+            title: 'Document generated successfully',
+            description: validationMsg,
+          })
+        } else {
+          toast({
+            variant: 'success',
+            title: 'Document generated successfully',
+            description: 'Document is ready for review',
+          })
+        }
+        
         router.push(`/dashboard/documents/${data.document.id}`)
         router.refresh()
       } else {
