@@ -6,9 +6,8 @@ import { Separator } from '@/components/ui/separator'
 import { Progress } from '@/components/ui/progress'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ArrowLeft, Download, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
+import { ArrowLeft, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
 import { ValidateDocumentButton } from '@/components/validate-document-button'
-import { DownloadMarkdownButton } from '@/components/download-markdown-button'
 import { DocumentViewer } from '@/components/document-viewer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
@@ -107,31 +106,6 @@ export default async function DocumentPage({ params }: { params: { id: string } 
               documentId={document.id}
               documentType={document.type}
             />
-            <DownloadMarkdownButton
-              content={(document as any).content || ''}
-              documentType={document.type}
-              filename={`${document.type || 'document'}-v${document.version}.md`}
-            />
-            <a href={`/api/documents/${document.id}/export/docx`} download>
-              <Button 
-                variant="outline" 
-                size="sm"
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Export DOCX
-              </Button>
-            </a>
-            <Button 
-              variant="outline" 
-              size="sm"
-              disabled
-              title="PDF export temporarily disabled - DOCX available"
-              className="gap-2"
-            >
-              <Download className="h-4 w-4" />
-              Export PDF
-            </Button>
           </div>
         </div>
       </div>

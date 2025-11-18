@@ -230,8 +230,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               {documents && documents.length > 0 ? (
                 <div className="space-y-2">
                   {documents.map((doc) => (
-                    <div
+                    <Link
                       key={doc.id}
+                      href={`/dashboard/documents/${doc.id}`}
                       className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
                     >
                       <div className="flex flex-col">
@@ -249,7 +250,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                       >
                         {getDocumentStatusMeta(doc.status).label}
                       </Badge>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
