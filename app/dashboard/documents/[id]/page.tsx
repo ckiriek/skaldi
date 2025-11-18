@@ -68,6 +68,19 @@ export default async function DocumentPage({ params }: { params: { id: string } 
     notFound()
   }
 
+  // Fetch current version content
+  const { data: currentVersion } = await supabase
+    .from('document_versions')
+    .select('content')
+    .eq('document_id', params.id)
+    .eq('is_current', true)
+    .single()
+
+  // Add content to document object
+  if (currentVersion) {
+    (document as any).content = currentVersion.content
+  }
+
   // Fetch latest validation results
   const { data: validationResultsArray } = await supabase
     .from('validation_results')
