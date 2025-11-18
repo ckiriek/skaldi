@@ -32,20 +32,21 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Fetch current version content
-    const { data: version, error: versionError } = await supabase
+    // Try to fetch current version content from document_versions
+    const { data: version } = await supabase
       .from('document_versions')
       .select('content')
       .eq('document_id', id)
       .eq('is_current', true)
       .single()
 
-    if (versionError || !version) {
-      console.error('Version fetch error:', versionError)
+    // Use content from document_versions if available, otherwise fall back to document.content
+    const content = version?.content || (document as any).content
+
+    if (!content) {
+      console.error('No content found in document_versions or document.content')
       return NextResponse.json({ error: 'Document has no content' }, { status: 404 })
     }
-
-    const content = version.content
 
     if (format === 'pdf') {
       return await exportToPDF(document, content)

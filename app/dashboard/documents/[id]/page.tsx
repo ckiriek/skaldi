@@ -68,7 +68,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
     notFound()
   }
 
-  // Fetch current version content
+  // Try to fetch current version content from document_versions
   const { data: currentVersion } = await supabase
     .from('document_versions')
     .select('content')
@@ -76,10 +76,11 @@ export default async function DocumentPage({ params }: { params: { id: string } 
     .eq('is_current', true)
     .single()
 
-  // Add content to document object
-  if (currentVersion) {
+  // Use content from document_versions if available, otherwise keep document.content
+  if (currentVersion?.content) {
     (document as any).content = currentVersion.content
   }
+  // If document.content already exists (from older schema), it will be used
 
   // Fetch latest validation results
   const { data: validationResultsArray } = await supabase
