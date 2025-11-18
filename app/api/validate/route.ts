@@ -1,5 +1,8 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
+import { ValidatorAgent } from '@/lib/agents/validator'
+
+const validatorAgent = new ValidatorAgent()
 
 export async function POST(request: Request) {
   try {
@@ -21,25 +24,67 @@ export async function POST(request: Request) {
       )
     }
 
-    // Call Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('validate-document', {
-      body: {
-        documentId,
-        documentType,
-        content,
-      },
+    console.log(`🔍 Validating document ${documentId} (${documentType})`)
+
+    // Run validation using ValidatorAgent
+    const validationResult = await validatorAgent.validate({
+      content,
+      section_id: 'full-document',
+      document_type: documentType,
+      validation_level: 'standard',
     })
 
-    if (error) {
-      console.error('Edge function error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+    // Calculate completeness score
+    const completenessScore = validationResult.score
+
+    // Determine status
+    const status = validationResult.passed ? 'approved' : 'review'
+
+    // Save validation results to database
+    const { error: insertError } = await supabase
+      .from('validation_results')
+      .insert({
+        document_id: documentId,
+        completeness_score: Math.round(completenessScore),
+        status,
+        total_rules: validationResult.issues.length,
+        passed: validationResult.issues.filter(i => i.type !== 'error').length,
+        failed: validationResult.summary.errors,
+        issues: validationResult.issues,
+        summary: validationResult.summary,
+        validation_date: new Date().toISOString(),
+      })
+
+    if (insertError) {
+      console.error('Failed to save validation results:', insertError)
     }
 
-    return NextResponse.json(data)
+    // Update document status if validation passed
+    if (validationResult.passed) {
+      await supabase
+        .from('documents')
+        .update({ status: 'approved' })
+        .eq('id', documentId)
+    }
+
+    console.log(`✅ Validation complete: ${completenessScore}% (${validationResult.passed ? 'PASSED' : 'FAILED'})`)
+
+    return NextResponse.json({
+      success: true,
+      completeness_score: Math.round(completenessScore),
+      status,
+      total_rules: validationResult.issues.length,
+      passed: validationResult.issues.filter(i => i.type !== 'error').length,
+      failed: validationResult.summary.errors,
+      issues: validationResult.issues,
+      summary: validationResult.summary,
+      validation_level: validationResult.validation_level,
+      duration_ms: validationResult.duration_ms,
+    })
   } catch (error) {
     console.error('API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', message: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }

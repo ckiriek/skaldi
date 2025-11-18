@@ -9,6 +9,7 @@ import Link from 'next/link'
 import { ArrowLeft, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
 import { ValidateDocumentButton } from '@/components/validate-document-button'
 import { DocumentViewer } from '@/components/document-viewer'
+import { ValidationResultsDetailed } from '@/components/validation-results-detailed'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
@@ -236,94 +237,22 @@ export default async function DocumentPage({ params }: { params: { id: string } 
 
         <TabsContent value="validation">
           {/* Validation Results */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-xl">Validation Results</CardTitle>
-              <CardDescription>
-                ICH/FDA compliance checks
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {validationResults ? (
-                <div className="space-y-6">
-                  {/* Summary */}
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Completeness Score</p>
-                      <p className="text-3xl font-semibold">{validationResults.completeness_score}%</p>
-                      <Progress 
-                        value={validationResults.completeness_score} 
-                        variant={
-                          validationResults.completeness_score >= 80 ? 'success' :
-                          validationResults.completeness_score >= 60 ? 'warning' : 'error'
-                        }
-                        showLabel
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Status</p>
-                      <Badge 
-                        variant={getValidationStatusMeta(validationResults.status).variant}
-                        size="lg"
-                      >
-                        {getValidationStatusMeta(validationResults.status).label}
-                      </Badge>
-                    </div>
-                    <div className="space-y-2">
-                      <p className="text-sm text-muted-foreground">Checks Passed</p>
-                      <p className="text-3xl font-semibold">{validationResults.passed}/{validationResults.total_rules}</p>
-                      <p className="text-sm text-muted-foreground">
-                        {Math.round((validationResults.passed / validationResults.total_rules) * 100)}% success rate
-                      </p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Detailed Results */}
-                  <div className="space-y-3">
-                    <h3 className="font-semibold text-base">Detailed Checks</h3>
-                    {(validationResults.results as any[]).map((result: any, index: number) => (
-                      <div 
-                        key={index} 
-                        className={`p-4 rounded-lg border transition-smooth ${
-                          result.passed 
-                            ? 'bg-success/5 border-success/20' 
-                            : 'bg-error/5 border-error/20'
-                        }`}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div className="flex-1">
-                            <p className="font-semibold text-sm">{result.rule_name}</p>
-                            <p className="text-xs text-muted-foreground mt-1">{result.section_ref}</p>
-                            <p className="text-sm mt-2">{result.message}</p>
-                          </div>
-                          <Badge 
-                            variant={result.passed ? 'success' : 'error'} 
-                            size="sm"
-                          >
-                            {result.passed ? 'Passed' : 'Failed'}
-                          </Badge>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <p className="text-xs text-muted-foreground mt-4">
-                    Last validated: {new Date(validationResults.validation_date).toLocaleString()}
-                  </p>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <CheckCircle className="mx-auto h-10 w-10 text-muted-foreground mb-3" />
-                  <h3 className="text-base font-medium mb-1">No validation results yet</h3>
-                  <p className="text-muted-foreground">
-                    Click 'Validate' to check document compliance with ICH/FDA guidelines
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {validationResults ? (
+            <ValidationResultsDetailed 
+              results={validationResults}
+              documentType={document.type}
+            />
+          ) : (
+            <Card>
+              <CardContent className="text-center py-12">
+                <CheckCircle className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+                <h3 className="text-lg font-semibold mb-2">No validation results yet</h3>
+                <p className="text-muted-foreground mb-4 max-w-md mx-auto">
+                  Click 'Validate' to check document compliance with ICH E6 (R2), FDA guidelines, and regulatory standards
+                </p>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
