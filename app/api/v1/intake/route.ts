@@ -110,6 +110,10 @@ export async function POST(request: NextRequest): Promise<NextResponse<IntakeRes
     console.log('🤖 Enabled agents:', enabledAgents)
     
     // 6. Prepare project data
+    // Select random medical icon from Lucide set
+    const medicalIcons = ['Pill', 'Syringe', 'Microscope', 'Dna', 'HeartPulse', 'Stethoscope', 'TestTube', 'Activity', 'Brain', 'Droplet']
+    const randomIcon = medicalIcons[Math.floor(Math.random() * medicalIcons.length)]
+    
     const projectData = {
       title: body.title,
       product_type: body.product_type,
@@ -120,6 +124,7 @@ export async function POST(request: NextRequest): Promise<NextResponse<IntakeRes
       drug_class: body.drug_class || null,
       countries: body.countries || [],
       design_json: body.design_json || null,
+      icon_name: randomIcon,
       
       // RLD fields (only for generic)
       rld_brand_name: body.product_type === 'generic' ? body.rld_brand_name : null,

@@ -2,17 +2,31 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { FileText, Book, FileCheck, FileSignature, Loader2 } from 'lucide-react'
+import { FileText, Book, FileCheck, FileSignature, Loader2, Microscope, ClipboardList, FileSpreadsheet } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 
-export function GenerateDocumentButton({ projectId }: { projectId: string }) {
+type DocumentType = 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF'
+
+interface GenerateDocumentButtonProps {
+  projectId: string
+  documentType?: DocumentType
+  variant?: 'default' | 'outline' | 'ghost'
+  size?: 'default' | 'sm' | 'lg'
+}
+
+export function GenerateDocumentButton({ 
+  projectId, 
+  documentType,
+  variant = 'outline',
+  size = 'sm'
+}: GenerateDocumentButtonProps) {
   const router = useRouter()
   const [loadingType, setLoadingType] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF') => {
-    setLoadingType(documentType)
+  const handleGenerate = async (type: DocumentType) => {
+    setLoadingType(type)
 
     try {
       const response = await fetch('/api/generate', {
@@ -20,7 +34,7 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           projectId,
-          documentType,
+          documentType: type,
         }),
       })
 
@@ -61,86 +75,59 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
 
   const isLoading = (type: string) => loadingType === type
 
-  return (
-    <div className="flex flex-wrap gap-2">
-      {/* Synopsis Button */}
+  const getIconForType = (type: DocumentType) => {
+    const icons = {
+      IB: Book,
+      Synopsis: FileText,
+      Protocol: FileCheck,
+      ICF: FileSignature,
+      SAP: FileSpreadsheet,
+      CRF: ClipboardList,
+    }
+    return icons[type]
+  }
+
+  const getLabel = (type: DocumentType) => {
+    const labels = {
+      IB: 'Investigator\'s Brochure',
+      Synopsis: 'Synopsis',
+      Protocol: 'Protocol',
+      ICF: 'Informed Consent',
+      SAP: 'Statistical Analysis Plan',
+      CRF: 'Case Report Form',
+    }
+    return labels[type]
+  }
+
+  // If documentType is specified, render single button
+  if (documentType) {
+    const Icon = getIconForType(documentType)
+    const loading = isLoading(documentType)
+    
+    return (
       <Button 
-        onClick={() => handleGenerate('Synopsis')}
+        onClick={() => handleGenerate(documentType)}
         disabled={loadingType !== null}
-        variant="outline"
-        size="sm"
+        variant={variant}
+        size={size}
+        className="w-full justify-start"
       >
-        {isLoading('Synopsis') ? (
+        {loading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />
         ) : (
-          <FileText className="w-4 h-4 mr-2" />
+          <Icon className="w-4 h-4 mr-2" />
         )}
-        {isLoading('Synopsis') ? 'Generating...' : 'Generate Synopsis'}
+        {loading ? 'Generating...' : `Generate ${getLabel(documentType)}`}
       </Button>
+    )
+  }
 
+  // Otherwise, render all buttons (legacy mode)
+  return (
+    <div className="flex flex-wrap gap-2">
       {/* IB Button */}
       <Button 
         onClick={() => handleGenerate('IB')}
-        disabled={loadingType !== null}
-        variant="outline"
-        size="sm"
-      >
-        {isLoading('IB') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <Book className="w-4 h-4 mr-2" />
-        )}
-        {isLoading('IB') ? 'Generating...' : 'Generate IB'}
-      </Button>
-
-      {/* Protocol Button */}
-      <Button 
-        onClick={() => handleGenerate('Protocol')}
-        disabled={loadingType !== null}
-        variant="outline"
-        size="sm"
-      >
-        {isLoading('Protocol') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <FileCheck className="w-4 h-4 mr-2" />
-        )}
-        {isLoading('Protocol') ? 'Generating...' : 'Generate Protocol'}
-      </Button>
-
-      {/* ICF Button */}
-      <Button 
-        onClick={() => handleGenerate('ICF')}
-        disabled={loadingType !== null}
-        variant="outline"
-        size="sm"
-      >
-        {isLoading('ICF') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <FileSignature className="w-4 h-4 mr-2" />
-        )}
-        {isLoading('ICF') ? 'Generating...' : 'Generate ICF'}
-      </Button>
-
-      {/* SAP Button */}
-      <Button 
-        onClick={() => handleGenerate('SAP')}
-        disabled={loadingType !== null}
-        variant="outline"
-        size="sm"
-      >
-        {isLoading('SAP') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-        ) : (
-          <FileSignature className="w-4 h-4 mr-2" />
-        )}
-        {isLoading('SAP') ? 'Generating...' : 'Generate SAP'}
-      </Button>
-
-      {/* CRF Button */}
-      <Button 
-        onClick={() => handleGenerate('CRF')}
         disabled={loadingType !== null}
         variant="outline"
         size="sm"

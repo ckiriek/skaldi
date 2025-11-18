@@ -3,7 +3,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Database, FileText } from 'lucide-react'
+import { Database, FileText, Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet, CheckCircle2 } from 'lucide-react'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { EvidenceDisplay } from '@/components/evidence-display'
 import { GenerateDocumentButton } from '@/components/generate-document-button'
@@ -78,25 +78,50 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const hasExternalData = evidenceSources && evidenceSources.length > 0
 
+  // Get icon component
+  const iconMap: Record<string, any> = {
+    Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet
+  }
+  const IconComponent = iconMap[project.icon_name || 'Pill'] || Pill
+  const enrichmentStatus = getEnrichmentStatusMeta(project.enrichment_status)
+
   return (
     <div className="space-y-4 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project</p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.title}</h1>
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-            <span>Phase: {project.phase || 'N/A'}</span>
-            <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
-            <span>Indication: {project.indication || 'N/A'}</span>
+        <div className="flex items-start gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+            <IconComponent className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Project</p>
+            <h1 className="mt-1 text-2xl font-semibold tracking-tight">{project.title}</h1>
+            <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+              <span>Phase: {project.phase || 'N/A'}</span>
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+              <span>Indication: {project.indication || 'N/A'}</span>
+              {project.compound_name && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                  <span>Compound: {project.compound_name}</span>
+                </>
+              )}
+              {project.rld_brand_name && (
+                <>
+                  <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                  <span>RLD: {project.rld_brand_name}</span>
+                </>
+              )}
+              <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+              <span className="flex items-center gap-1">
+                {enrichmentStatus.variant === 'success' && <CheckCircle2 className="h-3 w-3 text-green-600" />}
+                <Badge variant={enrichmentStatus.variant} size="sm">{enrichmentStatus.label}</Badge>
+              </span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {hasExternalData ? (
-            <GenerateDocumentButton projectId={project.id} />
-          ) : (
-            <FetchExternalDataButton projectId={project.id} />
-          )}
+          {!hasExternalData && <FetchExternalDataButton projectId={project.id} />}
         </div>
       </div>
 
@@ -113,49 +138,83 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <Tabs defaultValue="overview" className="space-y-4">
+      <Tabs defaultValue="documents" className="space-y-4">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="documents">Documents</TabsTrigger>
           <TabsTrigger value="evidence">Evidence</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview">
+        <TabsContent value="documents">
           <div className="space-y-4">
-            {/* Basic Info */}
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            {/* Document Generation Buttons - Compact, Single Column, Correct Order */}
+            {hasExternalData && (
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Compound</CardTitle>
+                  <CardTitle className="text-base">Generate Documents</CardTitle>
+                  <CardDescription className="text-xs">Generate documents in the recommended order</CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm">{project.compound_name || 'N/A'}</p>
+                  <div className="flex flex-col gap-2">
+                    <GenerateDocumentButton projectId={project.id} documentType="IB" variant="outline" size="sm" />
+                    <GenerateDocumentButton projectId={project.id} documentType="Synopsis" variant="outline" size="sm" />
+                    <GenerateDocumentButton projectId={project.id} documentType="Protocol" variant="outline" size="sm" />
+                    <GenerateDocumentButton projectId={project.id} documentType="ICF" variant="outline" size="sm" />
+                    <GenerateDocumentButton projectId={project.id} documentType="SAP" variant="outline" size="sm" />
+                    <GenerateDocumentButton projectId={project.id} documentType="CRF" variant="outline" size="sm" />
+                  </div>
                 </CardContent>
               </Card>
+            )}
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">RLD Brand</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-sm">{project.rld_brand_name || 'N/A'}</p>
-                </CardContent>
-              </Card>
+            {/* Documents List */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Generated Documents</CardTitle>
+                <CardDescription className="text-xs">View and manage your project documents</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {!documents || documents.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <FileText className="h-12 w-12 text-muted-foreground/50" />
+                    <p className="mt-2 text-sm font-medium text-muted-foreground">No documents yet</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {hasExternalData ? 'Generate your first document above' : 'Fetch external data to get started'}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {documents.map((doc) => (
+                      <Link
+                        key={doc.id}
+                        href={`/dashboard/documents/${doc.id}`}
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
+                      >
+                        <div className="flex flex-col">
+                          <p className="text-sm font-medium">
+                            {doc.type} 
+                            <span className="text-xs text-muted-foreground"> · v{doc.version}</span>
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Created {new Date(doc.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge
+                          size="sm"
+                          variant={getDocumentStatusMeta(doc.status).variant}
+                        >
+                          {getDocumentStatusMeta(doc.status).label}
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Enrichment Status</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Badge
-                    size="sm"
-                    variant={getEnrichmentStatusMeta(project.enrichment_status).variant}
-                  >
-                    {getEnrichmentStatusMeta(project.enrichment_status).label}
-                  </Badge>
-                </CardContent>
-              </Card>
-            </div>
+        <TabsContent value="evidence">
+          <div className="space-y-4">
 
             {/* Enrichment Details */}
             {project.enrichment_status === 'completed' && project.enrichment_metadata && (
