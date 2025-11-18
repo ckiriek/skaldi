@@ -26,7 +26,7 @@ interface ValidationResult {
 
 interface GenerateRequest {
   projectId: string
-  documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP'
+  documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF'
   userId: string
 }
 
@@ -482,6 +482,132 @@ ${soaMarkdown}
 Generate the complete Protocol in Markdown with precise, operational, audit-ready style suitable for CRO and sponsor review.
 
 IMPORTANT: Use the Schedule of Activities table provided above in Section 9. Do not modify the table structure.`
+}
+
+function promptSAPV2(c: any): string {
+  const evidenceSummary = c.evidenceSummaryForSynopsis || {}
+  return `You are a senior biostatistician in a global CRO.
+Generate a Statistical Analysis Plan (SAP) for a Phase ${c.phase} clinical trial.
+
+The SAP MUST be consistent with the clinical trial protocol for "${c.projectTitle}" (${c.compoundName} for ${c.indication}) and follow ICH E6 (R2) and ICH E9 principles.
+
+## STUDY CONTEXT
+- Compound: ${c.compoundName}
+- Indication: ${c.indication}
+- Phase: ${c.phase}
+- Sponsor: ${c.sponsor}
+- Product Type: ${c.productType}
+- Countries: ${c.countries?.join(', ') || 'Not specified'}
+
+## EVIDENCE SUMMARY (FOR CONTEXT ONLY)
+- Similar trials: ${evidenceSummary.trialCount || 0}
+- Publications: ${evidenceSummary.publicationCount || 0}
+${evidenceSummary.typicalSampleSize ? `- Typical sample size range: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max} (median: ${evidenceSummary.typicalSampleSize.median})` : ''}
+${evidenceSummary.phases?.length ? `- Phases in evidence: ${evidenceSummary.phases.join(', ')}` : ''}
+
+If appropriate, you may reference key trials and publications in the background and sample size rationale (for example, by NCT ID or PMID), but you MUST NOT invent study results.
+
+## MANDATORY RULES
+1. This is a PLANNED SAP. Do NOT describe any observed results.
+2. Do NOT present actual p-values, confidence intervals, or effect estimates. You may describe planned methods (for example: "a two-sided 95% confidence interval will be calculated for the mean change in SBP").
+3. Align the analysis sets, endpoints, and visit structure with a typical Phase 4, single-arm resistant hypertension protocol (for example: FAS, Safety Set, PK Set; primary endpoint: change from baseline in BP at Week 12).
+4. Use clear, technical, audit-ready language suitable for statisticians, regulators, and auditors.
+
+## REQUIRED SAP STRUCTURE
+1. TITLE PAGE
+2. TABLE OF CONTENTS
+3. LIST OF ABBREVIATIONS
+4. INTRODUCTION AND STUDY OVERVIEW
+   - Brief description of the study, including design (Phase 4, open-label, single-arm), population (resistant hypertension), and primary objective.
+5. STUDY OBJECTIVES AND ENDPOINTS
+   - List primary and secondary objectives and corresponding endpoints.
+6. ANALYSIS POPULATIONS
+   - Define Full Analysis Set (FAS), Safety Set, PK Set (if applicable), and any Per-Protocol Set.
+7. GENERAL STATISTICAL CONSIDERATIONS
+   - Level of significance (if any), confidence intervals to be reported (for example, 95% CI), general conventions (rounding, visit windows, analysis timepoints).
+8. DESCRIPTION OF ENDPOINTS
+   - Clearly define primary and secondary endpoints (for example, change from baseline in seated SBP/DBP at Week 12, responder rate, PK parameters).
+9. PRIMARY EFFICACY ANALYSIS
+   - Describe the primary endpoint, primary analysis set, timepoint, summary measures, and planned statistical methods (typically descriptive statistics and 95% CI for mean change).
+10. SECONDARY EFFICACY ANALYSES
+    - Describe planned analyses for diastolic BP, responder rate, and any other secondary endpoints.
+11. SAFETY ANALYSES
+    - Describe summaries of AEs and SAEs (by system organ class and preferred term, severity, relationship to study drug), vital signs, laboratory parameters, and ECGs.
+12. PHARMACOKINETIC ANALYSES (if applicable)
+    - Describe PK parameters (for example, Cmax, Tmax, AUC, t½), analysis set, and methods (for example, non-compartmental analysis).
+13. HANDLING OF MISSING DATA AND PROTOCOL DEVIATIONS
+    - Describe how missing data will be handled (for example, no imputation, observed cases) and how important protocol deviations will be identified and summarized.
+14. SAMPLE SIZE CONSIDERATIONS
+    - Provide a qualitative rationale for the planned sample size, optionally referencing typical sample sizes from similar studies (if available from evidenceSummary), without performing a full power calculation.
+15. INTERIM ANALYSES
+    - State whether any interim analyses are planned (for this type of Phase 4 single-arm study, typically "no interim analyses are planned").
+16. TABLES, FIGURES, AND LISTINGS (TFLs)
+    - Provide a high-level overview of the planned TFLs (for example, tables for baseline characteristics, primary endpoint summary, AEs; figures for BP change over time; key listings).
+
+Generate the complete SAP in Markdown, ready for internal CRO and sponsor biostatistics review.`
+}
+
+function promptCRFV2(c: any): string {
+  return `You are a senior clinical data manager in a global CRO.
+Generate a Case Report Form (CRF) specification for a Phase ${c.phase} clinical trial.
+
+The CRF MUST be consistent with the clinical trial protocol for "${c.projectTitle}" (${c.compoundName} for ${c.indication}) and aligned with ICH E6 (R2) and CDISC standards.
+
+## STUDY CONTEXT
+- Compound: ${c.compoundName}
+- Indication: ${c.indication}
+- Phase: ${c.phase}
+- Sponsor: ${c.sponsor}
+- Product Type: ${c.productType}
+- Countries: ${c.countries?.join(', ') || 'Not specified'}
+
+## MANDATORY RULES
+1. This is a CRF SPECIFICATION (design document), not actual patient data.
+2. Do NOT include any patient-specific data or results.
+3. Structure the CRF by MODULES (Demographics, Medical History, Vitals, Labs, AEs, etc.) and VISITS (Screening, Day 0, Week 1, 2, 4, 8, 12, EOS).
+4. For each module, list the FIELDS with data type (text, number, date, dropdown, checkbox), validation rules (ranges, required), and instructions.
+5. Use clear, technical language suitable for data managers, CRAs, and EDC programmers.
+
+## REQUIRED CRF STRUCTURE
+1. TITLE PAGE
+2. TABLE OF CONTENTS
+3. LIST OF ABBREVIATIONS
+4. INTRODUCTION
+   - Brief description of the study and purpose of the CRF.
+5. CRF COMPLETION GUIDELINES
+   - General instructions for site staff on how to complete the CRF.
+6. VISIT SCHEDULE
+   - List all visits (Screening, Day 0, Week 1, 2, 4, 8, 12, EOS) with timepoints and windows.
+7. CRF MODULES
+   For each module, describe:
+   - Module name and purpose
+   - Fields (name, data type, validation, required/optional)
+   - Instructions for completion
+   
+   Typical modules for a Phase 4 hypertension study:
+   - Demographics (age, sex, race, ethnicity)
+   - Medical History (prior conditions, medications)
+   - Inclusion/Exclusion Criteria (checklist)
+   - Vital Signs (BP, HR, temperature, weight, height)
+   - Physical Examination
+   - Laboratory Tests (hematology, chemistry, urinalysis)
+   - ECG (12-lead)
+   - Concomitant Medications
+   - Adverse Events
+   - Serious Adverse Events
+   - Study Drug Accountability
+   - Efficacy Assessments (BP measurements)
+   - PK Sampling (if applicable)
+   - Pregnancy Tests (for WOCBP)
+   - End of Study
+
+8. DATA VALIDATION RULES
+   - Describe key validation rules (e.g., SBP range 80-250 mmHg, DBP range 40-150 mmHg, date formats, required fields).
+
+9. QUERY MANAGEMENT
+   - Describe how data queries will be handled.
+
+Generate the complete CRF specification in Markdown, ready for EDC programming and site training.`
 }
 
 function promptIBV2(c: any): string {
@@ -957,6 +1083,8 @@ function generatePrompt(documentType: string, context: any): string {
       return promptICFV2(promptContext)
     case 'SAP':
       return promptSAPV2(promptContext)
+    case 'CRF':
+      return promptCRFV2(promptContext)
     default:
       // Fallback for unknown document types
       return `Generate a ${documentType} document for ${promptContext.projectTitle} (${promptContext.compoundName} for ${promptContext.indication}).`

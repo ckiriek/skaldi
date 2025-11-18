@@ -11,7 +11,7 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
   const [loadingType, setLoadingType] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP') => {
+  const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF') => {
     setLoadingType(documentType)
 
     try {
@@ -136,6 +136,21 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
           <FileSignature className="w-4 h-4 mr-2" />
         )}
         {isLoading('SAP') ? 'Generating...' : 'Generate SAP'}
+      </Button>
+
+      {/* CRF Button */}
+      <Button 
+        onClick={() => handleGenerate('CRF')}
+        disabled={loadingType !== null}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading('CRF') ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <FileText className="w-4 h-4 mr-2" />
+        )}
+        {isLoading('CRF') ? 'Generating...' : 'Generate CRF'}
       </Button>
     </div>
   )
