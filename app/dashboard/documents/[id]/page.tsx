@@ -92,7 +92,14 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     .order('validation_date', { ascending: false })
     .limit(1)
   
-  const validationResults = validationResultsArray?.[0] || null
+  const rawValidationResults = validationResultsArray?.[0] || null
+  
+  // Transform validation results to match expected format
+  const validationResults = rawValidationResults ? {
+    ...rawValidationResults,
+    issues: (rawValidationResults.results as any)?.issues || [],
+    summary: (rawValidationResults.results as any)?.summary || { errors: 0, warnings: 0, info: 0 },
+  } : null
 
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 

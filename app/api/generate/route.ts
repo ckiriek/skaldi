@@ -79,17 +79,24 @@ export async function POST(request: Request) {
           })
 
           // Save validation results
+          const totalChecks = 13
+          const passedChecks = totalChecks - validationResult.summary.errors
+          
           await supabase
             .from('validation_results')
             .insert({
               document_id: data.document.id,
               completeness_score: Math.round(validationResult.score),
               status: validationResult.passed ? 'approved' : 'review',
-              total_rules: validationResult.issues.length,
-              passed: validationResult.issues.filter(i => i.type !== 'error').length,
+              total_rules: totalChecks,
+              passed: passedChecks,
               failed: validationResult.summary.errors,
-              issues: validationResult.issues,
-              summary: validationResult.summary,
+              results: {
+                issues: validationResult.issues,
+                summary: validationResult.summary,
+                validation_level: 'standard',
+                duration_ms: validationResult.duration_ms,
+              },
               validation_date: new Date().toISOString(),
             })
 

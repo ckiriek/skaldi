@@ -85,8 +85,12 @@ export async function POST(request: Request) {
         total_rules: totalChecks,
         passed: passedChecks,
         failed: validationResult.summary.errors,
-        issues: validationResult.issues,
-        summary: validationResult.summary,
+        results: {
+          issues: validationResult.issues,
+          summary: validationResult.summary,
+          validation_level: validationResult.validation_level,
+          duration_ms: validationResult.duration_ms,
+        },
         validation_date: new Date().toISOString(),
       })
       .select()
