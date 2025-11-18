@@ -11,7 +11,7 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
   const [loadingType, setLoadingType] = useState<string | null>(null)
   const { toast } = useToast()
 
-  const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis') => {
+  const handleGenerate = async (documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP') => {
     setLoadingType(documentType)
 
     try {
@@ -25,7 +25,14 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
       })
 
       if (!response.ok) {
-        throw new Error('Failed to generate document')
+        const errorData = await response.json()
+        console.error('Generation failed:', errorData)
+        toast({
+          variant: 'error',
+          title: 'Document generation failed',
+          description: errorData.error || errorData.details || 'Unknown error',
+        })
+        return
       }
 
       const data = await response.json()
@@ -37,7 +44,7 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
         toast({
           variant: 'error',
           title: 'Document generation failed',
-          description: 'The document could not be generated. Please try again.',
+          description: data.error || 'The document could not be generated. Please try again.',
         })
       }
     } catch (error) {
@@ -114,6 +121,21 @@ export function GenerateDocumentButton({ projectId }: { projectId: string }) {
           <FileSignature className="w-4 h-4 mr-2" />
         )}
         {isLoading('ICF') ? 'Generating...' : 'Generate ICF'}
+      </Button>
+
+      {/* SAP Button */}
+      <Button 
+        onClick={() => handleGenerate('SAP')}
+        disabled={loadingType !== null}
+        variant="outline"
+        size="sm"
+      >
+        {isLoading('SAP') ? (
+          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+        ) : (
+          <FileSignature className="w-4 h-4 mr-2" />
+        )}
+        {isLoading('SAP') ? 'Generating...' : 'Generate SAP'}
       </Button>
     </div>
   )

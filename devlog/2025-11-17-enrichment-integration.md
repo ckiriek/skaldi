@@ -313,7 +313,47 @@ fetch(edgeFunctionUrl, {
 
 ---
 
-**Timestamp:** 2025-11-17 15:00 UTC  
-**Status:** ✅ Phase 1 & 2 Complete  
-**Deployed:** enrich-data (72.02kB), generate-document (104.3kB)  
-**Next:** End-to-end testing
+---
+
+## 2025-11-17 22:11 UTC - Phase 3 Complete: Enriched Data Integration ✅
+
+### What was done:
+1. **Re-integrated enriched data into `generate-document`**
+   - Fetch from `trials` table (limit 20)
+   - Fetch from `literature` table (limit 30)
+   - Fallback to `evidence_sources` for backward compatibility
+   - Structured data: phase, status, enrollment, design, outcomes (trials); authors, journal, abstract, keywords, MeSH terms (publications)
+
+2. **Enhanced AI prompts to use enriched data**
+   - Show up to 3 example trials with NCT ID, title, phase, status
+   - Show up to 3 publications with PMID and title
+   - Instruct AI to reference specific trials/publications: "Based on NCT12345678..." or "As demonstrated in PMID 12345..."
+
+3. **Verified quality improvement**
+   - Before: "Based on evidence from similar trials..."
+   - After: "Based on similar studies (e.g., NCT02836628, NCT01758669)..."
+   - AI now explicitly cites concrete NCT IDs and PMIDs
+   - Documents are more credible and traceable
+
+### Example output:
+```
+"informed by evidence from similar Phase 4 trials (e.g., NCT02836628, NCT01758669)"
+"see PMID 30521516"
+"Based on similar studies (e.g., NCT02836628, NCT01758669), approximately 120 patients..."
+```
+
+### Files modified:
+- `/supabase/functions/generate-document/index.ts` - Enriched data integration + enhanced prompts
+
+### Results:
+✅ Synopsis now references specific trials (NCT02836628, NCT01758669)
+✅ Synopsis cites specific publication (PMID 30521516)
+✅ Sample size justified by concrete trials
+✅ More scientific and regulatory-compliant rationale
+
+---
+
+**Timestamp:** 2025-11-17 22:11 UTC  
+**Status:** ✅ ALL 3 PHASES COMPLETE  
+**Deployed:** enrich-data (72.02kB), generate-document (104.2kB)  
+**Next:** Monitor performance, test other document types

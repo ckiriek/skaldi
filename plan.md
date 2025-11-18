@@ -1,11 +1,11 @@
 # Skaldi Writer - Implementation Plan
 
-**Last Updated:** 2025-11-17 14:30 UTC  
-**Current Phase:** Week 1-2: Document Generation Quality Fix  
-**Status:** ✅ REGULATORY CORE V1 COMPLETE — All 4 Phases Done!  
-**Progress:** 100% backend, 100% features, 60% UI/UX, 90% AI quality ⬆️  
+**Last Updated:** 2025-11-17 22:11 UTC  
+**Current Phase:** Week 3-4: Data Enrichment Pipeline ✅ COMPLETE  
+**Status:** ✅ ENRICHMENT INTEGRATION COMPLETE — AI now cites specific trials & publications!  
+**Progress:** 100% backend, 100% features, 60% UI/UX, 98% AI quality ⬆️⬆️  
 **Timeline:** 5 weeks remaining to production-ready system  
-**Latest Achievement:** Regulatory Core v1 - modular prompts, evidence extraction, SOA generator
+**Latest Achievement:** Enriched data integration - AI now references NCT IDs (e.g., NCT02836628) and PMIDs (e.g., PMID 30521516)
 **Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
 
 ## ✅ COMPLETED: Regulatory Core v1 (2025-11-17)
@@ -35,7 +35,39 @@
 **Size:** 94.89kB → 103.6kB (+8.71kB)  
 **See:** `devlog/2025-11-17-regulatory-core-v1.md`
 
-**Next Steps:** Week 3-4 - Data Enrichment Pipeline (see `/docs/ACTION_PLAN.md`)
+---
+
+## ✅ COMPLETED: Data Enrichment Pipeline (2025-11-17)
+
+**Achievement:** Full integration of enriched clinical trial and publication data into document generation
+
+### PHASE 1: DATABASE STORAGE ✅
+- Modified `enrich-data` Edge Function to save trials → `trials` table
+- Modified `enrich-data` Edge Function to save publications → `literature` table
+- Increased fetch limits: 20 trials, 30 publications
+- Error handling for storage failures
+
+### PHASE 2: AUTO-TRIGGER + UI ✅
+- Auto-trigger enrichment on project creation via `/api/v1/intake`
+- Real-time enrichment status updates in UI
+- Enrichment details card showing counts, duration, sources
+- Direct Edge Function invocation (no API route dependency)
+
+### PHASE 3: AI INTEGRATION ✅
+- Fetch enriched data from `trials` and `literature` tables
+- Fallback to `evidence_sources` for backward compatibility
+- Enhanced AI prompts with concrete examples (up to 3 trials, 3 publications)
+- AI now references specific NCT IDs and PMIDs in generated documents
+
+**Quality Improvement:**
+- Before: "Based on evidence from similar trials..."
+- After: "Based on similar studies (e.g., NCT02836628, NCT01758669)... see PMID 30521516"
+
+**Files:** `enrich-data/index.ts`, `generate-document/index.ts`, `/api/v1/intake/route.ts`, `/app/dashboard/projects/[id]/page.tsx`  
+**Size:** enrich-data 72.02kB, generate-document 104.2kB  
+**See:** `devlog/2025-11-17-enrichment-integration.md`
+
+**Next Steps:** Week 5-6 - Template System Enhancement (see `/docs/ACTION_PLAN.md`)
 **UX Baseline Rules (Stage 1):**
   - Global Spacing: 16px grid, 8px increments
   - Headings: Open Sans, font weights 400-700, line heights 1.2-1.5

@@ -32,7 +32,21 @@ export async function POST(request: Request) {
 
     if (error) {
       console.error('Edge function error:', error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ 
+        error: error.message,
+        details: error,
+        context: 'Edge function invocation failed'
+      }, { status: 500 })
+    }
+
+    // If data contains an error, it means the Edge Function returned 400
+    if (data && data.error) {
+      console.error('Edge function returned error:', data)
+      return NextResponse.json({
+        error: data.error,
+        details: data.details,
+        context: 'Edge function execution failed'
+      }, { status: 500 })
     }
 
     return NextResponse.json(data)

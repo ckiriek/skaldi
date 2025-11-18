@@ -149,5 +149,38 @@ Next steps:
 
 ---
 
-**Status:** CRITICAL FIX DEPLOYED
-**Next:** Test generation, verify compliance
+## 2025-11-17 22:01 UTC - SECOND CRITICAL FIX: Database Constraint
+
+### Problem:
+After fixing the prompt, Synopsis generation was still failing with 400 error:
+```
+new row for relation "documents" violates check constraint "documents_status_check"
+```
+
+### Root Cause:
+The `generate-document` Edge Function was trying to insert documents with status `needs_revision`, but the database constraint only allows: `draft`, `review`, `approved`, `outdated`.
+
+### Solution:
+Changed status logic in `/supabase/functions/generate-document/index.ts`:
+```typescript
+// Before:
+const status = validation.passed ? 'draft' : 'needs_revision'
+
+// After:
+const status = validation.passed ? 'draft' : 'review'
+```
+
+### Files Modified:
+- `/supabase/functions/generate-document/index.ts` - Fixed status constraint
+- `/app/api/generate/route.ts` - Enhanced error reporting
+- `/components/generate-document-button.tsx` - Better error display
+
+### Result:
+✅ Synopsis generation now works end-to-end!
+✅ Documents are created with correct status
+✅ Error messages are more informative
+
+---
+
+**Status:** ✅ BOTH CRITICAL FIXES DEPLOYED
+**Next:** Integrate enriched data from `trials` and `literature` tables

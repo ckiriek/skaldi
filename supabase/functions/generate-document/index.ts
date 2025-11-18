@@ -26,7 +26,7 @@ interface ValidationResult {
 
 interface GenerateRequest {
   projectId: string
-  documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis'
+  documentType: 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP'
   userId: string
 }
 
@@ -369,8 +369,16 @@ Countries: ${c.countries?.join(', ') || 'Not specified'}
 ${evidenceSummary.typicalSampleSize ? `- Typical sample size range: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max} (median: ${evidenceSummary.typicalSampleSize.median})` : ''}
 ${evidenceSummary.commonInterventionModels?.length ? `- Common intervention models: ${evidenceSummary.commonInterventionModels.join(', ')}` : ''}
 ${evidenceSummary.commonMasking?.length ? `- Common masking: ${evidenceSummary.commonMasking.join(', ')}` : ''}
+${evidenceSummary.phases?.length ? `- Phases in evidence: ${evidenceSummary.phases.join(', ')}` : ''}
+
+${evidenceSummary.exampleTrials?.length ? `### Example Trials (for design reference only):
+${evidenceSummary.exampleTrials.slice(0, 3).map((t: any) => `- ${t.nct || 'N/A'}: ${t.title || 'Untitled'}${t.phase ? ` (Phase ${t.phase})` : ''}${t.status ? ` - ${t.status}` : ''}`).join('\n')}` : ''}
+
+${evidenceSummary.examplePublications?.length ? `### Key Publications (for rationale):
+${evidenceSummary.examplePublications.slice(0, 3).map((p: any) => `- PMID ${p.pmid || 'N/A'}: ${p.title || 'Untitled'}`).join('\n')}` : ''}
 
 Use evidence ONLY for: typical sample sizes, common duration, common endpoints, design norms, scientific rationale.
+Reference specific trials/publications when appropriate (e.g., "Based on NCT12345678..." or "As demonstrated in PMID 12345...").
 
 ❌ STRICTLY FORBIDDEN: p-values, HR, CI, OR, AE%, efficacy/safety results, statistical outcomes.
 
@@ -417,39 +425,61 @@ Countries: ${c.countries?.join(', ') || 'Not specified'}
 ## EVIDENCE SUMMARY
 - Similar trials: ${evidenceSummary.trialCount || 0}
 - Publications: ${evidenceSummary.publicationCount || 0}
-${evidenceSummary.typicalSampleSize ? `- Sample size range: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max}` : ''}
+${evidenceSummary.typicalSampleSize ? `- Sample size range observed in evidence: ${evidenceSummary.typicalSampleSize.min}-${evidenceSummary.typicalSampleSize.max} (median: ${evidenceSummary.typicalSampleSize.median})` : ''}
 ${evidenceSummary.phases?.length ? `- Phases in evidence: ${evidenceSummary.phases.join(', ')}` : ''}
 
+${evidenceSummary.exampleTrials?.length ? `### Example Trials (for design reference only):
+${evidenceSummary.exampleTrials.slice(0, 3).map((t: any) => `- ${t.nct || 'N/A'}: ${t.title || 'Untitled'}${t.phase ? ` (Phase ${t.phase})` : ''}${t.status ? ` - ${t.status}` : ''}`).join('\n')}` : ''}
+
+${evidenceSummary.examplePublications?.length ? `### Key Publications (for rationale and background):
+${evidenceSummary.examplePublications.slice(0, 5).map((p: any) => `- PMID ${p.pmid || 'N/A'}: ${p.title || 'Untitled'}`).join('\n')}` : ''}
+
 Use evidence ONLY for designing a realistic and feasible protocol. DO NOT copy or fabricate numerical results.
+You SHOULD explicitly reference specific NCT IDs and PMIDs in the Introduction, Rationale, Study Design, Sample Size Justification, and References sections.
 
 ## MANDATORY RULES
 1. COMPOUND NAME: Always use "${c.compoundName}"
 2. SPONSOR NAME: Always use "${c.sponsor}"
-3. NO PLACEHOLDERS: If unknown, state "To be defined prior to first patient enrollment"
-4. NO RESULTS
+3. NO PLACEHOLDERS: If information is not yet finalized, state "To be defined prior to first patient enrollment" (e.g., Principal Investigator name, protocol date), but DO NOT use generic placeholders like "[Insert ...]".
+4. NO RESULTS: Do NOT describe observed outcomes, only planned analyses and endpoints.
+5. EVIDENCE TRACEABILITY: Include at least one explicit sentence that cites concrete NCT IDs and PMIDs (e.g., "Based on NCT12345678 and NCT23456789...", "As summarized in PMID 30521516...") in the relevant sections.
+6. SAFETY OPERATIONALITY: Define clear dose modification, interruption, and discontinuation rules for beta-blocker-specific risks (bradycardia, hypotension, worsening heart failure, bronchospasm, conduction disturbances) with concrete numeric thresholds where appropriate (e.g., HR <50 bpm, symptomatic SBP <90 mmHg).
+7. PK DESIGN CLARITY: If pharmacokinetics are assessed, describe PK sampling timepoints, analytes, basic bioanalytical method (e.g., LC-MS/MS), and sample handling/storage conditions (e.g., processing and freezing requirements).
+8. STATISTICAL TRANSPARENCY: Describe the sample size rationale, referencing the observed typical sample size range from evidence (if available), and specify which confidence intervals (e.g., 95% CI) will be reported for the primary endpoint.
 
 ## REQUIRED PROTOCOL STRUCTURE (ICH E6 Section 6)
 1. TITLE PAGE AND PROTOCOL SYNOPSIS
 2. TABLE OF CONTENTS
 3. LIST OF ABBREVIATIONS
 4. INTRODUCTION
+   - Include brief background on the indication and compound.
+   - Explicitly reference key NCT IDs and PMIDs that informed the design.
 5. STUDY OBJECTIVES AND ENDPOINTS
 6. STUDY DESIGN
+   - Describe overall design (phase, randomization/open-label, arms, duration).
+   - Justify design choices using the trials and publications listed above.
 7. STUDY POPULATION
 8. STUDY TREATMENTS
+   - Describe dosing regimen, titration rules, and treatment duration.
 9. STUDY PROCEDURES AND ASSESSMENTS
    - Include the following Schedule of Activities table in Section 9:
 
 ${soaMarkdown}
 
 10. SAFETY MONITORING
+    - Describe AE/SAE collection and reporting.
+    - Include explicit dose modification and stopping rules for key safety risks.
 11. STATISTICAL CONSIDERATIONS
+    - Describe analysis sets (FAS, Safety Set, PK Set if applicable).
+    - Provide a sample size rationale referencing the evidence-based sample size range above.
+    - Specify the primary analysis approach (descriptive, model-based, etc.) and planned confidence intervals.
 12. QUALITY CONTROL AND QUALITY ASSURANCE
 13. ETHICAL AND REGULATORY CONSIDERATIONS
 14. STUDY ADMINISTRATION
 15. REFERENCES
+    - List concrete NCT IDs and PMIDs used to inform the protocol.
 
-Generate the complete Protocol in Markdown with precise, operational, audit-ready style.
+Generate the complete Protocol in Markdown with precise, operational, audit-ready style suitable for CRO and sponsor review.
 
 IMPORTANT: Use the Schedule of Activities table provided above in Section 9. Do not modify the table structure.`
 }
@@ -469,18 +499,32 @@ Phase: ${c.phase}
 Sponsor: ${c.sponsor}
 Product Type: ${c.productType}
 
+## EVIDENCE SUMMARY
+- Clinical trials: ${evidenceSummary.trialCount || 0}
+- Publications: ${evidenceSummary.publicationCount || 0}
+- Safety data sources: ${evidenceSummary.safetyDataCount || 0}
+${evidenceSummary.phases?.length ? `- Phases in evidence: ${evidenceSummary.phases.join(', ')}` : ''}
+
+${evidenceSummary.exampleTrials?.length ? `### Example Trials (for context):
+${evidenceSummary.exampleTrials.slice(0, 3).map((t: any) => `- ${t.nct || 'N/A'}: ${t.title || 'Untitled'}${t.phase ? ` (Phase ${t.phase})` : ''}`).join('\n')}` : ''}
+
+${evidenceSummary.examplePublications?.length ? `### Key Publications (cite these):
+${evidenceSummary.examplePublications.slice(0, 5).map((p: any) => `- PMID ${p.pmid || 'N/A'}: ${p.title || 'Untitled'}`).join('\n')}` : ''}
+
 ## EVIDENCE USE POLICY
-From PubMed (${evidenceSummary.publicationCount || 0} publications): Summarize pharmacology, mechanism, nonclinical data, human PK/PD, safety profile qualitatively.
-From safety data (${evidenceSummary.safetyDataCount || 0} sources): Describe known or class-related risks.
-${evidenceSummary.phases?.length ? `From trials in phases: ${evidenceSummary.phases.join(', ')}` : ''}
+From PubMed publications: Summarize pharmacology, mechanism, nonclinical data, human PK/PD, safety profile qualitatively.
+From safety data: Describe known or class-related risks.
+From trials: Reference specific trials when discussing efficacy or safety (e.g., "as demonstrated in NCT12345678").
 
 You MUST:
+- Cite specific PMIDs in References section (e.g., "PMID 30521516")
+- Reference trials by NCT ID when relevant
 - Keep descriptions qualitative unless you have concrete values from publications
 - Avoid inventing AE percentages, hazard ratios, p-values
 - If not supported by evidence, write "Not adequately characterized in available data"
 
 ## MANDATORY STRUCTURE (ICH E6 Section 7)
-1. TITLE PAGE
+1. TITLE PAGE (use current date, Version 1.0)
 2. TABLE OF CONTENTS
 3. SUMMARY
 4. INTRODUCTION
@@ -488,7 +532,12 @@ You MUST:
 6. NONCLINICAL STUDIES
 7. EFFECTS IN HUMANS
 8. SUMMARY AND GUIDANCE FOR THE INVESTIGATOR
-9. REFERENCES
+9. REFERENCES (cite specific PMIDs and NCT IDs)
+
+## MANDATORY RULES
+1. NO PLACEHOLDERS: Use actual dates (current date), Version 1.0, compound name "${c.compoundName}", sponsor "${c.sponsor}"
+2. CITE SOURCES: Reference specific PMIDs and NCT IDs in References section
+3. QUALITATIVE ONLY: No fabricated quantitative data unless from cited sources
 
 Generate the complete IB in Markdown with clear distinction between nonclinical and clinical information.`
 }
@@ -507,6 +556,8 @@ Phase: ${c.phase}
 Sponsor: ${c.sponsor}
 Countries: ${c.countries?.join(', ') || 'Not specified'}
 
+Assume the study uses a screening period plus a treatment period similar to the Protocol (for example, about 14 weeks total with several clinic visits). When describing visits in the ICF, use a simple, approximate description (for example, "about X months" and "about Y clinic visits"), but DO NOT use placeholders like "[insert duration]".
+
 ## USE OF EVIDENCE
 You may use evidence ONLY to describe typical, known risks in simple language.
 You MUST:
@@ -519,7 +570,10 @@ You MUST:
 2. INTRODUCTION AND INVITATION
 3. PURPOSE OF THE STUDY
 4. WHAT WILL HAPPEN IF YOU TAKE PART
+   - Clearly describe approximately how long the study will last (for example, "about 3–4 months") and how many times the person will visit the clinic.
+   - Explain in simple terms that there will be blood tests, blood pressure checks, possible heart tracing (ECG), and questions about how the person feels.
 5. RISKS AND DISCOMFORTS
+   - Describe common, uncommon, and rare side effects of ${c.compoundName} in plain language.
 6. POSSIBLE BENEFITS
 7. ALTERNATIVES TO PARTICIPATION
 8. CONFIDENTIALITY
@@ -527,16 +581,22 @@ You MUST:
 10. IN CASE OF INJURY
 11. YOUR RIGHTS
 12. CONTACT INFORMATION
-13. CONSENT AND SIGNATURES
+13. PREGNANCY AND BIRTH CONTROL (if the study involves women who can become pregnant)
+   - In simple language, explain that:
+     - if someone can become pregnant, they should use reliable birth control while in the study;
+     - pregnancy tests may be done before and during the study;
+     - if a participant becomes pregnant, they will stop taking the study drug and the study doctor will follow their health and the health of the baby.
+14. CONSENT AND SIGNATURES
 
 ## LANGUAGE AND STYLE RULES
-- Use "you" and "your", not "the subject"
-- Avoid medical jargon
-- No statistics, no p-values
-- Be transparent about risks and uncertainty
-- Emphasize voluntariness and right to withdraw
+- Use "you" and "your", not "the subject".
+- Avoid medical jargon; explain any necessary medical term in everyday language.
+- No statistics, no p-values, no complex numbers.
+- Be transparent about risks and uncertainty.
+- Emphasize voluntariness and the right to withdraw at any time, without affecting regular medical care.
+- DO NOT use placeholder text like "[insert ...]" anywhere in the ICF. If some details (for example, the exact name of the ethics board or phone number) are not known, write that these will be provided in the final version of the form.
 
-Generate the complete ICF in Markdown.`
+Generate the complete ICF in Markdown, ready to be given directly to a patient.`
 }
 
 // ============================================================================
@@ -550,21 +610,32 @@ serve(async (req) => {
   }
 
   try {
+    console.log('🚀 Generate Document Request Started')
+    
     const supabaseClient = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
     )
 
-    const { projectId, documentType, userId }: GenerateRequest = await req.json()
+    const requestBody = await req.json()
+    console.log('📦 Request body:', JSON.stringify(requestBody))
+    
+    const { projectId, documentType, userId }: GenerateRequest = requestBody
+    console.log(`📝 Parsed: projectId=${projectId}, documentType=${documentType}, userId=${userId}`)
 
     // 1. Fetch project data
+    console.log('🔍 Step 1: Fetching project data...')
     const { data: project, error: projectError } = await supabaseClient
       .from('projects')
       .select('*')
       .eq('id', projectId)
       .single()
 
-    if (projectError) throw projectError
+    if (projectError) {
+      console.error('❌ Project fetch error:', projectError)
+      throw new Error(`Failed to fetch project: ${projectError.message}`)
+    }
+    console.log('✅ Project fetched successfully')
 
     // 2. Fetch entities for this project
     const { data: entities, error: entitiesError } = await supabaseClient
@@ -573,8 +644,11 @@ serve(async (req) => {
       .eq('project_id', projectId)
 
     if (entitiesError) throw entitiesError
+    
+    console.log(`📊 Fetched ${entities?.length || 0} entities`)
 
     // 3. Fetch enriched data from database
+    console.log('🔍 Step 3: Fetching enriched data...')
     const { data: trials, error: trialsError } = await supabaseClient
       .from('trials')
       .select('*')
@@ -594,6 +668,9 @@ serve(async (req) => {
       .eq('project_id', projectId)
 
     if (evidenceError) throw evidenceError
+    
+    console.log(`📊 Enriched data: ${trials?.length || 0} trials, ${publications?.length || 0} publications`)
+    console.log(`📊 Legacy data: ${evidence?.length || 0} evidence sources`)
 
     // 4. Build context for AI generation
     const context = {
@@ -607,7 +684,7 @@ serve(async (req) => {
         product_type: project.product_type,
         design: project.design_json,
       },
-      entities: entities.reduce((acc, entity) => {
+      entities: (entities || []).reduce((acc: Record<string, any>, entity: any) => {
         if (!acc[entity.entity_type]) acc[entity.entity_type] = {}
         acc[entity.entity_type][entity.entity_key] = entity.entity_value
         return acc
@@ -615,7 +692,7 @@ serve(async (req) => {
       evidence: {
         // Use enriched data if available, fallback to evidence_sources
         clinical_trials: trials && trials.length > 0 
-          ? trials.map(t => ({
+          ? trials.map((t: any) => ({
               nct_id: t.nct_id,
               title: t.title,
               phase: t.phase,
@@ -623,12 +700,12 @@ serve(async (req) => {
               enrollment: t.enrollment,
               design: t.design,
               outcomes: t.outcomes,
-              source: t.source,
+              source: t.source || 'ClinicalTrials.gov',
               source_url: t.source_url,
             }))
-          : evidence.filter(e => e.source === 'ClinicalTrials.gov'),
+          : (evidence || []).filter((e: any) => e.source === 'ClinicalTrials.gov'),
         publications: publications && publications.length > 0
-          ? publications.map(p => ({
+          ? publications.map((p: any) => ({
               pmid: p.pmid,
               title: p.title,
               authors: p.authors,
@@ -638,18 +715,27 @@ serve(async (req) => {
               keywords: p.keywords,
               mesh_terms: p.mesh_terms,
               doi: p.doi,
-              source: p.source,
+              source: p.source || 'PubMed',
               source_url: p.source_url,
             }))
-          : evidence.filter(e => e.source === 'PubMed'),
-        safety_data: evidence.filter(e => e.source === 'openFDA'),
+          : (evidence || []).filter((e: any) => e.source === 'PubMed'),
+        safety_data: (evidence || []).filter((e: any) => e.source === 'openFDA'),
       },
     }
 
     // 5. Call Azure OpenAI
-    const generatedContent = await generateWithAI(documentType, context)
+    console.log('🤖 Step 5: Calling Azure OpenAI...')
+    let generatedContent: string
+    try {
+      generatedContent = await generateWithAI(documentType, context)
+      console.log(`✅ Generated ${generatedContent.length} characters`)
+    } catch (aiError) {
+      console.error('❌ AI generation error:', aiError)
+      throw new Error(`AI generation failed: ${aiError instanceof Error ? aiError.message : String(aiError)}`)
+    }
 
     // 6. Validate generated content
+    console.log('✅ Step 6: Validating content...')
     const validation = validateGeneratedDocument({
       type: documentType,
       content: generatedContent,
@@ -660,9 +746,11 @@ serve(async (req) => {
         phase: context.project.phase,
       }
     })
+    console.log(`✅ Validation: ${validation.passed ? 'PASSED' : 'FAILED'} (score: ${validation.score})`)
 
     // 7. Determine status based on validation
-    const status = validation.passed ? 'draft' : 'needs_revision'
+    // Allowed statuses: 'draft', 'review', 'approved', 'outdated'
+    const status = validation.passed ? 'draft' : 'review'
 
     // 8. Create document record with content
     // TODO: Add metadata column to store validation results
@@ -709,8 +797,13 @@ serve(async (req) => {
       },
     )
   } catch (error) {
+    console.error('❌ Generate Document Error:', error)
+    console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace')
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        details: error instanceof Error ? error.stack : String(error)
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 400,
@@ -862,6 +955,8 @@ function generatePrompt(documentType: string, context: any): string {
       return promptIBV2(promptContext)
     case 'ICF':
       return promptICFV2(promptContext)
+    case 'SAP':
+      return promptSAPV2(promptContext)
     default:
       // Fallback for unknown document types
       return `Generate a ${documentType} document for ${promptContext.projectTitle} (${promptContext.compoundName} for ${promptContext.indication}).`
