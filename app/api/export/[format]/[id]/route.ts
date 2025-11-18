@@ -435,7 +435,7 @@ async function exportToDOCX(document: any) {
   const docxBuffer = await Packer.toBuffer(doc)
 
   // Return DOCX
-  return new NextResponse(docxBuffer, {
+  return new NextResponse(new Uint8Array(docxBuffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       'Content-Disposition': `attachment; filename="${sanitizeFilename(document.title)}.docx"`,
