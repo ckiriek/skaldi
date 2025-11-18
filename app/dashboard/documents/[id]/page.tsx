@@ -202,7 +202,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
               content={(document as any).content} 
               documentType={document.type}
               documentId={document.id}
-              documentTitle={document.title}
+              documentTitle={document.type}
             />
           ) : (
             <Card>

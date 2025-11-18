@@ -29,9 +29,6 @@ export function DocumentViewer({ content, documentType, documentId, documentTitl
   const [toc, setToc] = useState<TocItem[]>([])
   const [activeSection, setActiveSection] = useState<string>('')
 
-  // Debug: log props
-  console.log('DocumentViewer props:', { documentType, documentId, documentTitle })
-
   // Extract table of contents from markdown
   useEffect(() => {
     const headings: TocItem[] = []
