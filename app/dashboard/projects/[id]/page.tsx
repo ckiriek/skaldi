@@ -78,6 +78,17 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const hasExternalData = evidenceSources && evidenceSources.length > 0
 
+  // Auto-update enrichment status if we have evidence but status is still in_progress
+  if (hasExternalData && project.enrichment_status === 'in_progress') {
+    await supabase
+      .from('projects')
+      .update({ enrichment_status: 'completed' })
+      .eq('id', id)
+    
+    // Update local project object
+    project.enrichment_status = 'completed'
+  }
+
   // Get icon component
   const iconMap: Record<string, any> = {
     Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet
@@ -139,9 +150,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       )}
 
       <Tabs defaultValue="documents" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="documents">Documents</TabsTrigger>
-          <TabsTrigger value="evidence">Evidence</TabsTrigger>
+        <TabsList className="w-full h-9">
+          <TabsTrigger value="documents" className="flex-1">Documents</TabsTrigger>
+          <TabsTrigger value="evidence" className="flex-1">Evidence</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents">

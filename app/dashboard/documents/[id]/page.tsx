@@ -47,7 +47,8 @@ function getValidationStatusMeta(status: string | null | undefined) {
   return { variant: 'secondary' as const, label: 'Unknown' }
 }
 
-export default async function DocumentPage({ params }: { params: { id: string } }) {
+export default async function DocumentPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
 
   // Fetch document with content
@@ -62,7 +63,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
         indication
       )
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (error || !document) {
@@ -73,7 +74,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
   const { data: currentVersion } = await supabase
     .from('document_versions')
     .select('content')
-    .eq('document_id', params.id)
+    .eq('document_id', id)
     .eq('is_current', true)
     .single()
 
@@ -87,7 +88,7 @@ export default async function DocumentPage({ params }: { params: { id: string } 
   const { data: validationResultsArray } = await supabase
     .from('validation_results')
     .select('*')
-    .eq('document_id', params.id)
+    .eq('document_id', id)
     .order('validation_date', { ascending: false })
     .limit(1)
   
@@ -205,9 +206,9 @@ export default async function DocumentPage({ params }: { params: { id: string } 
       </div>
 
       <Tabs defaultValue="content" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="content">Content</TabsTrigger>
-          <TabsTrigger value="validation">Validation</TabsTrigger>
+        <TabsList className="w-full h-9">
+          <TabsTrigger value="content" className="flex-1">Content</TabsTrigger>
+          <TabsTrigger value="validation" className="flex-1">Validation</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
