@@ -15,16 +15,44 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json()
-    const { documentId, documentType, content } = body
+    const { documentId, documentType } = body
 
-    if (!documentId || !documentType || !content) {
+    if (!documentId || !documentType) {
       return NextResponse.json(
-        { error: 'Missing required fields: documentId, documentType, content' },
+        { error: 'Missing required fields: documentId, documentType' },
         { status: 400 }
       )
     }
 
     console.log(`🔍 Validating document ${documentId} (${documentType})`)
+
+    // Fetch document content from document_versions
+    const { data: versionData } = await supabase
+      .from('document_versions')
+      .select('content')
+      .eq('document_id', documentId)
+      .eq('is_current', true)
+      .single()
+
+    // Fallback to document.content if document_versions doesn't exist
+    let content = versionData?.content
+
+    if (!content) {
+      const { data: docData } = await supabase
+        .from('documents')
+        .select('content')
+        .eq('id', documentId)
+        .single()
+      
+      content = (docData as any)?.content
+    }
+
+    if (!content || content.length < 100) {
+      return NextResponse.json(
+        { error: 'Document has no content to validate' },
+        { status: 400 }
+      )
+    }
 
     // Run validation using ValidatorAgent
     const validationResult = await validatorAgent.validate({

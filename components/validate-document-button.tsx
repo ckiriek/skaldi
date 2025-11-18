@@ -21,31 +21,15 @@ export function ValidateDocumentButton({
     setLoading(true)
 
     try {
-      // Fetch actual document content
-      const docResponse = await fetch(`/api/documents/${documentId}`)
-      if (!docResponse.ok) {
-        throw new Error('Failed to fetch document')
-      }
-      
-      const doc = await docResponse.json()
-      const content = doc.content || ''
-      
-      if (!content || content.length < 10) {
-        toast({
-          variant: 'warning',
-          title: 'Document not ready for validation',
-          description: 'Generate document content before running validation.',
-        })
-        return
-      }
-
+      // Get content from current page (passed via data attribute or context)
+      // For now, we'll fetch it from the API
       const response = await fetch('/api/validate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           documentId,
           documentType,
-          content,
+          // Content will be fetched by the API route
         }),
       })
 
