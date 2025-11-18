@@ -281,87 +281,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               </Card>
             )}
           </div>
-        </TabsContent>
 
-        <TabsContent value="documents">
-          {/* Documents */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Documents</CardTitle>
-                  <CardDescription>Generated regulatory documents</CardDescription>
-                </div>
-                {hasExternalData && (
-                  <GenerateDocumentButton projectId={project.id} />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documents && documents.length > 0 ? (
-                <div className="space-y-2">
-                  {documents.map((doc) => (
-                    <Link
-                      key={doc.id}
-                      href={`/dashboard/documents/${doc.id}`}
-                      className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
-                    >
-                      <div className="flex flex-col">
-                        <p className="text-sm font-medium">
-                          {doc.type} 
-                          <span className="text-xs text-muted-foreground"> · v{doc.version}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          Created {new Date(doc.created_at).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <Badge
-                        size="sm"
-                        variant={getDocumentStatusMeta(doc.status).variant}
-                      >
-                        {getDocumentStatusMeta(doc.status).label}
-                      </Badge>
-                    </Link>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-6">
-                  <FileText className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <h3 className="text-sm font-medium mb-1">No documents yet</h3>
-                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    {hasExternalData
-                      ? 'Generate your first regulatory document for this project.'
-                      : 'Fetch external data first, then generate documents.'}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="evidence">
           {/* External Evidence */}
-          <Card>
-            <CardHeader>
-              <CardTitle>External Evidence</CardTitle>
-              <CardDescription>
-                Data from ClinicalTrials.gov, PubMed, and openFDA
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {evidenceSources && evidenceSources.length > 0 ? (
+          {evidenceSources && evidenceSources.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">External Evidence</CardTitle>
+                <CardDescription>
+                  Data from ClinicalTrials.gov, PubMed, and openFDA
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
                 <EvidenceDisplay evidenceSources={evidenceSources} />
-              ) : (
-                <div className="text-center py-8">
-                  <Database className="mx-auto h-8 w-8 text-muted-foreground mb-2" />
-                  <h3 className="text-sm font-medium mb-1">No evidence yet</h3>
-                  <p className="text-xs text-muted-foreground max-w-md mx-auto">
-                    Click "Fetch External Data" above to retrieve evidence for this project.
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </TabsContent>
       </Tabs>
     </div>
