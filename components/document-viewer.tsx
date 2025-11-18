@@ -9,11 +9,14 @@ import rehypeHighlight from 'rehype-highlight'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Printer } from 'lucide-react'
+import { ExportDocumentButtons } from '@/components/export-document-buttons'
 import 'highlight.js/styles/github.css'
 
 interface DocumentViewerProps {
   content: string
   documentType?: string
+  documentId?: string
+  documentTitle?: string
 }
 
 interface TocItem {
@@ -22,7 +25,7 @@ interface TocItem {
   level: number
 }
 
-export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
+export function DocumentViewer({ content, documentType, documentId, documentTitle }: DocumentViewerProps) {
   const [toc, setToc] = useState<TocItem[]>([])
   const [activeSection, setActiveSection] = useState<string>('')
 
@@ -121,16 +124,24 @@ export function DocumentViewer({ content, documentType }: DocumentViewerProps) {
               <p className="text-sm text-muted-foreground">
                 {documentType ? `${documentType} preview` : 'Document preview'}
               </p>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label="Print document"
-                onClick={() => typeof window !== 'undefined' && window.print()}
-              >
-                <Printer className="h-4 w-4 mr-2" />
-                Print
-              </Button>
+              <div className="flex gap-2">
+                {documentId && documentTitle && (
+                  <ExportDocumentButtons 
+                    documentId={documentId} 
+                    documentTitle={documentTitle} 
+                  />
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-label="Print document"
+                  onClick={() => typeof window !== 'undefined' && window.print()}
+                >
+                  <Printer className="h-4 w-4 mr-2" />
+                  Print
+                </Button>
+              </div>
             </div>
             <div className="prose prose-slate max-w-none">
               <ReactMarkdown

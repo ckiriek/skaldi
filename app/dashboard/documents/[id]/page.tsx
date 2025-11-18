@@ -227,6 +227,8 @@ export default async function DocumentPage({ params }: { params: { id: string } 
             <DocumentViewer 
               content={(document as any).content} 
               documentType={document.type}
+              documentId={document.id}
+              documentTitle={document.title}
             />
           ) : (
             <Card>
