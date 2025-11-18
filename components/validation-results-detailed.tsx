@@ -13,8 +13,10 @@ interface ValidationIssue {
   category: string
   message: string
   location?: string
+  quote?: string
   suggestion?: string
   guideline_reference?: string
+  regulatory_requirement?: string
 }
 
 interface ValidationResults {
@@ -304,11 +306,11 @@ function IssueCard({ issue }: { issue: ValidationIssue }) {
         {getIssueIcon(issue.type)}
         <div className="flex-1 space-y-2">
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="flex-1">
               <p className="font-semibold text-sm">{issue.message}</p>
               {issue.location && (
                 <p className="text-xs text-muted-foreground mt-1">
-                  Location: {issue.location}
+                  📍 Location: {issue.location}
                 </p>
               )}
             </div>
@@ -317,6 +319,27 @@ function IssueCard({ issue }: { issue: ValidationIssue }) {
             </Badge>
           </div>
 
+          {/* Quote from document */}
+          {issue.quote && (
+            <div className={`rounded p-3 border-l-4 ${
+              issue.type === 'error' ? 'bg-red-50 border-red-500' :
+              issue.type === 'warning' ? 'bg-yellow-50 border-yellow-500' :
+              'bg-blue-50 border-blue-500'
+            }`}>
+              <p className="text-xs font-medium mb-1 text-gray-700">📄 Found in document:</p>
+              <p className="text-sm font-mono text-gray-800">"{issue.quote}"</p>
+            </div>
+          )}
+
+          {/* Regulatory requirement */}
+          {issue.regulatory_requirement && (
+            <div className="bg-purple-50 rounded p-3 border border-purple-200">
+              <p className="text-xs font-medium text-purple-900 mb-1">📋 Regulatory Requirement:</p>
+              <p className="text-xs text-purple-800">{issue.regulatory_requirement}</p>
+            </div>
+          )}
+
+          {/* Suggestion */}
           {issue.suggestion && (
             <div className="bg-white/50 rounded p-2 border border-gray-200">
               <p className="text-xs font-medium text-gray-700 mb-1">💡 Suggestion:</p>
@@ -324,15 +347,16 @@ function IssueCard({ issue }: { issue: ValidationIssue }) {
             </div>
           )}
 
+          {/* Guideline reference with link */}
           {issue.guideline_reference && (
             <div className="flex items-center gap-2">
-              <span className="text-xs text-muted-foreground">Reference:</span>
+              <span className="text-xs text-muted-foreground">🔗 Reference:</span>
               {REGULATORY_LINKS[issue.guideline_reference] ? (
                 <a
                   href={REGULATORY_LINKS[issue.guideline_reference]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1"
+                  className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium"
                 >
                   {issue.guideline_reference}
                   <ExternalLink className="h-3 w-3" />

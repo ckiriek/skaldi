@@ -28,9 +28,11 @@ export interface ValidationIssue {
   type: 'error' | 'warning' | 'info'
   category: string
   message: string
-  location?: string
+  location?: string // e.g., "Section 2.1, Paragraph 3"
+  quote?: string // Exact text from document
   suggestion?: string
   guideline_reference?: string
+  regulatory_requirement?: string // Specific requirement text
 }
 
 export interface ValidationResult {
@@ -397,22 +399,38 @@ export class ValidatorAgent {
       })
     }
 
-    // Check for placeholder text
+    // Check for placeholder text with exact quotes and location
     const placeholders = [
-      '[',
-      'TODO',
-      'TBD',
-      'FIXME',
-      'XXX',
+      { pattern: /\[([^\]]{1,100})\]/g, name: 'bracket placeholder' },
+      { pattern: /\bTODO:?\s*([^\n]{0,100})/gi, name: 'TODO marker' },
+      { pattern: /\bTBD:?\s*([^\n]{0,100})/gi, name: 'TBD marker' },
+      { pattern: /\bFIXME:?\s*([^\n]{0,100})/gi, name: 'FIXME marker' },
+      { pattern: /\bXXX:?\s*([^\n]{0,100})/gi, name: 'XXX marker' },
     ]
 
-    for (const placeholder of placeholders) {
-      if (request.content.includes(placeholder)) {
+    const lines = request.content.split('\n')
+    
+    for (const { pattern, name } of placeholders) {
+      const matches = request.content.matchAll(pattern)
+      for (const match of matches) {
+        // Find line number
+        const beforeMatch = request.content.substring(0, match.index)
+        const lineNumber = beforeMatch.split('\n').length
+        
+        // Get surrounding context (up to 100 chars)
+        const startIdx = Math.max(0, (match.index || 0) - 50)
+        const endIdx = Math.min(request.content.length, (match.index || 0) + match[0].length + 50)
+        const quote = request.content.substring(startIdx, endIdx).trim()
+        
         issues.push({
           type: 'error',
           category: 'Quality',
-          message: `Placeholder text found: "${placeholder}"`,
-          suggestion: 'Replace all placeholder text with actual content.',
+          message: `Placeholder text found: ${name}`,
+          location: `Line ${lineNumber}`,
+          quote: match[0],
+          suggestion: 'Replace all placeholder text with actual content before submission.',
+          guideline_reference: 'ICH E6 (R2) Section 8.1',
+          regulatory_requirement: 'All documents must contain complete and accurate information without placeholder text (ICH E6 R2 8.1: Essential Documents)',
         })
       }
     }
@@ -423,7 +441,10 @@ export class ValidatorAgent {
         type: 'info',
         category: 'Quality',
         message: 'No data source information found.',
+        location: 'Document-wide',
         suggestion: 'Add data sources section for provenance tracking.',
+        guideline_reference: 'ICH E6 (R2) Section 5.5.3',
+        regulatory_requirement: 'Source data must be attributable, legible, contemporaneous, original, and accurate (ICH E6 R2 5.5.3: ALCOA principles)',
       })
     }
 
@@ -442,7 +463,10 @@ export class ValidatorAgent {
         type: 'warning',
         category: 'Completeness',
         message: 'No section header found.',
+        location: 'Document structure',
         suggestion: 'Add proper section header (e.g., "# 1. PRODUCT INFORMATION").',
+        guideline_reference: 'ICH E6 (R2) Section 7',
+        regulatory_requirement: 'Investigator\'s Brochure must follow standardized section numbering (ICH E6 R2 Section 7: Investigator\'s Brochure)',
       })
     }
 
