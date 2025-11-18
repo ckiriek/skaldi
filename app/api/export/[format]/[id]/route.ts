@@ -20,15 +20,11 @@ export async function GET(
 
     const { format, id } = params
 
-    // Fetch document with current version content
+    // Fetch document
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .select(`
-        *,
-        document_versions!inner(content)
-      `)
+      .select('*')
       .eq('id', id)
-      .eq('document_versions.is_current', true)
       .single()
 
     if (docError || !document) {
@@ -36,11 +32,20 @@ export async function GET(
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
-    // Extract content from the joined version
-    const content = (document as any).document_versions?.content
-    if (!content) {
+    // Fetch current version content
+    const { data: version, error: versionError } = await supabase
+      .from('document_versions')
+      .select('content')
+      .eq('document_id', id)
+      .eq('is_current', true)
+      .single()
+
+    if (versionError || !version) {
+      console.error('Version fetch error:', versionError)
       return NextResponse.json({ error: 'Document has no content' }, { status: 404 })
     }
+
+    const content = version.content
 
     if (format === 'pdf') {
       return await exportToPDF(document, content)
