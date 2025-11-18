@@ -20,21 +20,32 @@ export async function GET(
 
     const { format, id } = params
 
-    // Fetch document
+    // Fetch document with current version content
     const { data: document, error: docError } = await supabase
       .from('documents')
-      .select('*')
+      .select(`
+        *,
+        document_versions!inner(content)
+      `)
       .eq('id', id)
+      .eq('document_versions.is_current', true)
       .single()
 
     if (docError || !document) {
+      console.error('Document fetch error:', docError)
       return NextResponse.json({ error: 'Document not found' }, { status: 404 })
     }
 
+    // Extract content from the joined version
+    const content = (document as any).document_versions?.content
+    if (!content) {
+      return NextResponse.json({ error: 'Document has no content' }, { status: 404 })
+    }
+
     if (format === 'pdf') {
-      return await exportToPDF(document)
+      return await exportToPDF(document, content)
     } else if (format === 'docx') {
-      return await exportToDOCX(document)
+      return await exportToDOCX(document, content)
     } else {
       return NextResponse.json({ error: 'Unsupported format' }, { status: 400 })
     }
@@ -54,7 +65,7 @@ interface TocItem {
   page: number
 }
 
-async function exportToPDF(document: any) {
+async function exportToPDF(document: any, content: string) {
   const pdf = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -75,7 +86,7 @@ async function exportToPDF(document: any) {
   pdf.text(typeLines, pageWidth / 2, 80, { align: 'center' })
   
   pdf.setFontSize(20)
-  const titleLines = pdf.splitTextToSize(document.title, maxWidth - 40)
+  const titleLines = pdf.splitTextToSize(document.type, maxWidth - 40)
   pdf.text(titleLines, pageWidth / 2, 100, { align: 'center' })
   
   pdf.setFontSize(10)
@@ -88,7 +99,7 @@ async function exportToPDF(document: any) {
   pdf.text(`Generated: ${date}`, pageWidth / 2, 120, { align: 'center' })
 
   // Parse markdown and render
-  const tokens = marked.lexer(document.content)
+  const tokens = marked.lexer(content)
   
   // First pass: collect TOC items
   let currentPage = 2 // Start after title page
@@ -260,14 +271,14 @@ async function exportToPDF(document: any) {
   return new NextResponse(pdfBuffer, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${sanitizeFilename(document.title)}.pdf"`,
+      'Content-Disposition': `attachment; filename="${sanitizeFilename(document.type)}.pdf"`,
     },
   })
 }
 
-async function exportToDOCX(document: any) {
+async function exportToDOCX(document: any, content: string) {
   // Parse markdown
-  const tokens = marked.lexer(document.content)
+  const tokens = marked.lexer(content)
   
   const docChildren: any[] = []
 
@@ -280,7 +291,7 @@ async function exportToDOCX(document: any) {
       spacing: { before: 2000, after: 400 },
     }),
     new Paragraph({
-      text: document.title,
+      text: document.type,
       heading: HeadingLevel.TITLE,
       alignment: AlignmentType.CENTER,
       spacing: { after: 400 },
@@ -438,7 +449,7 @@ async function exportToDOCX(document: any) {
   return new NextResponse(new Uint8Array(docxBuffer), {
     headers: {
       'Content-Type': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      'Content-Disposition': `attachment; filename="${sanitizeFilename(document.title)}.docx"`,
+      'Content-Disposition': `attachment; filename="${sanitizeFilename(document.type)}.docx"`,
     },
   })
 }
