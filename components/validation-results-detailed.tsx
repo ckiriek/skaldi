@@ -113,40 +113,42 @@ export function ValidationResultsDetailed({ results, documentType }: ValidationR
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Overall Score</CardTitle>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <Card className="h-24">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Overall Score</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className={`text-3xl font-bold ${getStatusColor(results.completeness_score)}`}>
-              {results.completeness_score}%
+          <CardContent className="pb-2">
+            <div className="flex items-center gap-3">
+              <div className={`text-2xl font-bold ${getStatusColor(results.completeness_score)}`}>
+                {results.completeness_score}%
+              </div>
+              <Progress 
+                value={results.completeness_score} 
+                variant={getStatusVariant(results.completeness_score)}
+                className="flex-1"
+              />
             </div>
-            <Progress 
-              value={results.completeness_score} 
-              variant={getStatusVariant(results.completeness_score)}
-              className="mt-2"
-            />
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Checks Passed</CardTitle>
+        <Card className="h-24">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Checks Passed</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-bold">{results.passed}/{results.total_rules}</div>
-            <p className="text-xs text-muted-foreground mt-1">
+          <CardContent className="pb-2">
+            <div className="text-2xl font-bold">{results.passed}/{results.total_rules}</div>
+            <p className="text-xs text-muted-foreground">
               {Math.round((results.passed / results.total_rules) * 100)}% success rate
             </p>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Issues Found</CardTitle>
+        <Card className="h-24">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-xs font-medium text-muted-foreground">Issues Found</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="pb-2">
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-1">
                 <AlertCircle className="h-4 w-4 text-red-600" />
@@ -161,23 +163,6 @@ export function ValidationResultsDetailed({ results, documentType }: ValidationR
                 <span className="text-sm font-semibold">{results.summary?.info || 0}</span>
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground">Actions</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              onClick={handleExportReport} 
-              variant="outline" 
-              size="sm"
-              className="w-full"
-            >
-              <FileDown className="h-4 w-4 mr-2" />
-              Export Report
-            </Button>
           </CardContent>
         </Card>
       </div>
