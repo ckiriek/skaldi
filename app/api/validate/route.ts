@@ -68,23 +68,34 @@ export async function POST(request: Request) {
     // Determine status
     const status = validationResult.passed ? 'approved' : 'review'
 
+    // Calculate total checks performed (estimate based on validation categories)
+    const totalChecks = 13 // ICH (3) + FDA (3) + Terminology (2) + Quality (3) + Completeness (2)
+    const passedChecks = totalChecks - validationResult.summary.errors
+
+    console.log(`📊 Validation stats: ${passedChecks}/${totalChecks} checks passed`)
+    console.log(`📊 Issues found: ${validationResult.summary.errors} errors, ${validationResult.summary.warnings} warnings`)
+
     // Save validation results to database
-    const { error: insertError } = await supabase
+    const { data: insertData, error: insertError } = await supabase
       .from('validation_results')
       .insert({
         document_id: documentId,
         completeness_score: Math.round(completenessScore),
         status,
-        total_rules: validationResult.issues.length,
-        passed: validationResult.issues.filter(i => i.type !== 'error').length,
+        total_rules: totalChecks,
+        passed: passedChecks,
         failed: validationResult.summary.errors,
         issues: validationResult.issues,
         summary: validationResult.summary,
         validation_date: new Date().toISOString(),
       })
+      .select()
 
     if (insertError) {
-      console.error('Failed to save validation results:', insertError)
+      console.error('❌ Failed to save validation results:', insertError)
+      console.error('   Error details:', JSON.stringify(insertError, null, 2))
+    } else {
+      console.log('✅ Validation results saved to database:', insertData?.[0]?.id)
     }
 
     // Update document status if validation passed
@@ -101,8 +112,8 @@ export async function POST(request: Request) {
       success: true,
       completeness_score: Math.round(completenessScore),
       status,
-      total_rules: validationResult.issues.length,
-      passed: validationResult.issues.filter(i => i.type !== 'error').length,
+      total_rules: totalChecks,
+      passed: passedChecks,
       failed: validationResult.summary.errors,
       issues: validationResult.issues,
       summary: validationResult.summary,
