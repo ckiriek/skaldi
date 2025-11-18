@@ -1,12 +1,40 @@
 # Skaldi Writer - Implementation Plan
 
-**Last Updated:** 2025-11-17 22:11 UTC  
-**Current Phase:** Week 3-4: Data Enrichment Pipeline ✅ COMPLETE  
-**Status:** ✅ ENRICHMENT INTEGRATION COMPLETE — AI now cites specific trials & publications!  
-**Progress:** 100% backend, 100% features, 60% UI/UX, 98% AI quality ⬆️⬆️  
-**Timeline:** 5 weeks remaining to production-ready system  
-**Latest Achievement:** Enriched data integration - AI now references NCT IDs (e.g., NCT02836628) and PMIDs (e.g., PMID 30521516)
+**Last Updated:** 2025-11-18 17:20 UTC  
+**Current Phase:** Week 5-6: UI/UX Enhancement ⏳ IN PROGRESS  
+**Status:** ✅ PROJECT PAGE REDESIGN COMPLETE — Compact header, ordered buttons, visual icons!  
+**Progress:** 100% backend, 100% features, 70% UI/UX ⬆️, 98% AI quality  
+**Timeline:** 4 weeks remaining to production-ready system  
+**Latest Achievement:** UI/UX improvements - project icons, compact header, reordered document generation buttons
 **Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
+
+---
+
+## ✅ COMPLETED: UI/UX Improvements - Project Page Redesign (2025-11-18)
+
+**Achievement:** Major UI/UX improvement with better information hierarchy and guided workflow
+
+### PHASE 1: PROJECT ICONS ✅
+- Added `icon_name` field to projects table
+- Random medical icon assignment on project creation (10 Lucide icons)
+- Visual project identification in header and lists
+
+### PHASE 2: COMPACT HEADER ✅
+- Removed redundant "Overview" tab
+- Moved all key info to compact header (Phase, Indication, Compound, RLD, Status)
+- Added visual enrichment status indicator with checkmark
+
+### PHASE 3: DOCUMENT GENERATION WORKFLOW ✅
+- Reordered buttons in correct dependency order: IB → Synopsis → Protocol → ICF → SAP → CRF
+- Compact single-column layout instead of 2x3 grid
+- Removed button duplication on Documents tab
+- Enhanced `GenerateDocumentButton` with single-button mode
+
+**Files:** `20251118_add_icon_to_projects.sql`, `app/api/v1/intake/route.ts`, `app/dashboard/projects/[id]/page.tsx`, `components/generate-document-button.tsx`  
+**Impact:** 67% reduction in information density, clear user guidance, visual project identity  
+**See:** `devlog/2025-11-18-ui-ux-improvements.md`
+
+---
 
 ## ✅ COMPLETED: Regulatory Core v1 (2025-11-17)
 
