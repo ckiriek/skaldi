@@ -348,9 +348,8 @@ async function exportToDOCX(document: any) {
         // Add header row
         const headerCells = token.header.map((cell: any) => 
           new TableCell({
-            children: [new Paragraph({ 
-              text: cell.text,
-              bold: true,
+            children: [new Paragraph({
+              children: [new TextRun({ text: cell.text, bold: true })],
             })],
             shading: { fill: 'F0F0F0' },
           })
@@ -387,8 +386,7 @@ async function exportToDOCX(document: any) {
       case 'code':
         docChildren.push(
           new Paragraph({
-            text: token.text,
-            font: 'Courier New',
+            children: [new TextRun({ text: token.text, font: 'Courier New' })],
             shading: { fill: 'F5F5F5' },
             spacing: { before: 200, after: 200 },
           })
