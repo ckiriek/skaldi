@@ -38,12 +38,13 @@ export interface ProgressProps
     VariantProps<typeof indicatorVariants> {
   showLabel?: boolean
   label?: string
+  indicatorClassName?: string
 }
 
 const Progress = React.forwardRef<
   React.ElementRef<typeof ProgressPrimitive.Root>,
   ProgressProps
->(({ className, value, size, variant, showLabel, label, ...props }, ref) => (
+>(({ className, value, size, variant, showLabel, label, indicatorClassName, ...props }, ref) => (
   <div className="w-full space-y-1">
     {(showLabel || label) && (
       <div className="flex justify-between text-sm text-gray-600">
@@ -57,7 +58,7 @@ const Progress = React.forwardRef<
       {...props}
     >
       <ProgressPrimitive.Indicator
-        className={cn(indicatorVariants({ variant }))}
+        className={cn(indicatorVariants({ variant }), indicatorClassName)}
         style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
       />
     </ProgressPrimitive.Root>
