@@ -1,12 +1,30 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { FileText, Book, FileCheck, FileSignature, Loader2, Microscope, ClipboardList, FileSpreadsheet } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 
 type DocumentType = 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF'
+
+const LOADING_TERMS = [
+  "Analyzing protocol...", 
+  "Fetching clinical data...", 
+  "Synthesizing safety profile...", 
+  "Formatting ICH structure...", 
+  "Validating references...", 
+  "Checking compliance...", 
+  "Drafting sections...", 
+  "Reviewing terminology...", 
+  "Optimizing readability...", 
+  "Finalizing layout...", 
+  "Generating tables...", 
+  "Processing citations...", 
+  "Reviewing contraindications...", 
+  "Checking interactions...", 
+  "Finalizing document..."
+]
 
 interface GenerateDocumentButtonProps {
   projectId: string
@@ -25,7 +43,21 @@ export function GenerateDocumentButton({
 }: GenerateDocumentButtonProps) {
   const router = useRouter()
   const [loadingType, setLoadingType] = useState<string | null>(null)
+  const [loadingTermIndex, setLoadingTermIndex] = useState(0)
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (!loadingType) {
+      setLoadingTermIndex(0)
+      return
+    }
+    
+    const interval = setInterval(() => {
+      setLoadingTermIndex(prev => (prev + 1) % LOADING_TERMS.length)
+    }, 2000)
+    
+    return () => clearInterval(interval)
+  }, [loadingType])
 
   const handleGenerate = async (type: DocumentType) => {
     if (disabled) return
@@ -132,14 +164,27 @@ export function GenerateDocumentButton({
         disabled={loadingType !== null || disabled}
         variant={variant}
         size={size}
-        className={disabled ? "w-full justify-start opacity-50" : "w-full justify-start"}
+        className={`${disabled ? "opacity-50 " : ""}w-full justify-start ${loading ? "h-auto py-2" : ""}`}
       >
         {loading ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <div className="flex flex-col w-full text-left">
+             <div className="flex items-center">
+                <Loader2 className="w-3 h-3 mr-2 animate-spin text-emerald-600" />
+                <span className="text-emerald-700 text-xs animate-pulse font-medium">{LOADING_TERMS[loadingTermIndex]}</span>
+             </div>
+             <div className="h-1 w-full bg-emerald-100/50 mt-1.5 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-emerald-400 transition-all duration-500 ease-in-out" 
+                  style={{ width: `${Math.min(((loadingTermIndex + 1) / LOADING_TERMS.length) * 100, 100)}%` }} 
+                />
+             </div>
+          </div>
         ) : (
-          <Icon className="w-4 h-4 mr-2" />
+          <>
+            <Icon className="w-4 h-4 mr-2" />
+            {`Generate ${getLabel(documentType)}`}
+          </>
         )}
-        {loading ? 'Generating...' : `Generate ${getLabel(documentType)}`}
       </Button>
     )
   }

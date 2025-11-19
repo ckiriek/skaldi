@@ -29,7 +29,7 @@
 - [ ] **Smart Progress:** "Generating: [term]" bar with 15 medical terms cycle. (#11)
 
 ## 🧠 Sprint 4: Content & Orchestration
-- [ ] **Synopsis Quality:** Improve prompt and structure. (#13)
+- [ ] **IB Quality:** Major overhaul of Investigator's Brochure prompt and content depth. (#13 - user correction)
 - [ ] **External Data:** Force reference usage in generation. (#14)
 - [ ] **Doc Standards:** Research and adjust document lengths. (#15)
 - [ ] **Orchestration:** Verify multi-agent workflow. (#16)

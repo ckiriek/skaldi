@@ -382,6 +382,29 @@ class OpenFDAAdapter {
       return null
     }
   }
+
+  async searchAdverseEvents(drugName: string, limit: number = 5): Promise<any[]> {
+    try {
+      await this.rateLimit()
+      // Search FAERS for patient.drug.medicinalproduct and count by reaction
+      const url = `${this.baseUrl}/drug/event.json?search=patient.drug.medicinalproduct:"${encodeURIComponent(drugName)}"&count=patient.reaction.reactionmeddrapt.exact&limit=${limit}`
+      
+      const response = await fetch(url)
+      if (!response.ok) {
+        // 404 is expected if no events found
+        if (response.status !== 404) {
+          console.warn(`openFDA FAERS error ${response.status} for ${drugName}`)
+        }
+        return []
+      }
+
+      const data = await response.json()
+      return data.results || []
+    } catch (error) {
+      console.error(`openFDA searchAdverseEvents error:`, error)
+      return []
+    }
+  }
 }
 
 // ============================================================================
@@ -674,6 +697,47 @@ Deno.serve(async (req) => {
 
     if (metrics.records_fetched.labels > 0) {
       metrics.coverage.labels = 1.0
+    }
+
+    // ========================================================================
+    // STEP 4.5: OPENFDA - FAERS (Safety Data)
+    // ========================================================================
+    console.log(`\n📍 STEP 4.5: openFDA - Fetching Adverse Events`)
+    const openfdaSafety = new OpenFDAAdapter()
+    const faersEvents = await openfdaSafety.searchAdverseEvents(project.compound_name, 10)
+
+    if (faersEvents.length > 0) {
+      metrics.sources_used.push('openFDA FAERS')
+      metrics.records_fetched.adverse_events = faersEvents.length
+      
+      const eventsToStore = faersEvents.map((evt: any) => ({
+        inchikey,
+        project_id,
+        term: evt.term,
+        frequency: evt.count.toString(), // Store as string frequency/count
+        source: 'openFDA FAERS',
+        retrieved_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }))
+      
+      // Try to store
+      const { error: aeError } = await supabaseClient
+        .from('adverse_events')
+        .insert(eventsToStore)
+      
+      if (aeError) {
+        console.error('Error storing adverse events:', aeError)
+        // Don't fail the whole process, just log warning
+        metrics.errors.push({
+          code: 'E450_AE_STORAGE_FAILED',
+          message: `Failed to store adverse events: ${aeError.message}`,
+          source: 'openFDA',
+          severity: 'warning'
+        })
+      } else {
+        console.log(`✅ Stored ${faersEvents.length} adverse event terms`)
+      }
     }
 
     // ========================================================================

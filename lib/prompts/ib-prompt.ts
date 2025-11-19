@@ -51,223 +51,71 @@ export function generateIBPrompt(context: IBContext): string {
   const primaryEndpoint = design?.primary_endpoint
   const allEndpoints = primaryEndpoint ? [primaryEndpoint, ...endpoints] : endpoints
 
-  return `You are an expert medical writer specializing in regulatory documentation for clinical trials. Your task is to generate a comprehensive Investigator's Brochure (IB) that complies with ICH E6 (R2) Good Clinical Practice guidelines.
+  return `You are an expert Senior Medical Writer with 15+ years of experience in regulatory affairs (FDA/EMA). Your task is to generate a COMPREHENSIVE, SCIENTIFICALLY RIGOROUS Investigator's Brochure (IB) for ${compoundName}.
 
-## ROLE AND EXPERTISE
-- Act as a senior medical writer with 10+ years of experience in clinical trial documentation
-- You have deep knowledge of ICH E6, FDA 21 CFR, and EMA guidelines
-- You write in a clear, precise, and scientifically rigorous style
-- You maintain objectivity and balance in presenting benefits and risks
+## CRITICAL REQUIREMENTS
+1. **LENGTH & DEPTH:** The output must be substantial. Avoid surface-level summaries. Expand on pharmacological mechanisms, safety profiles, and clinical rationale.
+2. **EVIDENCE-BASED:** You MUST cite the specific Clinical Trials (NCT IDs) and Publications (PMIDs/Authors) provided in the Context below. 
+3. **REGULATORY COMPLIANCE:** Strictly follow ICH E6 (R2) Section 7 structure.
+4. **TONE:** Formal, objective, medical-grade English. No marketing fluff.
 
-## AUDIENCE
-- Primary: Clinical investigators and research staff conducting the trial
-- Secondary: Ethics committees (IRB/IEC), regulatory authorities, and study coordinators
-- Expertise level: Healthcare professionals with clinical research experience
+## DOCUMENT CONTEXT
+- **Compound:** ${compoundName}
+- **Indication:** ${indication}
+- **Phase:** ${phase}
+- **Sponsor:** ${sponsor}
+- **Pharmacological Class:** ${entities.find(e => e.type === 'compound')?.description || 'Investigational Therapeutic Agent'}
 
-## OBJECTIVE
-Generate a complete Investigator's Brochure for ${compoundName} in the treatment of ${indication}. The IB must:
-1. Enable investigators to assess risks and benefits for study participants
-2. Support informed consent discussions
-3. Provide scientific rationale for the clinical trial
-4. Comply with ICH E6 Section 7 requirements
+## AVAILABLE EVIDENCE (MUST BE CITED)
 
-## DOCUMENT STRUCTURE (ICH E6 Compliant)
+### Clinical Trials
+${clinicalTrials.length > 0 ? clinicalTrials.map(t => `- **${t.nctId}**: ${t.title} (${t.phase}, Status: ${t.status}). Primary Outcome: ${t.primaryOutcome}`).join('\n') : 'No specific trials provided. Reference standard phase-appropriate studies.'}
 
-Generate the IB with the following sections:
+### Literature / Publications
+${publications.length > 0 ? publications.map(p => `- **${p.pmid}**: ${p.title} (${p.authors[0]} et al., ${p.journal}, ${p.publicationDate})`).join('\n') : 'No specific publications provided. Reference standard class-appropriate literature.'}
 
-### 1. TITLE PAGE
-- Document title: "Investigator's Brochure: ${compoundName}"
-- Sponsor: ${sponsor}
-- Version number and date
-- Confidentiality statement
+### Safety Data (FAERS/FDA)
+${safetyData.length > 0 ? safetyData[0]?.adverseEvents.slice(0, 5).map(ae => `- ${ae.term}: ${ae.frequency} reports (${ae.seriousness})`).join('\n') : 'Limited safety data available. Extrapolate from pharmacological class.'}
 
-### 2. TABLE OF CONTENTS
-- Comprehensive list of all sections and subsections with page numbers
+## DOCUMENT STRUCTURE & CONTENT GUIDANCE
 
-### 3. SUMMARY
-- Brief overview (1-2 pages) of key information:
-  * Chemical name and structure
-  * Pharmacological class and mechanism of action
-  * Rationale for clinical development
-  * Summary of nonclinical findings
-  * Summary of clinical experience to date
-  * Anticipated benefits and known/potential risks
+### 1. SUMMARY
+- Provide a high-level 1-2 page executive summary.
+- Synthesize the physical, nonclinical, and clinical info.
+- **Constraint:** Must be standalone and compelling for an investigator.
 
-### 4. INTRODUCTION
-- Generic and trade names (if applicable)
-- Chemical name and structure
-- Pharmacological class: ${entities.find(e => e.type === 'compound')?.description || 'Novel therapeutic agent'}
-- Rationale for investigating ${compoundName} for ${indication}
-- Overview of development program and current phase (${phase})
+### 2. INTRODUCTION
+- Chemical name (and synonyms).
+- Rationale: Why ${compoundName} for ${indication}? Explain the unmet medical need.
+- Mechanism of Action: Explain HOW it works at a molecular level.
 
-### 5. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES
-- Chemical structure and molecular formula
-- Physical properties (appearance, solubility, stability)
-- Formulation details
-- Storage and handling requirements
-- Preparation instructions (if applicable)
+### 3. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES
+- Describe the formulation (e.g., tablets, solution).
+- Storage and handling instructions (standard for this class).
 
-### 6. NONCLINICAL STUDIES
+### 4. NONCLINICAL STUDIES
+**WARNING:** This section is often too short. EXPAND IT.
+- **Nonclinical Pharmacology:** Receptor binding, primary PD, secondary PD.
+- **Pharmacokinetics (Animal):** Absorption, distribution, metabolism (CYP enzymes), excretion.
+- **Toxicology:** Single-dose, repeat-dose, genotoxicity, reproductive toxicity.
+- *If specific data is missing, describe expected profiles for the ${entities.find(e => e.type === 'compound')?.description || 'drug class'} class.*
 
-#### 6.1 Nonclinical Pharmacology
-- Primary pharmacodynamics (mechanism of action)
-- Secondary pharmacodynamics (off-target effects)
-- Safety pharmacology (cardiovascular, respiratory, CNS effects)
+### 5. EFFECTS IN HUMANS (CLINICAL DATA)
+- **Pharmacokinetics:** ADME in humans, half-life, Cmax, AUC.
+- **Safety & Efficacy:** 
+  - Summarize results from the cited clinical trials (${clinicalTrials.map(t => t.nctId).join(', ')}).
+  - Discuss adverse events from safety data.
+  - Cite literature (${publications.map(p => p.pmid).join(', ')}).
 
-#### 6.2 Pharmacokinetics and Product Metabolism
-- Absorption, distribution, metabolism, excretion (ADME)
-- Species differences
-- Potential for drug-drug interactions
-
-#### 6.3 Toxicology
-- Single-dose toxicity
-- Repeat-dose toxicity
-- Carcinogenicity (if applicable)
-- Genotoxicity
-- Reproductive and developmental toxicity
-- Local tolerance
-- Other special studies
-
-### 7. EFFECTS IN HUMANS
-
-#### 7.1 Pharmacokinetics and Product Metabolism
-${dosages.length > 0 ? `- Studied dosages: ${dosages.join(', ')}` : '- Dose-ranging studies'}
-- Absorption and bioavailability
-- Distribution and protein binding
-- Metabolism and excretion
-- Special populations (elderly, renal/hepatic impairment, pediatric)
-- Drug-drug interactions
-- Food effects
-
-#### 7.2 Pharmacodynamics
-- Mechanism of action in humans
-- Dose-response relationships
-- Biomarkers and surrogate endpoints
-${allEndpoints.length > 0 ? `- Key endpoints: ${allEndpoints.join(', ')}` : ''}
-
-#### 7.3 Efficacy
-${publications.length > 0 ? `
-**Evidence from Published Literature:**
-${publications.slice(0, 3).map(pub => `
-- ${pub.title} (${pub.authors[0]} et al., ${pub.journal}, ${pub.publicationDate})
-  ${pub.abstract.substring(0, 200)}...
-`).join('\n')}
-` : ''}
-
-${clinicalTrials.length > 0 ? `
-**Evidence from Clinical Trials:**
-${clinicalTrials.slice(0, 3).map(trial => `
-- ${trial.title} (${trial.nctId})
-  Phase: ${trial.phase} | Status: ${trial.status}
-  Primary Outcome: ${trial.primaryOutcome || 'Not specified'}
-  Enrollment: ${trial.enrollment || 'N/A'} participants
-`).join('\n')}
-` : ''}
-
-- Phase 1 studies: Safety, tolerability, PK/PD
-- Phase 2 studies: Dose-finding, proof-of-concept
-${phase === 'Phase 3' || phase === 'Phase 4' ? '- Phase 3 studies: Confirmatory efficacy and safety' : ''}
-
-#### 7.4 Safety and Tolerability
-
-${safetyData.length > 0 ? `
-**Safety Data from FDA Adverse Event Reporting:**
-${safetyData[0]?.adverseEvents.slice(0, 5).map(ae => `
-- ${ae.term}: ${ae.frequency} reports (${ae.seriousness})
-`).join('\n')}
-` : ''}
-
-**Common Adverse Events:**
-- Provide frequency, severity, and relationship to treatment
-- Serious adverse events and deaths
-- Laboratory abnormalities
-- Discontinuations due to adverse events
-
-**Special Safety Concerns:**
-- Organ toxicity (hepatic, renal, cardiac, etc.)
-- Immunogenicity
-- Potential for abuse or dependence
-- Pregnancy and lactation considerations
-
-### 8. SUMMARY OF DATA AND GUIDANCE FOR THE INVESTIGATOR
-
-#### 8.1 Benefit-Risk Assessment
-- Summary of potential benefits for ${indication}
-- Summary of known and potential risks
-- Benefit-risk balance for study participants
-
-#### 8.2 Dosing and Administration
-${dosages.length > 0 ? `- Recommended dosing: ${dosages[0]}` : '- Dosing to be determined in study'}
-- Route of administration
-- Dose modifications for toxicity
-- Concomitant medications (allowed/prohibited)
-
-#### 8.3 Safety Monitoring
-- Required safety assessments
-- Stopping rules and dose-limiting toxicities
-- Reporting requirements for adverse events
-
-#### 8.4 Pregnancy Prevention and Testing
-- Contraceptive requirements
-- Pregnancy testing schedule
-- Management of pregnancy during study
-
-### 9. REFERENCES
-- List all cited publications, clinical trial reports, and regulatory documents
-- Use standard citation format (e.g., Vancouver or AMA style)
-
-## FORMATTING REQUIREMENTS
-
-1. **Markdown Format**: Use proper markdown headers (# for H1, ## for H2, etc.)
-2. **Length**: Comprehensive but concise (typically 40-80 pages for a Phase 2/3 IB)
-3. **Tone**: 
-   - Formal and scientific
-   - Objective and balanced
-   - Clear and precise
-   - Avoid promotional language
-4. **Style**:
-   - Use active voice where appropriate
-   - Define all abbreviations on first use
-   - Use tables for complex data presentation
-   - Include figure placeholders where relevant
-
-## COMPLIANCE STANDARDS
-- ICH E6 (R2) Good Clinical Practice
-- ICH E3 Structure and Content of Clinical Study Reports
-- FDA 21 CFR Part 312 (IND regulations)
-- EMA Guidelines on Clinical Trial Documentation
-
-## QUALITY CHECKS
-Before finalizing, ensure:
-- [ ] All required ICH E6 sections are included
-- [ ] Scientific accuracy and internal consistency
-- [ ] Balanced presentation of benefits and risks
-- [ ] Clear and understandable for target audience
-- [ ] Proper citations and references
-- [ ] No promotional or biased language
-
-## CONTEXT-SPECIFIC INFORMATION
-
-**Project Details:**
-- Compound: ${compoundName}
-- Indication: ${indication}
-- Phase: ${phase}
-- Sponsor: ${sponsor}
-${population.length > 0 ? `- Target Population: ${population.join(', ')}` : ''}
-
-**Available Evidence:**
-- ${clinicalTrials.length} relevant clinical trials identified
-- ${publications.length} peer-reviewed publications available
-- ${safetyData.length > 0 ? 'FDA adverse event data available' : 'Limited safety data available'}
-
-**Key Entities:**
-${entities.slice(0, 10).map(e => `- ${e.type}: ${e.value}${e.description ? ` (${e.description})` : ''}`).join('\n')}
+### 6. SUMMARY OF DATA AND GUIDANCE FOR THE INVESTIGATOR
+- **Benefit-Risk Assessment:** Critical analysis.
+- **Contraindications & Precautions.**
+- **Monitoring:** What labs/vitals must be checked?
+- **Overdose:** Management strategies.
 
 ---
 
-Now, generate a comprehensive Investigator's Brochure following the structure above. Use all available context and evidence to create a scientifically rigorous, ICH E6-compliant document that will enable investigators to conduct the trial safely and effectively.
-
-Return the output in clean markdown format, ready to be saved and displayed.`
+GENERATE THE FULL DOCUMENT IN MARKDOWN. USE TABLES WHERE APPROPRIATE. DO NOT LEAVE PLACEHOLDERS.`
 }
 
 /**

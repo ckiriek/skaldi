@@ -10,6 +10,7 @@ import { ArrowLeft, CheckCircle, FileText, Calendar, Info } from 'lucide-react'
 import { ValidateDocumentButton } from '@/components/validate-document-button'
 import { DocumentViewer } from '@/components/document-viewer'
 import { ValidationResultsDetailed } from '@/components/validation-results-detailed'
+import { AuditLogViewer } from '@/components/audit-log-viewer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
@@ -101,6 +102,13 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
     summary: (rawValidationResults.results as any)?.summary || { errors: 0, warnings: 0, info: 0 },
   } : null
 
+  // Fetch Audit Logs
+  const { data: auditLogs } = await supabase
+    .from('audit_log')
+    .select('*')
+    .eq('document_id', id)
+    .order('created_at', { ascending: false })
+
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 
   return (
@@ -187,6 +195,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
         <TabsList className="w-full h-9">
           <TabsTrigger value="content" className="flex-1">Content</TabsTrigger>
           <TabsTrigger value="validation" className="flex-1">Validation</TabsTrigger>
+          <TabsTrigger value="audit" className="flex-1">Audit</TabsTrigger>
         </TabsList>
 
         <TabsContent value="content">
@@ -232,6 +241,10 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="audit">
+          <AuditLogViewer logs={auditLogs || []} />
         </TabsContent>
       </Tabs>
     </div>

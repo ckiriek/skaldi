@@ -876,16 +876,29 @@ serve(async (req) => {
 
     // 7. Determine status based on validation
     // Allowed statuses: 'draft', 'review', 'approved', 'outdated'
-    const status = validation.passed ? 'draft' : 'review'
+    // Always set to 'review' initially so user can review the generated content
+    const status = 'review'
 
-    // 8. Create document record with content
+    // 8. Determine version number
+    const { data: latestDoc } = await supabaseClient
+      .from('documents')
+      .select('version')
+      .eq('project_id', projectId)
+      .eq('type', documentType)
+      .order('version', { ascending: false })
+      .limit(1)
+      .single()
+    
+    const nextVersion = (latestDoc?.version || 0) + 1
+
+    // 9. Create document record with content
     // TODO: Add metadata column to store validation results
     const { data: document, error: docError } = await supabaseClient
       .from('documents')
       .insert({
         project_id: projectId,
         type: documentType,
-        version: 1,
+        version: nextVersion,
         status,
         created_by: userId,
         content: generatedContent,
