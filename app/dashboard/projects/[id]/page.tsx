@@ -6,7 +6,7 @@ import { Badge } from '@/components/ui/badge'
 import { Database, FileText, Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet, CheckCircle2 } from 'lucide-react'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { EvidenceDisplay } from '@/components/evidence-display'
-import { GenerateDocumentButton } from '@/components/generate-document-button'
+import { GenerationPipeline } from '@/components/projects/generation-pipeline'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
@@ -69,14 +69,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     .eq('project_id', id)
     .order('created_at', { ascending: false })
 
-  // Determine which documents can be generated (Sequential Workflow)
-  const existingTypes = new Set((documents || []).map(d => d.type))
-  const canGenerateSynopsis = existingTypes.has('IB')
-  const canGenerateProtocol = existingTypes.has('Synopsis')
-  const canGenerateICF = existingTypes.has('Protocol')
-  const canGenerateSAP = existingTypes.has('Protocol')
-  const canGenerateCRF = existingTypes.has('SAP')
-
   // Fetch evidence sources
   const { data: evidenceSources } = await supabase
     .from('evidence_sources')
@@ -86,8 +78,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   const hasExternalData = evidenceSources && evidenceSources.length > 0
 
-  // Auto-update enrichment status if we have evidence but status is still in_progress
-  if (hasExternalData && project.enrichment_status === 'in_progress') {
+  // Auto-update enrichment status if we have evidence but status is not completed
+  // This fixes projects stuck in "Awaiting Enrichment" or "Failed" despite having data
+  if (hasExternalData && ['in_progress', 'failed', 'pending', 'skipped'].includes(project.enrichment_status || '')) {
     await supabase
       .from('projects')
       .update({ enrichment_status: 'completed' })
@@ -105,7 +98,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const enrichmentStatus = getEnrichmentStatusMeta(project.enrichment_status)
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-start gap-3">
@@ -157,69 +150,36 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </div>
       )}
 
-      <Tabs defaultValue="documents" className="space-y-4">
+      <Tabs defaultValue="documents" className="space-y-6">
         <TabsList className="w-full h-9">
-          <TabsTrigger value="documents" className="flex-1">Documents</TabsTrigger>
+          <TabsTrigger value="documents" className="flex-1">Pipeline</TabsTrigger>
+          <TabsTrigger value="files" className="flex-1">Files & Versions</TabsTrigger>
           <TabsTrigger value="evidence" className="flex-1">Evidence</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="documents">
-          <div className="space-y-4">
-            {/* Document Generation Buttons - Compact, Single Column, Correct Order */}
-            {hasExternalData && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Generate Documents</CardTitle>
-                  <CardDescription className="text-xs">Generate documents in the recommended order</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex flex-col gap-2">
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="IB" 
-                      variant="outline" 
-                      size="sm" 
-                    />
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="Synopsis" 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={!canGenerateSynopsis}
-                    />
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="Protocol" 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={!canGenerateProtocol}
-                    />
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="ICF" 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={!canGenerateICF}
-                    />
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="SAP" 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={!canGenerateSAP}
-                    />
-                    <GenerateDocumentButton 
-                      projectId={project.id} 
-                      documentType="CRF" 
-                      variant="outline" 
-                      size="sm" 
-                      disabled={!canGenerateCRF}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+        <TabsContent value="documents" className="pt-2">
+           <Card className="border-none shadow-none bg-transparent">
+              <CardHeader className="px-0 pt-0 pb-6">
+                <CardTitle className="text-lg">Documentation Pipeline</CardTitle>
+                <CardDescription>Sequential generation of regulatory documents based on ICH E6 (R2)</CardDescription>
+              </CardHeader>
+              <CardContent className="px-0">
+                 {hasExternalData ? (
+                   <GenerationPipeline projectId={project.id} documents={documents || []} />
+                 ) : (
+                   <div className="text-center py-12 border rounded-xl bg-white">
+                     <Database className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+                     <h3 className="text-base font-medium text-foreground">Enrichment Required</h3>
+                     <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+                       Please fetch external data first to enable the document generation pipeline.
+                     </p>
+                   </div>
+                 )}
+              </CardContent>
+           </Card>
+        </TabsContent>
 
+        <TabsContent value="files">
             {/* Documents List */}
             <Card>
               <CardHeader>
@@ -232,7 +192,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                     <FileText className="h-12 w-12 text-muted-foreground/50" />
                     <p className="mt-2 text-sm font-medium text-muted-foreground">No documents yet</p>
                     <p className="mt-1 text-xs text-muted-foreground">
-                      {hasExternalData ? 'Generate your first document above' : 'Fetch external data to get started'}
+                      {hasExternalData ? 'Generate your first document in the Pipeline tab' : 'Fetch external data to get started'}
                     </p>
                   </div>
                 ) : (
@@ -241,7 +201,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                       <Link
                         key={doc.id}
                         href={`/dashboard/documents/${doc.id}`}
-                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors"
+                        className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
                       >
                         <div className="flex flex-col">
                           <p className="text-sm font-medium">
@@ -264,7 +224,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 )}
               </CardContent>
             </Card>
-          </div>
         </TabsContent>
 
         <TabsContent value="evidence">

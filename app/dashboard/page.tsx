@@ -85,7 +85,9 @@ export default async function DashboardPage() {
                   </TableCell>
                   <TableCell className="py-2">
                     <span className="text-xs text-muted-foreground">
-                      {Array.isArray(project.documents) ? project.documents.length : 0}
+                      {Array.isArray(project.documents) && project.documents.length > 0
+                        ? (project.documents[0] as any).count 
+                        : 0}
                     </span>
                   </TableCell>
                   <TableCell className="py-2">

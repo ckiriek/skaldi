@@ -36,24 +36,24 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-30 flex h-16 items-center border-b bg-background/80 backdrop-blur-sm px-6">
+      <header className="sticky top-0 z-30 flex h-12 items-center border-b bg-background/95 backdrop-blur-sm px-4 shadow-sm">
         <div className="flex flex-1 items-center justify-between">
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center">
             <Image 
               src="/logo.png" 
               alt="Skaldi" 
-              width={120} 
-              height={40}
-              className="object-contain h-8 w-auto"
+              width={140} 
+              height={46}
+              className="object-contain h-9 w-auto"
               priority
             />
           </Link>
 
           {/* Right Side: Navigation & User */}
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-4">
             {/* Navigation Links */}
-            <nav className="flex items-center gap-4">
+            <nav className="flex items-center gap-3">
               {navigation.map((item) => {
                 const isActive = item.href === '/dashboard' 
                   ? pathname === '/dashboard'
@@ -63,29 +63,30 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      'flex items-center gap-2 text-sm font-medium transition-colors',
+                      'flex items-center gap-1.5 text-xs font-medium transition-colors px-2 py-1 rounded-md',
                       isActive
-                        ? 'text-primary'
-                        : 'text-muted-foreground hover:text-primary'
+                        ? 'text-primary bg-primary/5'
+                        : 'text-muted-foreground hover:text-primary hover:bg-muted'
                     )}
                   >
-                    <item.icon className="h-4 w-4" />
+                    <item.icon className="h-3.5 w-3.5" />
                     {item.name}
                   </Link>
                 )
               })}
             </nav>
 
+            <div className="h-6 w-px bg-border" />
+
             {/* User Menu */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-3 rounded-full hover:bg-muted/50 transition-colors pl-2 pr-1 py-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                <button className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-colors pl-2 pr-1 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <div className="text-right hidden sm:block">
-                    <p className="text-sm font-medium leading-none">Admin User</p>
-                    <p className="text-xs text-muted-foreground">admin@skaldi.com</p>
+                    <p className="text-xs font-medium leading-none">Admin User</p>
                   </div>
-                  <Avatar className="h-8 w-8">
-                    <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">AD</AvatarFallback>
+                  <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">AD</AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>

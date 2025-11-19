@@ -11,28 +11,28 @@
 ---
 
 ## 🔄 Sprint 1: UI Structure & Navigation (Current)
-- [ ] **Layout Overhaul:** Remove left sidebar. Move Dashboard, Settings, User to top header. (#5)
-- [ ] **Enrichment UI:** Change "Enrichment Failed" to "Awaiting Enrichment" for new projects. (#1)
-- [ ] **Document Buttons:** Redesign generation buttons (sequential, compact, disable future steps). (#3)
-- [ ] **Document Cards:** Resize Info/Project/Timeline cards to 1/3 height. (#4)
-- [ ] **Action Buttons:** Validate button 1.5x width, 0.5x height, medical green styling. (#4)
-- [ ] **Document Viewer:** TOC to left, remove Print, compact Export buttons, widen text area 1.5x. (#6)
+- [x] **Layout Overhaul:** Remove left sidebar. Move Dashboard, Settings, User to top header. (#5)
+- [x] **Enrichment UI:** Change "Enrichment Failed" to "Awaiting Enrichment" for new projects. (#1)
+- [x] **Document Buttons:** Redesign generation buttons (sequential, compact, disable future steps). (#3)
+- [x] **Document Cards:** Resize Info/Project/Timeline cards to 1/3 height. (#4)
+- [x] **Action Buttons:** Validate button 1.5x width, 0.5x height, medical green styling. (#4)
+- [x] **Document Viewer:** TOC to left, remove Print, compact Export buttons, widen text area 1.5x. (#6)
 
 ## 🧩 Sprint 2: Logic & Data Integrity
-- [ ] **Status Consistency:** Ensure generated docs are "In Review" (not "Draft"). (#12)
-- [ ] **Enrichment Logic:** Debug why status gets stuck/failed. (#10)
-- [ ] **Safety Reports:** Investigate missing Imipenem data. (#2)
-- [ ] **Versioning:** Update cards with version growth (e.g., 1.1). (#9)
+- [x] **Status Consistency:** Ensure generated docs are "In Review" (not "Draft"). (#12)
+- [x] **Enrichment Logic:** Debug why status gets stuck/failed. (#10)
+- [x] **Safety Reports:** Investigate missing Imipenem data. (#2)
+- [x] **Versioning:** Update cards with version growth (e.g., 1.1). (#9)
 
 ## ✨ Sprint 3: Advanced Features
-- [ ] **Audit Tab:** Add chronological log of changes/validations. (#8)
-- [ ] **Smart Progress:** "Generating: [term]" bar with 15 medical terms cycle. (#11)
+- [x] **Audit Tab:** Add chronological log of changes/validations. (#8)
+- [x] **Smart Progress:** "Generating: [term]" bar with 15 medical terms cycle. (#11)
 
 ## 🧠 Sprint 4: Content & Orchestration
-- [ ] **IB Quality:** Major overhaul of Investigator's Brochure prompt and content depth. (#13 - user correction)
-- [ ] **External Data:** Force reference usage in generation. (#14)
-- [ ] **Doc Standards:** Research and adjust document lengths. (#15)
-- [ ] **Orchestration:** Verify multi-agent workflow. (#16)
+- [x] **IB Quality:** Major overhaul of Investigator's Brochure prompt and content depth. (#13 - user correction)
+- [x] **External Data:** Force reference usage in generation. (#14)
+- [x] **Doc Standards:** Research and adjust document lengths. (#15)
+- [x] **Orchestration:** Verify multi-agent workflow. (#16)
 
 ## ✅ COMPLETED: Validation System Improvements (2025-11-18)
 
