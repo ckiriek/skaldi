@@ -8,23 +8,110 @@ import { useToast } from '@/components/ui/use-toast'
 
 type DocumentType = 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF'
 
-const LOADING_TERMS = [
-  "Analyzing protocol...", 
-  "Fetching clinical data...", 
-  "Synthesizing safety profile...", 
-  "Formatting ICH structure...", 
-  "Validating references...", 
-  "Checking compliance...", 
-  "Drafting sections...", 
-  "Reviewing terminology...", 
-  "Optimizing readability...", 
-  "Finalizing layout...", 
-  "Generating tables...", 
-  "Processing citations...", 
-  "Reviewing contraindications...", 
-  "Checking interactions...", 
-  "Finalizing document..."
-]
+const GENERATION_PHRASES: Record<DocumentType, string[]> = {
+  IB: [
+    "Compiling preclinical efficacy data...",
+    "Extracting pharmacokinetic parameters...",
+    "Reviewing toxicology study findings...",
+    "Summarizing non-clinical safety results...",
+    "Linking mechanism of action to therapeutic rationale...",
+    "Validating prior clinical study outcomes...",
+    "Assembling investigator-sponsored research...",
+    "Cross-checking safety signals across studies...",
+    "Summarizing target engagement evidence...",
+    "Highlighting key findings from literature...",
+    "Generating regulatory-compliant narrative...",
+    "Referencing ICH E6 and E3 structures...",
+    "Structuring data by therapeutic area...",
+    "Formatting for regulatory readability...",
+    "Finalizing document structure..."
+  ],
+  Synopsis: [
+    "Mapping objectives to endpoints...",
+    "Designing visit schedule and assessments...",
+    "Structuring inclusion/exclusion criteria...",
+    "Validating study arms and randomization...",
+    "Aligning procedures with safety monitoring...",
+    "Referencing previous study designs...",
+    "Linking outcomes with statistical plans...",
+    "Applying ICH E6 and SPIRIT guidance...",
+    "Defining primary and secondary endpoints...",
+    "Generating procedural flow diagram...",
+    "Configuring adverse event capture plan...",
+    "Embedding regulatory-required sections...",
+    "Ensuring coherence across sections...",
+    "Cross-validating design against indication...",
+    "Finalizing protocol structure..."
+  ],
+  Protocol: [
+    "Mapping objectives to endpoints...",
+    "Designing visit schedule and assessments...",
+    "Structuring inclusion/exclusion criteria...",
+    "Validating study arms and randomization...",
+    "Aligning procedures with safety monitoring...",
+    "Referencing previous study designs...",
+    "Linking outcomes with statistical plans...",
+    "Applying ICH E6 and SPIRIT guidance...",
+    "Defining primary and secondary endpoints...",
+    "Generating procedural flow diagram...",
+    "Configuring adverse event capture plan...",
+    "Embedding regulatory-required sections...",
+    "Ensuring coherence across sections...",
+    "Cross-validating design against indication...",
+    "Finalizing protocol structure..."
+  ],
+  ICF: [
+    "Simplifying study language for patients...",
+    "Outlining procedures and visit schedule...",
+    "Describing potential risks and benefits...",
+    "Referencing eligibility and withdrawal rights...",
+    "Clarifying confidentiality and data use...",
+    "Localizing medical terminology...",
+    "Aligning with IRB/ethics templates...",
+    "Ensuring readability (Flesch-Kincaid)...",
+    "Formatting for multilingual support...",
+    "Highlighting patient contact points...",
+    "Structuring per regulatory templates...",
+    "Incorporating compensation details...",
+    "Validating comprehension layers...",
+    "Embedding GCP-required sections...",
+    "Finalizing patient-friendly content..."
+  ],
+  SAP: [
+    "Selecting appropriate statistical models...",
+    "Validating population definitions (ITT/PP)...",
+    "Defining variable derivation logic...",
+    "Mapping CRF fields to analysis datasets...",
+    "Specifying analysis time windows...",
+    "Referencing protocol objectives...",
+    "Planning interim analysis strategy...",
+    "Flagging missing data imputation rules...",
+    "Defining subgroup analyses...",
+    "Linking endpoints to TLF shells...",
+    "Checking consistency with protocol...",
+    "Ensuring regulatory traceability...",
+    "Applying CDISC and FDA standards...",
+    "Calculating planned sample size...",
+    "Finalizing analysis specifications..."
+  ],
+  CRF: [
+    "Extracting study conduct summary...",
+    "Aggregating subject disposition data...",
+    "Summarizing primary endpoint outcomes...",
+    "Formatting safety results by SOC/MedDRA...",
+    "Referencing SAP-defined analysis...",
+    "Cross-validating reported vs planned stats...",
+    "Generating efficacy data narratives...",
+    "Structuring per ICH E3 guidance...",
+    "Linking protocol deviations to outcomes...",
+    "Describing population analysis sets...",
+    "Adding summary of AEs and SAEs...",
+    "Compiling listings and TLF references...",
+    "Referencing interim analyses where applicable...",
+    "Embedding conclusions and next steps...",
+    "Finalizing CSR for submission..."
+  ]
+}
 
 interface GenerateDocumentButtonProps {
   projectId: string
@@ -52,8 +139,11 @@ export function GenerateDocumentButton({
       return
     }
     
+    const phrases = GENERATION_PHRASES[loadingType as DocumentType]
+    if (!phrases) return
+    
     const interval = setInterval(() => {
-      setLoadingTermIndex(prev => (prev + 1) % LOADING_TERMS.length)
+      setLoadingTermIndex(prev => (prev + 1) % phrases.length)
     }, 2000)
     
     return () => clearInterval(interval)
@@ -157,6 +247,7 @@ export function GenerateDocumentButton({
   if (documentType) {
     const Icon = getIconForType(documentType)
     const loading = isLoading(documentType)
+    const phrases = GENERATION_PHRASES[documentType]
     
     return (
       <Button 
@@ -170,12 +261,12 @@ export function GenerateDocumentButton({
           <div className="flex flex-col w-full text-left">
              <div className="flex items-center">
                 <Loader2 className="w-3 h-3 mr-2 animate-spin text-emerald-600" />
-                <span className="text-emerald-700 text-xs animate-pulse font-medium">{LOADING_TERMS[loadingTermIndex]}</span>
+                <span className="text-emerald-700 text-xs animate-pulse font-medium">{phrases[loadingTermIndex]}</span>
              </div>
              <div className="h-1 w-full bg-emerald-100/50 mt-1.5 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-emerald-400 transition-all duration-500 ease-in-out" 
-                  style={{ width: `${Math.min(((loadingTermIndex + 1) / LOADING_TERMS.length) * 100, 100)}%` }} 
+                  style={{ width: `${Math.min(((loadingTermIndex + 1) / phrases.length) * 100, 100)}%` }} 
                 />
              </div>
           </div>
