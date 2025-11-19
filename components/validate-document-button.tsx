@@ -9,9 +9,11 @@ import { useToast } from '@/components/ui/use-toast'
 export function ValidateDocumentButton({
   documentId,
   documentType,
+  className,
 }: {
   documentId: string
   documentType: string
+  className?: string
 }) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
@@ -66,7 +68,12 @@ export function ValidateDocumentButton({
   }
 
   return (
-    <Button onClick={handleValidate} disabled={loading} variant="outline">
+    <Button 
+      onClick={handleValidate} 
+      disabled={loading} 
+      variant="outline"
+      className={className || "bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border-emerald-200 transition-all duration-200"}
+    >
       <CheckCircle className="w-4 h-4 mr-2" />
       {loading ? 'Validating...' : 'Validate'}
     </Button>

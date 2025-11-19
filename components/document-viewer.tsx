@@ -8,7 +8,6 @@ import rehypeSanitize from 'rehype-sanitize'
 import rehypeHighlight from 'rehype-highlight'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Printer } from 'lucide-react'
 import { ExportDocumentButtons } from '@/components/export-document-buttons'
 import 'highlight.js/styles/github.css'
 
@@ -131,16 +130,6 @@ export function DocumentViewer({ content, documentType, documentId, documentTitl
                     documentTitle={documentTitle} 
                   />
                 )}
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  aria-label="Print document"
-                  onClick={() => typeof window !== 'undefined' && window.print()}
-                >
-                  <Printer className="h-4 w-4 mr-2" />
-                  Print
-                </Button>
               </div>
             </div>
             <div className="prose prose-slate max-w-none">

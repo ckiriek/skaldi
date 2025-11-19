@@ -104,7 +104,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   const project = Array.isArray(document.projects) ? document.projects[0] : document.projects
 
   return (
-    <div className="space-y-4 max-w-5xl mx-auto">
+    <div className="space-y-4 max-w-[1600px] mx-auto">
       {/* Header */}
       <div>
         <Link href={`/dashboard/projects/${(document as any).projects?.id}`}>
@@ -128,6 +128,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
             <ValidateDocumentButton 
               documentId={document.id}
               documentType={document.type}
+              className="h-8 min-w-[160px] text-xs bg-emerald-50 text-emerald-700 hover:bg-emerald-600 hover:text-white border-emerald-200"
             />
           </div>
         </div>
@@ -135,80 +136,50 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
 
       <Separator />
 
-      {/* Document Info */}
+      {/* Document Info - Compact */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <FileText className="h-5 w-5 text-primary" />
-              Document Info
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Type:</span>
-              <span className="font-medium">{document.type}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Version:</span>
-              <span className="font-medium">{document.version}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Status:</span>
-              <Badge 
-                variant={getDocumentStatusMeta(document.status).variant}
-                size="sm"
-              >
+        <Card className="px-4 py-3 h-24 flex flex-col justify-center">
+          <div className="flex items-center justify-between mb-1">
+             <div className="flex items-center gap-2 text-muted-foreground">
+                <FileText className="h-4 w-4" />
+                <span className="text-xs font-medium">Document Info</span>
+             </div>
+             <Badge variant={getDocumentStatusMeta(document.status).variant} className="h-5 text-[10px] px-1.5">
                 {getDocumentStatusMeta(document.status).label}
-              </Badge>
-            </div>
-          </CardContent>
+             </Badge>
+          </div>
+          <div className="flex items-baseline gap-2">
+             <span className="font-bold text-lg">{document.type}</span>
+             <span className="text-xs text-muted-foreground">v{document.version}</span>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Info className="h-5 w-5 text-primary" />
-              Project Info
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Phase:</span>
-              <span className="font-medium">{project?.phase}</span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Indication:</span>
-              <span className="font-medium">{project?.indication}</span>
-            </div>
-          </CardContent>
+        <Card className="px-4 py-3 h-24 flex flex-col justify-center">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+             <Info className="h-4 w-4" />
+             <span className="text-xs font-medium">Project Info</span>
+          </div>
+          <div className="flex flex-col">
+             <span className="font-bold text-sm truncate" title={project?.indication}>{project?.indication}</span>
+             <span className="text-xs text-muted-foreground">{project?.phase}</span>
+          </div>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Calendar className="h-5 w-5 text-primary" />
-              Timeline
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Created:</span>
-              <span className="font-medium">
-                {new Date(document.created_at).toLocaleDateString()}
-              </span>
-            </div>
-            <Separator />
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Updated:</span>
-              <span className="font-medium">
-                {new Date(document.updated_at).toLocaleDateString()}
-              </span>
-            </div>
-          </CardContent>
+        <Card className="px-4 py-3 h-24 flex flex-col justify-center">
+          <div className="flex items-center gap-2 text-muted-foreground mb-1">
+             <Calendar className="h-4 w-4" />
+             <span className="text-xs font-medium">Timeline</span>
+          </div>
+          <div className="flex justify-between items-end text-xs mt-1">
+             <div>
+                <span className="text-muted-foreground block text-[10px]">Created</span>
+                <span className="font-medium">{new Date(document.created_at).toLocaleDateString()}</span>
+             </div>
+             <div className="text-right">
+                <span className="text-muted-foreground block text-[10px]">Updated</span>
+                <span className="font-medium">{new Date(document.updated_at).toLocaleDateString()}</span>
+             </div>
+          </div>
         </Card>
       </div>
 

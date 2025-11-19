@@ -13,19 +13,22 @@ interface GenerateDocumentButtonProps {
   documentType?: DocumentType
   variant?: 'default' | 'outline' | 'ghost'
   size?: 'default' | 'sm' | 'lg'
+  disabled?: boolean
 }
 
 export function GenerateDocumentButton({ 
   projectId, 
   documentType,
   variant = 'outline',
-  size = 'sm'
+  size = 'sm',
+  disabled = false
 }: GenerateDocumentButtonProps) {
   const router = useRouter()
   const [loadingType, setLoadingType] = useState<string | null>(null)
   const { toast } = useToast()
 
   const handleGenerate = async (type: DocumentType) => {
+    if (disabled) return
     setLoadingType(type)
 
     try {
@@ -126,10 +129,10 @@ export function GenerateDocumentButton({
     return (
       <Button 
         onClick={() => handleGenerate(documentType)}
-        disabled={loadingType !== null}
+        disabled={loadingType !== null || disabled}
         variant={variant}
         size={size}
-        className="w-full justify-start"
+        className={disabled ? "w-full justify-start opacity-50" : "w-full justify-start"}
       >
         {loading ? (
           <Loader2 className="w-4 h-4 mr-2 animate-spin" />

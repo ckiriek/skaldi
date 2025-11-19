@@ -68,11 +68,12 @@ export function ExportDocumentButtons({ documentId, documentTitle }: ExportDocum
         disabled={loadingFormat !== null}
         variant="outline"
         size="sm"
+        className="h-7 text-xs"
       >
         {isLoading('pdf') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Loader2 className="w-3 h-3 mr-2 animate-spin" />
         ) : (
-          <FileDown className="w-4 h-4 mr-2" />
+          <FileDown className="w-3 h-3 mr-2" />
         )}
         {isLoading('pdf') ? 'Exporting...' : 'Export PDF'}
       </Button>
@@ -83,11 +84,12 @@ export function ExportDocumentButtons({ documentId, documentTitle }: ExportDocum
         disabled={loadingFormat !== null}
         variant="outline"
         size="sm"
+        className="h-7 text-xs"
       >
         {isLoading('docx') ? (
-          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          <Loader2 className="w-3 h-3 mr-2 animate-spin" />
         ) : (
-          <FileDown className="w-4 h-4 mr-2" />
+          <FileDown className="w-3 h-3 mr-2" />
         )}
         {isLoading('docx') ? 'Exporting...' : 'Export DOCX'}
       </Button>

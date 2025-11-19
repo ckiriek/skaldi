@@ -38,7 +38,7 @@ function getEnrichmentStatusMeta(status: string | null | undefined) {
     return { variant: 'info' as const, label: 'Enriching…' }
   }
   if (normalized === 'failed') {
-    return { variant: 'error' as const, label: 'Enrichment Failed' }
+    return { variant: 'secondary' as const, label: 'Awaiting Enrichment' }
   }
   if (normalized === 'skipped') {
     return { variant: 'warning' as const, label: 'Enrichment Skipped' }
@@ -68,6 +68,14 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
     .select('*')
     .eq('project_id', id)
     .order('created_at', { ascending: false })
+
+  // Determine which documents can be generated (Sequential Workflow)
+  const existingTypes = new Set((documents || []).map(d => d.type))
+  const canGenerateSynopsis = existingTypes.has('IB')
+  const canGenerateProtocol = existingTypes.has('Synopsis')
+  const canGenerateICF = existingTypes.has('Protocol')
+  const canGenerateSAP = existingTypes.has('Protocol')
+  const canGenerateCRF = existingTypes.has('SAP')
 
   // Fetch evidence sources
   const { data: evidenceSources } = await supabase
@@ -166,12 +174,47 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 </CardHeader>
                 <CardContent>
                   <div className="flex flex-col gap-2">
-                    <GenerateDocumentButton projectId={project.id} documentType="IB" variant="outline" size="sm" />
-                    <GenerateDocumentButton projectId={project.id} documentType="Synopsis" variant="outline" size="sm" />
-                    <GenerateDocumentButton projectId={project.id} documentType="Protocol" variant="outline" size="sm" />
-                    <GenerateDocumentButton projectId={project.id} documentType="ICF" variant="outline" size="sm" />
-                    <GenerateDocumentButton projectId={project.id} documentType="SAP" variant="outline" size="sm" />
-                    <GenerateDocumentButton projectId={project.id} documentType="CRF" variant="outline" size="sm" />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="IB" 
+                      variant="outline" 
+                      size="sm" 
+                    />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="Synopsis" 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={!canGenerateSynopsis}
+                    />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="Protocol" 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={!canGenerateProtocol}
+                    />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="ICF" 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={!canGenerateICF}
+                    />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="SAP" 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={!canGenerateSAP}
+                    />
+                    <GenerateDocumentButton 
+                      projectId={project.id} 
+                      documentType="CRF" 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={!canGenerateCRF}
+                    />
                   </div>
                 </CardContent>
               </Card>

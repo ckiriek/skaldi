@@ -1,14 +1,38 @@
 # Skaldi Writer - Implementation Plan
 
 **Last Updated:** 2025-11-18 18:30 UTC  
-**Current Phase:** Week 5-6: UI/UX Enhancement ⏳ IN PROGRESS  
-**Status:** ✅ VALIDATION SYSTEM UPGRADED — Auto-validation, detailed reports, regulatory links!  
-**Progress:** 100% backend, 100% features, 75% UI/UX ⬆️, 99% AI quality ⬆️  
-**Timeline:** 4 weeks remaining to production-ready system  
-**Latest Achievement:** Validation improvements - auto-validation, detailed reports, regulatory compliance visibility
-**Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer; product UI, code, docs, GitHub repo and Vercel project updated. Historical analytical docs keep original Asetria naming.
+**Current Phase:** Sprint 1: UI Structure & Navigation 🚀 STARTING
+**Status:** 🟢 SPRINT 1 STARTED — Major UI Overhaul & Navigation Redesign
+**Progress:** 100% backend, 100% features, 75% UI/UX ⬆️, 99% AI quality ⬆️
+**Timeline:** 4-Sprint Strategy to Production
+**Latest Achievement:** Validation system fixed and detailed.
+**Brand Update (2025-11-14 18:31 UTC):** Project renamed from Asetria Writer to Skaldi Writer.
 
 ---
+
+## 🔄 Sprint 1: UI Structure & Navigation (Current)
+- [ ] **Layout Overhaul:** Remove left sidebar. Move Dashboard, Settings, User to top header. (#5)
+- [ ] **Enrichment UI:** Change "Enrichment Failed" to "Awaiting Enrichment" for new projects. (#1)
+- [ ] **Document Buttons:** Redesign generation buttons (sequential, compact, disable future steps). (#3)
+- [ ] **Document Cards:** Resize Info/Project/Timeline cards to 1/3 height. (#4)
+- [ ] **Action Buttons:** Validate button 1.5x width, 0.5x height, medical green styling. (#4)
+- [ ] **Document Viewer:** TOC to left, remove Print, compact Export buttons, widen text area 1.5x. (#6)
+
+## 🧩 Sprint 2: Logic & Data Integrity
+- [ ] **Status Consistency:** Ensure generated docs are "In Review" (not "Draft"). (#12)
+- [ ] **Enrichment Logic:** Debug why status gets stuck/failed. (#10)
+- [ ] **Safety Reports:** Investigate missing Imipenem data. (#2)
+- [ ] **Versioning:** Update cards with version growth (e.g., 1.1). (#9)
+
+## ✨ Sprint 3: Advanced Features
+- [ ] **Audit Tab:** Add chronological log of changes/validations. (#8)
+- [ ] **Smart Progress:** "Generating: [term]" bar with 15 medical terms cycle. (#11)
+
+## 🧠 Sprint 4: Content & Orchestration
+- [ ] **Synopsis Quality:** Improve prompt and structure. (#13)
+- [ ] **External Data:** Force reference usage in generation. (#14)
+- [ ] **Doc Standards:** Research and adjust document lengths. (#15)
+- [ ] **Orchestration:** Verify multi-agent workflow. (#16)
 
 ## ✅ COMPLETED: Validation System Improvements (2025-11-18)
 
