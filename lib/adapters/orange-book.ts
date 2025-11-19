@@ -207,8 +207,9 @@ export class OrangeBookAdapter {
       // Use wildcard for partial matching (e.g., "gluco" matches "Glucophage")
       // Also search generic_name to allow finding brands by active ingredient
       // AND search products.brand_name because some discontinued RLDs lack the openfda section
+      // NOTE: Do NOT use quotes with wildcards (e.g. "term"*) as it breaks OpenFDA search
       const url = this.buildUrl({
-        search: `openfda.brand_name:"${brandName}"* OR openfda.generic_name:"${brandName}"* OR products.brand_name:"${brandName}"*`,
+        search: `openfda.brand_name:${brandName}* OR openfda.generic_name:${brandName}* OR products.brand_name:${brandName}*`,
         limit: '10',
       })
 
