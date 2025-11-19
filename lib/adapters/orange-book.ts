@@ -205,8 +205,9 @@ export class OrangeBookAdapter {
       await this.rateLimit()
 
       // Use wildcard for partial matching (e.g., "gluco" matches "Glucophage")
+      // Also search generic_name to allow finding brands by active ingredient
       const url = this.buildUrl({
-        search: `openfda.brand_name:${brandName}*`,
+        search: `openfda.brand_name:${brandName}* OR openfda.generic_name:${brandName}*`,
         limit: '10',
       })
 
