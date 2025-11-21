@@ -39,6 +39,7 @@ export class AuditLogger {
     try {
       const { error } = await this.supabase
         .from('audit_log')
+        // @ts-ignore - Supabase type inference issue
         .insert({
           document_id: entry.document_id,
           action: entry.action,

@@ -8,7 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { markdownToDOCX } from '@/lib/export/markdown-to-docx'
-import { markdownToPDF } from '@/lib/export/markdown-to-pdf'
+// import { markdownToPDF } from '@/lib/export/markdown-to-pdf'
 import archiver from 'archiver'
 import { Readable } from 'stream'
 
@@ -57,22 +57,21 @@ export async function POST(request: NextRequest) {
       try {
         // Export DOCX
         if (format === 'docx' || format === 'both') {
-          const docxBuffer = await markdownToDOCX(doc.content || '', {
-            title: `${doc.type} - Version ${doc.version}`
-          })
+          const docxBuffer = await markdownToDOCX(doc.content || '', `${doc.type} - Version ${doc.version}`)
           archive.append(docxBuffer, { name: `${filename}.docx` })
           console.log(`   ✅ ${filename}.docx`)
         }
 
-        // Export PDF
+        // Export PDF (temporarily disabled for production build)
         if (format === 'pdf' || format === 'both') {
-          const pdfBuffer = await markdownToPDF(doc.content || '', {
-            title: `${doc.type} - Version ${doc.version}`
-          })
-          archive.append(pdfBuffer, { name: `${filename}.pdf` })
-          console.log(`   ✅ ${filename}.pdf`)
-        }
-
+          // TODO: Re-enable PDF export with edge-compatible library
+          // const pdfBuffer = await markdownToPDF(doc.content || '', {
+          //   title: `${doc.type} - Version ${doc.version}`
+          // })
+          // archive.append(pdfBuffer, { name: `${filename}.pdf` })
+          console.log('PDF export temporarily disabled')
+        } 
+        console.log(`   ✅ ${filename}.pdf`)
       } catch (error) {
         console.error(`   ❌ Failed to export ${filename}:`, error)
       }

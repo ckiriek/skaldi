@@ -84,11 +84,13 @@ export function EditableBlock({
       : 'info'
     : null
 
-  const borderClass = {
-    error: 'border-l-4 border-red-500 bg-red-50',
-    warning: 'border-l-4 border-yellow-500 bg-yellow-50',
-    info: 'border-l-4 border-blue-500 bg-blue-50'
-  }[highestSeverity || ''] || 'border-l-4 border-transparent'
+  const borderClass = highestSeverity
+    ? {
+        error: 'border-l-4 border-red-500 bg-red-50',
+        warning: 'border-l-4 border-yellow-500 bg-yellow-50',
+        info: 'border-l-4 border-blue-500 bg-blue-50'
+      }[highestSeverity]
+    : 'border-l-4 border-transparent'
 
   return (
     <div
