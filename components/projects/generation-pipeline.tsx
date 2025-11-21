@@ -154,7 +154,9 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
     return { ...step, isCompleted, isReady, isLocked, docId: doc?.id }
   })
 
-  const progress = Math.round((documents.length / STEPS.length) * 100)
+  // Count unique document types (not total documents, to avoid counting regenerations)
+  const uniqueDocTypes = new Set(documents.map(d => d.type)).size
+  const progress = Math.round((uniqueDocTypes / STEPS.length) * 100)
 
   // Animation loop for phrases
   useEffect(() => {
