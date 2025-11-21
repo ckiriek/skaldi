@@ -1,0 +1,18 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_objectives",
+  "section_name": "Study Objectives",
+  "description": "Primary, secondary and exploratory objectives of the study.",
+  "expected_inputs": [
+    "primary_objectives",
+    "secondary_objectives",
+    "exploratory_objectives"
+  ],
+  "constraints": [
+    "Must match Protocol exactly",
+    "Past tense usually used in CSR"
+  ],
+  "template_type": "list_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,14 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_composition",
+  "section_name": "Qualitative and Quantitative Composition",
+  "description": "Active substances and key excipients.",
+  "expected_inputs": [
+    "active_substances",
+    "excipients_declaration"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

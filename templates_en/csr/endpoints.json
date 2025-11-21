@@ -1,0 +1,19 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_endpoints",
+  "section_name": "Efficacy and Safety Variables",
+  "description": "Definitions of efficacy and safety endpoints.",
+  "expected_inputs": [
+    "primary_endpoints",
+    "secondary_endpoints",
+    "safety_endpoints",
+    "surrogate_endpoints"
+  ],
+  "constraints": [
+    "Define how they were measured",
+    "Define timepoints"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

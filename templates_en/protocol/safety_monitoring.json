@@ -1,0 +1,20 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_safety_monitoring",
+  "section_name": "Assessment of Safety",
+  "description": "Safety parameters and AE reporting.",
+  "expected_inputs": [
+    "ae_definition",
+    "sae_definition",
+    "reporting_timelines",
+    "follow_up_procedures"
+  ],
+  "constraints": [
+    "Standard regulatory definitions (ICH)",
+    "24h reporting for SAEs"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 12: SAFETY ASSESSMENTS.\n\nRequirements:\n1. Define AEs and SAEs (ICH E2A).\n2. Grading: CTCAE v5.0.\n3. Reporting: SAEs within 24 hours.\n4. Labs: Hematology, Chemistry, Urinalysis.\n5. Vitals and ECG monitoring."
+}

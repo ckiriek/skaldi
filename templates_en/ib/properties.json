@@ -1,0 +1,19 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_properties",
+  "section_name": "Physical, Chemical, and Pharmaceutical Properties",
+  "description": "Description of the physical, chemical, and pharmaceutical properties of the investigational product.",
+  "expected_inputs": [
+    "formulation_desc",
+    "storage_conditions",
+    "handling_instructions",
+    "structural_formula"
+  ],
+  "constraints": [
+    "Include storage stability",
+    "Include instructions for reconstitution if applicable"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,21 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_treatments",
+  "section_name": "Treatment of Subjects",
+  "description": "Details of study treatments.",
+  "expected_inputs": [
+    "investigational_product_details",
+    "comparator_details",
+    "dosing_regimen",
+    "packaging_labeling",
+    "storage"
+  ],
+  "constraints": [
+    "Clear instructions for administration",
+    "Compliance monitoring"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 9: STUDY TREATMENTS.\n\nContext:\n- Drug: {{compoundName}}\n- Dose: {{dosages}}\n- Comparator: Placebo\n\nRequirements:\n1. Study Drug: Describe formulation, route, frequency.\n2. Comparator: Describe matching placebo.\n3. Dosing instructions: How to administer.\n4. Concomitant meds: Allowed vs Prohibited.\n5. Compliance checking."
+}

@@ -1,0 +1,19 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_eligibility_criteria",
+  "section_name": "Selection and Withdrawal of Subjects",
+  "description": "Inclusion and Exclusion criteria.",
+  "expected_inputs": [
+    "inclusion_criteria_list",
+    "exclusion_criteria_list",
+    "withdrawal_criteria"
+  ],
+  "constraints": [
+    "Specific, measurable criteria",
+    "Safety-first approach"
+  ],
+  "template_type": "list_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 8: STUDY POPULATION.\n\nContext:\n- Indication: {{indication}}\n- Population: {{population}}\n\nRequirements:\n1. Inclusion Criteria: List 5-7 standard criteria (Age 18-75, Diagnosis of {{indication}}, Informed Consent).\n2. Exclusion Criteria: List 5-7 standard exclusions (Pregnancy, Comorbidities, Hypersensitivity).\n3. Withdrawal Criteria: Standard safety and consent withdrawal reasons.\n\nFormat as:\n#### 8.1 Inclusion Criteria\n#### 8.2 Exclusion Criteria\n#### 8.3 Subject Withdrawal Criteria"
+}

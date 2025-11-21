@@ -1,0 +1,19 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_risks",
+  "section_name": "Risks and Discomforts",
+  "description": "Potential risks of study drug and procedures.",
+  "expected_inputs": [
+    "drug_risks_very_common",
+    "drug_risks_common",
+    "drug_risks_rare",
+    "procedure_risks"
+  ],
+  "constraints": [
+    "Group by frequency",
+    "Include reproductive risks if applicable"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

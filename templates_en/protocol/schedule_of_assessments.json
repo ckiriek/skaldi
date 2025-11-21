@@ -1,0 +1,19 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_schedule_of_assessments",
+  "section_name": "Schedule of Assessments",
+  "description": "Table and description of visits and procedures.",
+  "expected_inputs": [
+    "visit_list",
+    "procedure_list",
+    "time_window"
+  ],
+  "constraints": [
+    "Clear table format",
+    "Footnotes for specific conditions"
+  ],
+  "template_type": "table_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 10: STUDY PROCEDURES.\n\nRequirements:\n1. Create a detailed Schedule of Assessments (Table placeholder).\n2. Describe Screening Period (Day -28 to -1).\n3. Describe Treatment Period (Day 1 to Week {{duration_weeks}}).\n4. Describe Follow-up Period.\n\nInclude standard safety assessments (Vitals, ECG, Labs) and efficacy assessments related to {{primaryEndpoint}}."
+}

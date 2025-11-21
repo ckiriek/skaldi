@@ -1,0 +1,15 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_admin",
+  "section_name": "Administrative Information",
+  "description": "MAH, Number, Date.",
+  "expected_inputs": [
+    "marketing_authorisation_holder",
+    "marketing_authorisation_number",
+    "date_of_first_authorisation"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

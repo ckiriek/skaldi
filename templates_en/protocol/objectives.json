@@ -1,0 +1,20 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_objectives",
+  "section_name": "Study Objectives and Purpose",
+  "description": "Detailed objectives and purpose.",
+  "expected_inputs": [
+    "primary_objective",
+    "secondary_objectives",
+    "exploratory_objectives",
+    "purpose"
+  ],
+  "constraints": [
+    "SMART objectives",
+    "Aligned with endpoints"
+  ],
+  "template_type": "list_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 6: STUDY OBJECTIVES AND ENDPOINTS.\n\nContext:\n- Primary Endpoint: {{primaryEndpoint}}\n- Indication: {{indication}}\n- Compound: {{compoundName}}\n- Secondary Endpoints: {{secondaryEndpoints}}\n\nRequirements:\n1. Primary Objective: Clearly state the objective to evaluate {{primaryEndpoint}}.\n2. Secondary Objectives: List 3-5 key secondary objectives (Safety, PK, QoL).\n3. Exploratory Objectives: Include PK/PD, biomarkers, etc.\n\nFormat as:\n#### 6.1 Primary Objective\n#### 6.2 Secondary Objectives\n#### 6.3 Exploratory Objectives"
+}

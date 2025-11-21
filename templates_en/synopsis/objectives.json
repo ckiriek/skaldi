@@ -1,0 +1,16 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_objectives",
+  "section_name": "Objectives",
+  "description": "Primary and secondary objectives.",
+  "expected_inputs": [
+    "primary_objectives",
+    "secondary_objectives"
+  ],
+  "constraints": [
+    "Bulleted list"
+  ],
+  "template_type": "list_block",
+  "language": "en",
+  "version": 1
+}

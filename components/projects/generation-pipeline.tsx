@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 import { Progress } from '@/components/ui/progress'
+import { ValidationResultsCard, ValidationResults } from '@/components/documents/validation-results-card'
 
 type DocType = 'IB' | 'Synopsis' | 'Protocol' | 'ICF' | 'SAP' | 'CRF'
 
@@ -135,6 +136,7 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
   const [loadingType, setLoadingType] = useState<DocType | null>(null)
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0)
   const [animatingSuccess, setAnimatingSuccess] = useState<DocType | null>(null)
+  const [validationResults, setValidationResults] = useState<{ type: DocType; validation: ValidationResults } | null>(null)
 
   // Calculate status for each step
   const stepStatus = STEPS.map((step, index) => {
@@ -183,6 +185,11 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
 
       if (!response.ok || !data.success) {
         throw new Error(data.error || 'Generation failed')
+      }
+
+      // Store validation results if available
+      if (data.validation) {
+        setValidationResults({ type, validation: data.validation })
       }
 
       // Success animation
@@ -355,6 +362,16 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
           )
         })}
       </div>
+
+      {/* Validation Results */}
+      {validationResults && (
+        <div className="mt-8">
+          <ValidationResultsCard
+            validation={validationResults.validation}
+            documentType={validationResults.type}
+          />
+        </div>
+      )}
     </div>
   )
 }

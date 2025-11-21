@@ -1,0 +1,13 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_title",
+  "section_name": "Study Title",
+  "description": "Full study title.",
+  "expected_inputs": [
+    "title"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

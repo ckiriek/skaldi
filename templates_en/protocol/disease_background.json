@@ -1,0 +1,73 @@
+{
+  "section_name": "disease_background",
+  "document_type": "protocol",
+  "display_name": "Disease Background",
+  "description": "Comprehensive overview of the disease or medical condition being studied, including pathophysiology, epidemiology, and clinical significance",
+  "required_inputs": [
+    "indication",
+    "disease_name",
+    "target_population"
+  ],
+  "optional_inputs": [
+    "disease_severity",
+    "disease_stage",
+    "geographic_region"
+  ],
+  "rag_queries": [
+    {
+      "type": "disease",
+      "query_template": "{{disease_name}} pathophysiology clinical features",
+      "min_chunks": 2,
+      "max_chunks": 4,
+      "min_similarity": 0.7
+    },
+    {
+      "type": "disease",
+      "query_template": "{{disease_name}} epidemiology prevalence incidence",
+      "min_chunks": 1,
+      "max_chunks": 3,
+      "min_similarity": 0.7
+    }
+  ],
+  "prompt_template": "You are a medical writer preparing a Disease Background section for a clinical trial protocol.\n\n**Task:** Write a comprehensive Disease Background section that provides regulatory reviewers and investigators with essential context about {{disease_name}}.\n\n**Required Content:**\n1. **Definition and Classification**\n   - Clear definition of {{disease_name}}\n   - Disease classification (ICD-10, other taxonomies)\n   - Subtypes or variants if applicable\n\n2. **Pathophysiology**\n   - Underlying disease mechanisms\n   - Molecular and cellular pathways\n   - Disease progression and natural history\n\n3. **Clinical Presentation**\n   - Common signs and symptoms\n   - Diagnostic criteria\n   - Disease severity spectrum\n\n4. **Epidemiology**\n   - Prevalence and incidence data\n   - Geographic and demographic variations\n   - Risk factors and populations at risk\n\n5. **Clinical Significance**\n   - Impact on patient quality of life\n   - Morbidity and mortality data\n   - Healthcare burden\n\n**Evidence Base:**\nUse the following references to support your content:\n\n{{references}}\n\n**Style Requirements:**\n- Formal, scientific tone appropriate for regulatory submission\n- Evidence-based statements with implicit reference to sources\n- Clear, accessible language (avoid excessive jargon)\n- Logical flow from definition → pathophysiology → clinical impact\n- Present tense for established facts\n- Past tense for specific study results\n\n**Length:** 500-800 words (approximately 3-4 paragraphs)\n\n**Format:** Plain text, no headings within the section (headings will be added by document structure)\n\n**Important:** Do NOT include citations in brackets [1], [2]. Instead, integrate evidence naturally into the narrative. The references provided are for your information to ensure accuracy and evidence-based content.",
+  "expected_length": {
+    "min_words": 500,
+    "max_words": 800,
+    "target_words": 650
+  },
+  "validation_rules": {
+    "must_include": [
+      "pathophysiology",
+      "epidemiology",
+      "clinical"
+    ],
+    "must_not_include": [
+      "[1]",
+      "[2]",
+      "TODO",
+      "TBD"
+    ],
+    "min_paragraphs": 3,
+    "max_paragraphs": 5
+  },
+  "style": {
+    "tone": "formal",
+    "voice": "third_person",
+    "tense": "present",
+    "evidence_level": "high",
+    "regulatory_appropriate": true
+  },
+  "examples": [
+    {
+      "disease": "Herpes Simplex Virus Infection",
+      "preview": "Herpes simplex virus (HSV) infection is a common viral disease caused by two distinct but antigenically related serotypes: HSV-1 and HSV-2. These double-stranded DNA viruses belong to the Herpesviridae family and are characterized by their ability to establish lifelong latent infection in sensory ganglia following primary infection. The pathophysiology involves viral replication in epithelial cells, followed by retrograde transport to neuronal cell bodies where the virus remains dormant until reactivation triggers..."
+    }
+  ],
+  "metadata": {
+    "version": "1.0.0",
+    "created_date": "2025-11-21",
+    "regulatory_alignment": ["ICH E6(R2)", "FDA Guidance for Industry"],
+    "typical_placement": "Section 1.2 or 2.1 of Protocol",
+    "related_sections": ["epidemiology", "standard_of_care", "unmet_need"]
+  }
+}

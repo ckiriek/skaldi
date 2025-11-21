@@ -1,0 +1,20 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_efficacy_evaluation",
+  "section_name": "Efficacy Evaluation",
+  "description": "Results of efficacy analysis.",
+  "expected_inputs": [
+    "primary_endpoint_results",
+    "secondary_endpoint_results",
+    "statistical_significance",
+    "confidence_intervals"
+  ],
+  "constraints": [
+    "Present data in tables and text",
+    "Do not cherry-pick results",
+    "Address missing data handling"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

@@ -241,3 +241,12 @@ export function createDocxFromMarkdown(markdown: string, title: string): Documen
     }]
   })
 }
+
+/**
+ * Main export function for batch operations
+ */
+export async function markdownToDOCX(markdown: string, title: string = 'Document'): Promise<Buffer> {
+  const { Packer } = await import('docx')
+  const doc = createDocxFromMarkdown(markdown, title)
+  return await Packer.toBuffer(doc)
+}

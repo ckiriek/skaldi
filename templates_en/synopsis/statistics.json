@@ -1,0 +1,14 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_statistics",
+  "section_name": "Statistical Methods",
+  "description": "Sample size and primary analysis method.",
+  "expected_inputs": [
+    "sample_size",
+    "primary_analysis_method"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

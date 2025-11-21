@@ -68,3 +68,5 @@ secrets/
 # Build artifacts
 *.tsbuildinfo
 next-env.d.ts
+AZURE_SETUP.md
+scripts/setup-edge-function-secrets.sh

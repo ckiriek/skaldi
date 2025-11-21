@@ -1,0 +1,18 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_populations",
+  "section_name": "Data Sets Analyzed",
+  "description": "Definition of analysis populations (ITT, PP, Safety Set).",
+  "expected_inputs": [
+    "itt_definition",
+    "pp_definition",
+    "safety_set_definition"
+  ],
+  "constraints": [
+    "Must align with SAP",
+    "Report number of patients in each set"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

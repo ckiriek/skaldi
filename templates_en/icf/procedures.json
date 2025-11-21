@@ -1,0 +1,19 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_procedures",
+  "section_name": "Study Procedures",
+  "description": "What will happen, duration, randomization explanation.",
+  "expected_inputs": [
+    "duration_of_participation",
+    "number_of_visits",
+    "procedures_list",
+    "randomization_explanation"
+  ],
+  "constraints": [
+    "Explain randomization clearly (like flipping a coin)",
+    "Explain placebo if used"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

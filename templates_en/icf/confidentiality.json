@@ -1,0 +1,17 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_confidentiality",
+  "section_name": "Confidentiality of Records",
+  "description": "How data will be protected and who sees it.",
+  "expected_inputs": [
+    "data_protection_measures",
+    "access_list"
+  ],
+  "constraints": [
+    "Mention GDPR/HIPAA if applicable",
+    "Mention monitor/auditor access"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

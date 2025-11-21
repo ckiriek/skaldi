@@ -1,0 +1,20 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_title_page",
+  "section_name": "Title Page",
+  "description": "Title page with sponsor and product details.",
+  "expected_inputs": [
+    "sponsor_name",
+    "product_name",
+    "edition_number",
+    "release_date",
+    "safety_statement"
+  ],
+  "constraints": [
+    "Standard IB Title Page format",
+    "Include confidentiality statement"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

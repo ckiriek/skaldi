@@ -1,0 +1,20 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_introduction",
+  "section_name": "Introduction",
+  "description": "Chemical name, generic name, trade name, active ingredients, pharmacological class, and rationale for performing research.",
+  "expected_inputs": [
+    "chemical_name",
+    "generic_name",
+    "trade_names",
+    "pharmacological_class",
+    "rationale"
+  ],
+  "constraints": [
+    "Include structure formula reference",
+    "Clear rationale"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,15 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_name",
+  "section_name": "Name of the Medicinal Product",
+  "description": "Name + strength + pharmaceutical form.",
+  "expected_inputs": [
+    "product_name",
+    "strength",
+    "pharmaceutical_form"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

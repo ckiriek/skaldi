@@ -1,0 +1,21 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_study_design",
+  "section_name": "Study Design",
+  "description": "Description of the research design.",
+  "expected_inputs": [
+    "design_type",
+    "randomization",
+    "blinding",
+    "arms",
+    "schematic_diagram"
+  ],
+  "constraints": [
+    "Justify design choice",
+    "Include schematic figure"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 7: STUDY DESIGN.\n\nContext:\n- Phase: {{phase}}\n- Design: {{design_type}}, {{blinding}}, placebo-controlled\n- Duration: {{duration_weeks}} weeks treatment\n- Arms: {{arms}}\n\nRequirements:\n1. Overall Design: Describe the study architecture (randomized, double-blind, etc.).\n2. Study Schema: Insert a placeholder [INSERT STUDY DIAGRAM].\n3. Rationale: Justify the choice of control group and blinding.\n\nFormat as:\n#### 7.1 Overall Design\n#### 7.2 Study Schema\n#### 7.3 Rationale for Study Design"
+}

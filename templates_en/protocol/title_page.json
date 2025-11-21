@@ -1,0 +1,18 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_title_page",
+  "section_name": "Title Page",
+  "description": "Protocol Title Page.",
+  "expected_inputs": [
+    "projectTitle",
+    "phase",
+    "compoundName",
+    "indication",
+    "sponsor"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Generate the TITLE PAGE for the Clinical Protocol.\n\nContext:\n- Protocol Title: \"A {{phase}} Study of {{compoundName}} in {{indication}}\"\n- Protocol Number: [NUMBER]\n- Sponsor: {{sponsor}}\n- Date: {{currentDate}}\n\nInclude standard Confidentiality Statement."
+}

@@ -1,0 +1,20 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_summary",
+  "section_name": "Summary",
+  "description": "A brief summary (preferably not exceeding 2 pages) highlighting the significant physical, chemical, pharmaceutical, pharmacological, toxicological, pharmacokinetic, metabolic, and clinical information.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "mechanism_of_action_summary",
+    "nonclinical_summary",
+    "clinical_summary"
+  ],
+  "constraints": [
+    "Max 2 pages",
+    "High-level overview only"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

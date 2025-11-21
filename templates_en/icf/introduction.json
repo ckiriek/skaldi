@@ -1,0 +1,17 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_introduction",
+  "section_name": "Introduction",
+  "description": "Invitation to participate and basic explanation.",
+  "expected_inputs": [
+    "investigator_name",
+    "study_purpose_simple"
+  ],
+  "constraints": [
+    "Lay language (8th grade level)",
+    "State research nature"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

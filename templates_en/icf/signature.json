@@ -1,0 +1,18 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_signature",
+  "section_name": "Consent Signature Page",
+  "description": "Signature blocks for participant and investigator.",
+  "expected_inputs": [
+    "participant_name_field",
+    "date_field",
+    "investigator_signature_field"
+  ],
+  "constraints": [
+    "Clear layout for signatures",
+    "Separate date fields"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,18 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_design",
+  "section_name": "Study Design",
+  "description": "Summary of design, population, and sites.",
+  "expected_inputs": [
+    "design_type",
+    "blinding",
+    "population_summary",
+    "number_of_sites"
+  ],
+  "constraints": [
+    "Concise summary"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

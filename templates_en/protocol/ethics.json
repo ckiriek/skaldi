@@ -1,0 +1,12 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_ethics",
+  "section_name": "Ethical Considerations",
+  "description": "Ethics and GCP compliance.",
+  "expected_inputs": [],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 16: ETHICAL AND REGULATORY CONSIDERATIONS.\n\nRequirements:\n1. Compliance with Declaration of Helsinki and ICH GCP.\n2. Informed Consent process.\n3. IRB/IEC approval.\n4. Data privacy."
+}

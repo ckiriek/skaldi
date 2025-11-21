@@ -1,0 +1,19 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_human_effects",
+  "section_name": "Effects in Humans",
+  "description": "Pharmacokinetics, metabolism, pharmacodynamics, dose response, safety, efficacy, and other pharmacological activities in humans.",
+  "expected_inputs": [
+    "pk_human",
+    "safety_human",
+    "efficacy_human",
+    "marketing_experience"
+  ],
+  "constraints": [
+    "Include all relevant clinical trials",
+    "Highlight safety signals"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

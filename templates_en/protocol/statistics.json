@@ -1,0 +1,15 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_statistics",
+  "section_name": "Statistical Considerations",
+  "description": "Sample size and analysis methods.",
+  "expected_inputs": [
+    "primaryEndpoint",
+    "design"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 14: STATISTICAL CONSIDERATIONS.\n\nContext:\n- Primary Endpoint: {{primaryEndpoint}}\n\nRequirements:\n1. Sample Size: Describe assumptions and power calculation (placeholder).\n2. Analysis Sets: ITT, PP, Safety.\n3. Statistical Methods: How {{primaryEndpoint}} will be analyzed (e.g., ANCOVA).\n4. Missing Data: Handling strategy."
+}

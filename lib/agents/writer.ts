@@ -109,7 +109,7 @@ export class WriterAgent {
     // Azure OpenAI configuration
     this.apiKey = process.env.AZURE_OPENAI_API_KEY
     this.endpoint = process.env.AZURE_OPENAI_ENDPOINT
-    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4'
+    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-5.1'
   }
 
   /**

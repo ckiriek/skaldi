@@ -1,0 +1,15 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_rationale",
+  "section_name": "Rationale",
+  "description": "Brief rationale for the study.",
+  "expected_inputs": [
+    "rationale_summary"
+  ],
+  "constraints": [
+    "Max 1 paragraph"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

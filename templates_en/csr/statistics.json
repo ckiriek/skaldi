@@ -1,0 +1,19 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_statistics",
+  "section_name": "Statistical Methods",
+  "description": "Summary of statistical methods used.",
+  "expected_inputs": [
+    "statistical_tests",
+    "level_of_significance",
+    "power_calculation",
+    "interim_analysis"
+  ],
+  "constraints": [
+    "Reference SAP",
+    "Justify deviations from protocol"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

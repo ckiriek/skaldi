@@ -1,0 +1,16 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_treatment",
+  "section_name": "Treatment",
+  "description": "Investigational product, comparator, dosage.",
+  "expected_inputs": [
+    "investigational_product",
+    "comparator",
+    "dosage_regimen",
+    "duration"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

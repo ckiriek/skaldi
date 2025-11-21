@@ -35,7 +35,7 @@ export class AzureOpenAIClient {
   constructor() {
     this.endpoint = process.env.AZURE_OPENAI_ENDPOINT || ''
     this.apiKey = process.env.AZURE_OPENAI_API_KEY || ''
-    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4.1'
+    this.deploymentName = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-5.1'
     this.apiVersion = process.env.AZURE_OPENAI_API_VERSION || '2025-01-01-preview'
 
     if (!this.endpoint || !this.apiKey) {

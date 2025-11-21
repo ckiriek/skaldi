@@ -188,3 +188,25 @@ export function markdownToHtml(markdown: string, title: string): string {
 </html>
   `.trim()
 }
+
+/**
+ * Main export function for batch operations
+ */
+export async function markdownToPDF(markdown: string, title: string = 'Document'): Promise<Buffer> {
+  const htmlPdfNode = await import('html-pdf-node')
+  const html = markdownToHtml(markdown, title)
+  
+  const options = {
+    format: 'A4',
+    margin: {
+      top: '2.5cm',
+      right: '2.5cm',
+      bottom: '2.5cm',
+      left: '2.5cm'
+    }
+  }
+  
+  const file = { content: html }
+  const pdfBuffer = await htmlPdfNode.generatePdf(file, options)
+  return pdfBuffer
+}

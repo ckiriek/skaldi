@@ -1,0 +1,18 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_nonclinical",
+  "section_name": "Nonclinical Studies",
+  "description": "Results of all relevant nonclinical pharmacology, toxicology, pharmacokinetic, and investigational product metabolism studies.",
+  "expected_inputs": [
+    "nonclinical_pharmacology",
+    "pharmacokinetics_animals",
+    "toxicology_summary"
+  ],
+  "constraints": [
+    "Summarize methodology and results",
+    "Address relevance to human use"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

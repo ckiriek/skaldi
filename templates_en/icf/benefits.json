@@ -1,0 +1,17 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_benefits",
+  "section_name": "Benefits",
+  "description": "Potential benefits to participant and society.",
+  "expected_inputs": [
+    "potential_benefits",
+    "societal_benefits"
+  ],
+  "constraints": [
+    "Do not promise cure",
+    "State if no direct benefit is expected"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

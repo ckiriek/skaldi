@@ -1,0 +1,21 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_study_design",
+  "section_name": "Investigational Plan",
+  "description": "Overall study design and plan description.",
+  "expected_inputs": [
+    "study_design_type",
+    "blinding_method",
+    "randomization_method",
+    "control_group",
+    "study_duration",
+    "treatment_schedule"
+  ],
+  "constraints": [
+    "Describe any changes to design during study",
+    "Include flowchart reference"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

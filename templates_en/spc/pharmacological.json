@@ -1,0 +1,15 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_pharmacological",
+  "section_name": "Pharmacological Properties",
+  "description": "PD, PK, Preclinical safety.",
+  "expected_inputs": [
+    "pharmacodynamic_properties",
+    "pharmacokinetic_properties",
+    "preclinical_safety_data"
+  ],
+  "constraints": [],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

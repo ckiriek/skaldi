@@ -1,0 +1,24 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_synopsis",
+  "section_name": "Synopsis",
+  "description": "Summary of the protocol.",
+  "expected_inputs": [
+    "title",
+    "rationale",
+    "objectives",
+    "endpoints",
+    "design",
+    "population",
+    "treatment",
+    "duration"
+  ],
+  "constraints": [
+    "Max 5 pages",
+    "Stand-alone document capable"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Generate a Tabular Protocol Synopsis (2-3 pages) summarizing the study.\n\nContext:\n- Title: \"A {{phase}} Study of {{compoundName}} in {{indication}}\"\n- Phase: {{phase}}\n- Indication: {{indication}}\n- Compound: {{compoundName}}\n- Sponsor: {{sponsor}}\n\nThe synopsis must include:\n1. Study Title and Phase\n2. Objectives (Primary and Secondary)\n3. Study Design and Methodology\n4. Study Population (Inclusion/Exclusion summary)\n5. Treatment Groups and Dosing\n6. Endpoints and Assessments\n7. Statistical Considerations\n8. Study Duration\n\nFormat as a clear Markdown table or structured list."
+}

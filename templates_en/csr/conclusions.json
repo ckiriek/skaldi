@@ -1,0 +1,19 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_conclusions",
+  "section_name": "Discussion and Overall Conclusions",
+  "description": "Interpretation of results and final conclusion.",
+  "expected_inputs": [
+    "efficacy_conclusion",
+    "safety_conclusion",
+    "benefit_risk_assessment"
+  ],
+  "constraints": [
+    "Balanced view",
+    "Compare with previous studies",
+    "No new data presented here"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

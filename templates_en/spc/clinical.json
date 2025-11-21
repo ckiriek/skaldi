@@ -1,0 +1,18 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_clinical",
+  "section_name": "Clinical Particulars",
+  "description": "Indications, posology, contraindications.",
+  "expected_inputs": [
+    "therapeutic_indications",
+    "posology_and_method_of_administration",
+    "contraindications",
+    "special_warnings"
+  ],
+  "constraints": [
+    "Use standard MedDRA terms"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,15 @@
+{
+  "document_type": "Synopsis",
+  "section_id": "synopsis_endpoints",
+  "section_name": "Endpoints",
+  "description": "Primary and secondary endpoints.",
+  "expected_inputs": [
+    "primary_endpoints",
+    "secondary_endpoints",
+    "safety_endpoints"
+  ],
+  "constraints": [],
+  "template_type": "list_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,19 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_guidance",
+  "section_name": "Summary of Data and Guidance for the Investigator",
+  "description": "Discussion of nonclinical and clinical data, and guidance on management of adverse events, risks, and contraindications.",
+  "expected_inputs": [
+    "risk_benefit_assessment",
+    "contraindications",
+    "warnings_precautions",
+    "monitoring_requirements"
+  ],
+  "constraints": [
+    "Clear guidance for investigator",
+    "Include RSI (Reference Safety Information)"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

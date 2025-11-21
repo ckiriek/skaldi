@@ -1,0 +1,17 @@
+{
+  "document_type": "Protocol",
+  "section_id": "protocol_introduction",
+  "section_name": "Introduction",
+  "description": "Background and rationale.",
+  "expected_inputs": [
+    "indication",
+    "compoundName",
+    "publications",
+    "clinicalTrials"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1,
+  "prompt_text": "Write Section 5: INTRODUCTION.\n\nContext:\n- Indication: {{indication}}\n- Compound: {{compoundName}}\n- Evidence: {{publications}}\n\nRequirements:\n1. Background: Describe the disease burden of {{indication}}.\n2. Rationale: Why {{compoundName}} is being developed.\n3. Risk/Benefit: Brief assessment.\n\nCite 2-3 key supporting publications if available."
+}

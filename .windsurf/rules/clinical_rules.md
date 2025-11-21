@@ -291,11 +291,3 @@ Do not turn this system into a general medical advice engine.
 The output is intended for professional users who understand clinical and regulatory context.
 Never instruct the end user directly on diagnosis or treatment decisions.
 Focus on structure and wording of documents, not on providing medical recommendations to patients.
-
-11. How to interpret tasks
-
-When you receive a task in this repository:
-First, check whether it relates to:reference corpus,templates,Supabase schema,orchestration of document generation,UI only.
-Before editing:
-read or re read clinical_guidelines/system.md,
-read relevant parts of clinical_guidelines/templates.

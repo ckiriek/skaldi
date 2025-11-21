@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ValidatorAgent } from '@/lib/agents/validator'
+import { DocumentOrchestrator } from '@/lib/services/document-orchestrator'
 
 const validatorAgent = new ValidatorAgent()
+const documentOrchestrator = new DocumentOrchestrator()
+
+// Feature flags
+const USE_NEW_ORCHESTRATOR = process.env.USE_NEW_ORCHESTRATOR === 'true'
+const USE_ORCHESTRATOR_FOR_ALL = process.env.USE_ORCHESTRATOR_FOR_ALL === 'true'
+
+// Document types supported by new orchestrator
+const NEW_ORCHESTRATOR_TYPES = USE_ORCHESTRATOR_FOR_ALL 
+  ? ['Protocol', 'IB', 'ICF', 'Synopsis', 'CSR', 'SPC'] 
+  : ['Protocol'] // Start with Protocol only if not using all
 
 export async function POST(request: Request) {
   try {
@@ -26,36 +37,89 @@ export async function POST(request: Request) {
 
     console.log(`📝 Generating ${documentType} for project ${projectId}`)
 
-    // Call Supabase Edge Function
-    const { data, error } = await supabase.functions.invoke('generate-document', {
-      body: {
-        projectId,
-        documentType,
-        userId: user.id,
-      },
-    })
+    // Determine which generation path to use
+    const useNewOrchestrator = USE_NEW_ORCHESTRATOR && NEW_ORCHESTRATOR_TYPES.includes(documentType)
+    
+    let data: any
+    let error: any
+
+    if (useNewOrchestrator) {
+      console.log(`🚀 Using NEW DocumentOrchestrator for ${documentType}`)
+      console.log(`   Project ID: ${projectId}`)
+      console.log(`   User ID: ${user.id}`)
+      
+      try {
+        const result = await documentOrchestrator.generateDocument({
+          projectId,
+          documentType,
+          userId: user.id,
+        })
+
+        console.log(`   Orchestrator result:`, { success: result.success, sections: Object.keys(result.sections).length, errors: result.errors?.length })
+
+        if (result.success) {
+          data = {
+            success: true,
+            document: {
+              id: result.documentId,
+              type: documentType,
+              sections: result.sections,
+            },
+            validation: result.validation,
+            duration_ms: result.duration_ms,
+            orchestrator: 'new', // Flag to indicate new path
+          }
+        } else {
+          console.error(`   Orchestrator failed:`, result.errors)
+          error = {
+            message: 'Document generation failed',
+            details: result.errors,
+          }
+        }
+      } catch (err) {
+        console.error(`   Orchestrator exception:`, err)
+        error = {
+          message: err instanceof Error ? err.message : 'Unknown error',
+          details: err,
+        }
+      }
+    } else {
+      console.log(`🔄 Using LEGACY Edge Function for ${documentType}`)
+      
+      // Call legacy Supabase Edge Function
+      const response = await supabase.functions.invoke('generate-document', {
+        body: {
+          projectId,
+          documentType,
+          userId: user.id,
+        },
+      })
+
+      data = response.data
+      error = response.error
+    }
 
     if (error) {
-      console.error('Edge function error:', error)
+      console.error('Generation error:', error)
       return NextResponse.json({ 
         error: error.message,
         details: error,
-        context: 'Edge function invocation failed'
+        context: useNewOrchestrator ? 'New orchestrator failed' : 'Edge function invocation failed'
       }, { status: 500 })
     }
 
-    // If data contains an error, it means the Edge Function returned 400
+    // If data contains an error, it means generation returned 400
     if (data && data.error) {
-      console.error('Edge function returned error:', data)
+      console.error('Generation returned error:', data)
       return NextResponse.json({
         error: data.error,
         details: data.details,
-        context: 'Edge function execution failed'
+        context: 'Generation execution failed'
       }, { status: 500 })
     }
 
-    // Auto-validate the generated document
-    if (data.success && data.document && data.document.id) {
+    // Auto-validate the generated document (skip if new orchestrator already validated)
+    if (data.success && data.document && data.document.id && !useNewOrchestrator) {
       console.log(`🔍 Auto-validating generated document ${data.document.id}`)
       
       try {

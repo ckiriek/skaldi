@@ -31,6 +31,11 @@ export default function NewProjectPage() {
     primary_endpoint: '',
     // Generic-specific fields
     rld_brand_name: '',
+    // New clinical parameters (Step 6)
+    visit_schedule: '',
+    safety_monitoring: '',
+    secondary_endpoints: '',
+    analysis_populations: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -50,6 +55,11 @@ export default function NewProjectPage() {
         arms: parseInt(formData.arms),
         duration_weeks: parseInt(formData.duration_weeks),
         primary_endpoint: formData.primary_endpoint,
+        // New clinical parameters
+        visit_schedule: formData.visit_schedule || undefined,
+        safety_monitoring: formData.safety_monitoring || undefined,
+        secondary_endpoints: formData.secondary_endpoints || undefined,
+        analysis_populations: formData.analysis_populations || undefined,
       }
 
       // Call Intake Agent API
@@ -429,6 +439,62 @@ export default function NewProjectPage() {
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   💡 If left empty, we'll automatically use the most common endpoint from similar clinical trials for your indication.
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Secondary Endpoints
+                </label>
+                <Input
+                  value={formData.secondary_endpoints}
+                  onChange={(e) => setFormData({ ...formData, secondary_endpoints: e.target.value })}
+                  placeholder="e.g., Change in fasting glucose, lipid profile"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Optional: List secondary endpoints separated by semicolons
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Visit Schedule
+                </label>
+                <Input
+                  value={formData.visit_schedule}
+                  onChange={(e) => setFormData({ ...formData, visit_schedule: e.target.value })}
+                  placeholder="e.g., Screening, Baseline, Week 4, Week 12, Week 24"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Optional: Key visit timepoints (comma-separated)
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Safety Monitoring
+                </label>
+                <Input
+                  value={formData.safety_monitoring}
+                  onChange={(e) => setFormData({ ...formData, safety_monitoring: e.target.value })}
+                  placeholder="e.g., Vital signs, ECG, laboratory tests"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Optional: Key safety assessments (comma-separated)
+                </p>
+              </div>
+
+              <div className="mt-3">
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  Analysis Populations
+                </label>
+                <Input
+                  value={formData.analysis_populations}
+                  onChange={(e) => setFormData({ ...formData, analysis_populations: e.target.value })}
+                  placeholder="e.g., ITT, PP, Safety"
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Optional: Analysis sets (comma-separated). Defaults to ITT, PP, Safety if empty.
                 </p>
               </div>
             </div>

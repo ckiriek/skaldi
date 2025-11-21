@@ -1,0 +1,16 @@
+{
+  "document_type": "SPC",
+  "section_id": "spc_pharmaceutical",
+  "section_name": "Pharmaceutical Particulars",
+  "description": "Excipients, shelf life, storage.",
+  "expected_inputs": [
+    "list_of_excipients",
+    "shelf_life",
+    "special_precautions_for_storage",
+    "nature_and_contents_of_container"
+  ],
+  "constraints": [],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

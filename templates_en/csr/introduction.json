@@ -1,0 +1,20 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_introduction",
+  "section_name": "Introduction",
+  "description": "Background of the drug, rationale for the study, and context.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "pharmacological_class",
+    "rationale",
+    "regulatory_history"
+  ],
+  "constraints": [
+    "Cite Investigator's Brochure",
+    "Briefly summarize pre-clinical context"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

@@ -1,0 +1,18 @@
+{
+  "section_name": "mechanism_of_action",
+  "document_type": "ib",
+  "display_name": "Mechanism of Action",
+  "description": "How the drug works at molecular and cellular levels",
+  "required_inputs": ["compound_name", "drug_class", "indication"],
+  "rag_queries": [
+    {
+      "type": "drug",
+      "query_template": "{{compound_name}} mechanism of action pharmacology",
+      "min_chunks": 2,
+      "max_chunks": 4
+    }
+  ],
+  "prompt_template": "Write a Mechanism of Action section for {{compound_name}}.\n\nInclude:\n1. Primary molecular target\n2. Cellular effects\n3. Physiological outcomes\n4. Relationship to {{indication}}\n\nReferences:\n{{references}}\n\nStyle: Scientific, evidence-based, 300-500 words.",
+  "expected_length": {"min_words": 300, "max_words": 500},
+  "style": {"tone": "formal", "evidence_level": "high"}
+}

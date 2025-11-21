@@ -1,0 +1,26 @@
+{
+  "document_type": "CSR",
+  "section_id": "csr_synopsis",
+  "section_name": "Synopsis",
+  "description": "High-level summary of study design, population, endpoints and main results.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "phase",
+    "study_design_type",
+    "primary_endpoints",
+    "secondary_endpoints",
+    "sample_size",
+    "efficacy_results_summary",
+    "safety_results_summary"
+  ],
+  "constraints": [
+    "ICH E3 structure",
+    "No speculative efficacy claims",
+    "Results must be linked to actual study data",
+    "Max 3 pages usually"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

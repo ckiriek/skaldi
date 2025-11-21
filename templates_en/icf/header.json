@@ -1,0 +1,19 @@
+{
+  "document_type": "ICF",
+  "section_id": "icf_header",
+  "section_name": "Header",
+  "description": "Study title, Protocol ID, Sponsor, Investigator details.",
+  "expected_inputs": [
+    "study_title",
+    "protocol_id",
+    "sponsor_name",
+    "investigator_name",
+    "site_name"
+  ],
+  "constraints": [
+    "Clear identification of the study"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

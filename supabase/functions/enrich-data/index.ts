@@ -16,6 +16,7 @@
  */
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { DataNormalizer } from './normalizer.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -655,17 +656,48 @@ Deno.serve(async (req) => {
         metrics.sources_used.push('DailyMed')
         metrics.records_fetched.labels++
         
-        // Store label
-        await supabaseClient
-          .from('labels')
-          .upsert({
-            inchikey,
-            ...dailymedLabel,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'inchikey' })
+        // Store label sections in external_data_cache (labels table uses product_id, not inchikey)
+        if (dailymedLabel.sections) {
+          const normalizer = new DataNormalizer()
+          
+          for (const [sectionName, content] of Object.entries(dailymedLabel.sections)) {
+            if (!content || typeof content !== 'string') continue
+            
+            const normalized = normalizer.normalize(content, 'label_section')
+            
+            try {
+              await supabaseClient
+                .from('external_data_cache')
+                .upsert({
+                  compound_name: project.compound_name,
+                  inchikey,
+                  source: 'fda_label',
+                  source_id: dailymedLabel.setid,
+                  source_url: dailymedLabel.source_url,
+                  content_type: 'label_section',
+                  section_name: sectionName,
+                  raw_content: content,
+                  normalized_content: normalized.normalized_content,
+                  payload: {
+                    label_type: dailymedLabel.label_type,
+                    effective_date: dailymedLabel.effective_date,
+                    version: dailymedLabel.version,
+                    ...normalized.metadata
+                  },
+                  confidence: 'high',
+                }, {
+                  onConflict: 'compound_name,source,source_id,content_type,section_name',
+                  ignoreDuplicates: false
+                })
+              
+              console.log(`✅ Cached label section: ${sectionName}`)
+            } catch (error) {
+              console.error(`❌ Error caching label section ${sectionName}:`, error)
+            }
+          }
+        }
         
-        console.log(`✅ Stored DailyMed label`)
+        console.log(`✅ Stored DailyMed label in cache`)
       }
     }
 
@@ -681,17 +713,47 @@ Deno.serve(async (req) => {
         metrics.sources_used.push('openFDA')
         metrics.records_fetched.labels++
         
-        // Store label
-        await supabaseClient
-          .from('labels')
-          .upsert({
-            inchikey,
-            ...openfdaLabel,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }, { onConflict: 'inchikey' })
+        // Store label sections in external_data_cache
+        if (openfdaLabel.sections) {
+          const normalizer = new DataNormalizer()
+          
+          for (const [sectionName, content] of Object.entries(openfdaLabel.sections)) {
+            if (!content || typeof content !== 'string') continue
+            
+            const normalized = normalizer.normalize(content, 'label_section')
+            
+            try {
+              await supabaseClient
+                .from('external_data_cache')
+                .upsert({
+                  compound_name: project.compound_name,
+                  inchikey,
+                  source: 'fda_label',
+                  source_id: openfdaLabel.setid,
+                  source_url: openfdaLabel.source_url,
+                  content_type: 'label_section',
+                  section_name: sectionName,
+                  raw_content: content,
+                  normalized_content: normalized.normalized_content,
+                  payload: {
+                    label_type: openfdaLabel.label_type,
+                    effective_date: openfdaLabel.effective_date,
+                    ...normalized.metadata
+                  },
+                  confidence: 'high',
+                }, {
+                  onConflict: 'compound_name,source,source_id,content_type,section_name',
+                  ignoreDuplicates: false
+                })
+              
+              console.log(`✅ Cached label section: ${sectionName}`)
+            } catch (error) {
+              console.error(`❌ Error caching label section ${sectionName}:`, error)
+            }
+          }
+        }
         
-        console.log(`✅ Stored openFDA label`)
+        console.log(`✅ Stored openFDA label in cache`)
       }
     }
 
@@ -756,13 +818,16 @@ Deno.serve(async (req) => {
       const trialsToStore = nctIds.map(nctId => ({
         nct_id: nctId,
         inchikey,
-        project_id,
+        // project_id removed - field doesn't exist in trials table
         title: `Clinical Trial ${nctId}`, // Will be updated with full data later
         phase: null,
         status: null,
         enrollment: null,
         design: {},
-        outcomes: {},
+        arms: {},
+        outcomes_primary: {},
+        outcomes_secondary: {},
+        results: {},
         source: 'ClinicalTrials.gov',
         source_url: `https://clinicaltrials.gov/study/${nctId}`,
         retrieved_at: new Date().toISOString(),
@@ -804,15 +869,19 @@ Deno.serve(async (req) => {
       const publicationsToStore = pmids.map(pmid => ({
         pmid,
         inchikey,
-        project_id,
+        // project_id removed - field doesn't exist in literature table
         title: `PubMed Article ${pmid}`, // Will be updated with full data later
         authors: [],
         journal: null,
         publication_date: null,
+        volume: null,
+        issue: null,
+        pages: null,
+        doi: null,
         abstract: null,
         keywords: [],
         mesh_terms: [],
-        doi: null,
+        relevance_score: null,
         source: 'PubMed',
         source_url: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
         retrieved_at: new Date().toISOString(),
