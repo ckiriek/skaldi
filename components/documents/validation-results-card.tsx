@@ -29,7 +29,7 @@ export function ValidationResultsCard({
   documentType,
   onSectionClick
 }: ValidationResultsCardProps) {
-  const { passed, issues } = validation
+  const { passed, issues = [] } = validation
 
   // Count issues by severity
   const errorCount = issues.filter(i => i.severity === 'error').length
