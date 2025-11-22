@@ -78,9 +78,24 @@ function normalizeInput(input: string): string {
  */
 function extractAPIName(input: string): string {
   // Remove strength patterns first
-  let cleaned = input.replace(/\d+\.?\d*\s*(mg|g|mcg|iu|%|mg\/ml|iu\/ml|units\/ml)/gi, '')
+  let cleaned = input.replace(/\d+\.?\d*\s*(mg|g|mcg|iu|%|mg\/ml|g\/ml|mcg\/ml|iu\/ml|units\/ml|units|u)\b/gi, '')
   
-  // Remove dosage form patterns
+  // Remove common dosage forms (more comprehensive)
+  const commonForms = [
+    'tablet', 'tablets', 'capsule', 'capsules', 'injection', 'injections',
+    'suppository', 'suppositories', 'cream', 'ointment', 'gel', 'spray',
+    'solution', 'suspension', 'powder', 'drops', 'inhaler', 'patch',
+    'vaginal', 'ophthalmic', 'nasal', 'rectal', 'topical', 'oral',
+    'inhalation', 'nebulizer', 'pen', 'syringe', 'infusion',
+    'film-coated', 'extended-release', 'immediate-release', 'modified-release', 'sustained-release',
+    'chewable', 'dispersible', 'effervescent', 'enteric-coated', 'pre-filled'
+  ]
+  
+  for (const form of commonForms) {
+    cleaned = cleaned.replace(new RegExp(`\\b${form}\\b`, 'gi'), '')
+  }
+  
+  // Remove dosage form synonyms
   const dosageForms = Object.keys(DOSAGE_FORM_SYNONYMS)
   for (const form of dosageForms) {
     cleaned = cleaned.replace(new RegExp(`\\b${form}\\b`, 'gi'), '')
@@ -91,9 +106,6 @@ function extractAPIName(input: string): string {
   for (const route of routes) {
     cleaned = cleaned.replace(new RegExp(`\\b${route}\\b`, 'gi'), '')
   }
-  
-  // Remove common descriptors
-  cleaned = cleaned.replace(/\b(film-coated|extended-release|immediate-release|modified-release|sustained-release)\b/gi, '')
   
   // Clean up
   cleaned = cleaned.replace(/\s+/g, ' ').trim()
@@ -111,9 +123,18 @@ function extractAPIName(input: string): string {
     apiName = cleaned
   }
   
-  // Capitalize first letter
+  // If still too short, try first 1-2 words
+  if (!apiName || apiName.length < 3) {
+    const words = input.split(/\s+/)
+    apiName = words.slice(0, Math.min(2, words.length)).join(' ')
+  }
+  
+  // Capitalize properly (preserve compound names like "Insulin glargine")
   if (apiName) {
-    apiName = apiName.charAt(0).toUpperCase() + apiName.slice(1).toLowerCase()
+    const words = apiName.split(/\s+/)
+    apiName = words.map(word => 
+      word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+    ).join(' ')
   }
   
   return apiName || input.split(/\s+/)[0] // Fallback to first word
@@ -149,12 +170,24 @@ function extractDosageForm(input: string): DosageForm | null {
     return 'vaginal gel'
   }
   
+  if (lowerInput.includes('ophthalmic') && lowerInput.includes('solution')) {
+    return 'ophthalmic solution'
+  }
+  
+  if (lowerInput.includes('ophthalmic') && lowerInput.includes('ointment')) {
+    return 'ophthalmic ointment'
+  }
+  
   if (lowerInput.includes('eye') && lowerInput.includes('drop')) {
     return 'eye drops'
   }
   
   if (lowerInput.includes('nasal') && lowerInput.includes('spray')) {
     return 'nasal spray'
+  }
+  
+  if (lowerInput.includes('inhalation') && lowerInput.includes('powder')) {
+    return 'inhalation powder'
   }
   
   // Check for basic forms
@@ -177,15 +210,15 @@ function extractDosageForm(input: string): DosageForm | null {
 function extractRoute(input: string): Route | null {
   const lowerInput = input.toLowerCase()
   
-  // Check synonyms
+  // Check synonyms first
   for (const [synonym, route] of Object.entries(ROUTE_SYNONYMS)) {
     if (lowerInput.includes(synonym.toLowerCase())) {
       return route
     }
   }
   
-  // Infer from dosage form
-  if (lowerInput.includes('vaginal') || lowerInput.includes('intravaginal')) {
+  // Infer from dosage form (order matters - check specific before general)
+  if (lowerInput.includes('vaginal') || lowerInput.includes('intravaginal') || lowerInput.includes('suppository')) {
     return 'vaginal'
   }
   
@@ -205,12 +238,8 @@ function extractRoute(input: string): Route | null {
     return 'topical'
   }
   
-  if (lowerInput.includes('inhalation') || lowerInput.includes('inhaler')) {
+  if (lowerInput.includes('inhalation') || lowerInput.includes('inhaler') || lowerInput.includes('podhaler')) {
     return 'inhalation'
-  }
-  
-  if (lowerInput.includes('tablet') || lowerInput.includes('capsule') || lowerInput.includes('oral')) {
-    return 'oral'
   }
   
   if (lowerInput.includes('iv') || lowerInput.includes('intravenous')) {
@@ -223,6 +252,11 @@ function extractRoute(input: string): Route | null {
   
   if (lowerInput.includes('sc') || lowerInput.includes('subcutaneous')) {
     return 'subcutaneous'
+  }
+  
+  // Check for oral last (most common, but should not override specific routes)
+  if (lowerInput.includes('tablet') || lowerInput.includes('capsule') || lowerInput.includes('oral')) {
+    return 'oral'
   }
   
   return null

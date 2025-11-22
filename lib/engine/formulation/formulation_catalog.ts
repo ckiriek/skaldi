@@ -56,6 +56,8 @@ export const DOSAGE_FORM_SYNONYMS: Record<string, DosageForm> = {
   'eye drop': 'eye drops',
   'eyedrops': 'eye drops',
   'opth solution': 'ophthalmic solution',
+  'ophthalmic sol': 'ophthalmic solution',
+  'eye solution': 'ophthalmic solution',
   'глазные капли': 'eye drops',
   
   // Nasal
