@@ -1,0 +1,77 @@
+
+Running 4 tests using 1 worker
+
+🔐 Setting up authentication...
+📍 On login page
+✅ Filled email
+✅ Filled password
+✅ Clicked login
+✅ Logged in - URL: https://app.skaldi.co/dashboard
+✅ Auth state saved
+  ✓  1 [setup] › e2e/auth.setup.ts:14:6 › authenticate (8.8s)
+🚀 Starting final smoke test...
+
+📍 STEP 1: Creating project...
+  ✅ Title filled
+  ✅ Compound filled
+  ✅ Sponsor filled
+  ✅ Indication filled
+  ✅ Form submitted
+  ✅ Project created: e0d1f8d9-c276-400a-8ac0-1ea1460fe246
+
+📍 STEP 2: Verifying initial state...
+  ✅ Fetch button visible
+  ✅ Pipeline shows "Enrichment Required" (correct!)
+
+📍 STEP 3: Fetching external data...
+  ✅ Clicked Fetch External Data
+  ⏳ Waiting 60 seconds for data fetch...
+  ✅ Data fetch completed
+
+📍 STEP 4: Verifying pipeline is now visible...
+  ✅ Enrichment badge shows "Data Enriched"
+  ✅ Switched to Pipeline tab
+
+📍 STEP 5: Generating IB...
+  ✅ Generate button found
+  ✅ Clicked Generate
+  ⏳ Waiting up to 90 seconds for generation...
+  ❌ IB generation timeout or failed
+  ✘  2 [chromium] › e2e/smoke-final.spec.ts:20:7 › Skaldi Production Smoke Test › Complete workflow: Create → Fetch → Generate → Validate → Export (2.8m)
+✅ Dashboard health check passed
+  ✓  3 [chromium] › e2e/smoke-final.spec.ts:248:7 › Skaldi Production Smoke Test › Health check: Dashboard loads (4.4s)
+✅ Projects health check passed
+  ✓  4 [chromium] › e2e/smoke-final.spec.ts:255:7 › Skaldi Production Smoke Test › Health check: Projects page loads (4.8s)
+
+
+  1) [chromium] › e2e/smoke-final.spec.ts:20:7 › Skaldi Production Smoke Test › Complete workflow: Create → Fetch → Generate → Validate → Export 
+
+    TimeoutError: locator.waitFor: Timeout 90000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('button').filter({ hasText: /^View$/i }).first() to be visible[22m
+
+
+      162 |     
+      163 |     try {
+    > 164 |       await viewButton.waitFor({ timeout: 90000 })
+          |                        ^
+      165 |       console.log('  ✅ IB generated successfully!\n')
+      166 |       
+      167 |       await page.screenshot({ path: 'e2e/screenshots/06-ib-generated.png' })
+        at /Users/mitchkiriek/skaldi/e2e/smoke-final.spec.ts:164:24
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-final-Skaldi-Product-71efc-enerate-→-Validate-→-Export-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/smoke-final-Skaldi-Product-71efc-enerate-→-Validate-→-Export-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-final-Skaldi-Product-71efc-enerate-→-Validate-→-Export-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/smoke-final.spec.ts:20:7 › Skaldi Production Smoke Test › Complete workflow: Create → Fetch → Generate → Validate → Export 
+  3 passed (3.4m)
+
+[36m  Serving HTML report at http://localhost:57106. Press Ctrl+C to quit.[39m

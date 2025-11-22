@@ -140,6 +140,7 @@ export class ConsistencyValidator {
 
     const report: ConsistencyReport = {
       document_id: documentId,
+      // @ts-ignore - Supabase type inference issue
       document_type: document.document_type,
       total_checks: checks.length,
       passed,

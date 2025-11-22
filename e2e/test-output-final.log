@@ -1,0 +1,41 @@
+
+Running 4 tests using 1 worker
+
+🔐 Setting up authentication...
+📍 On login page
+✅ Filled email
+✅ Filled password
+✅ Clicked login
+✅ Logged in - URL: https://app.skaldi.co/dashboard
+✅ Auth state saved
+  ✓  1 [setup] › e2e/auth.setup.ts:14:6 › authenticate (7.8s)
+🚀 Starting production smoke test...
+📍 Step 1: Creating new project...
+✅ New project form loaded
+📍 Step 2: Filling project form...
+✅ Product type: innovator (default)
+✅ Filled project title
+✅ Filled compound name
+✅ Filled sponsor
+✅ Phase: Phase 2 (default)
+✅ Filled indication
+📍 Step 3: Submitting form...
+✅ Clicked Create Project
+✅ Project created: https://app.skaldi.co/dashboard/projects/316e7ccb-bf2d-4379-86b8-a6cecb9840f2
+📍 Step 4: Generating IB...
+⚠️ Generate IB button not found
+🎉 Smoke test completed!
+  ✓  2 [chromium] › e2e/smoke-real.spec.ts:18:7 › Skaldi Production Smoke Test › Complete workflow: Create Project → Generate IB → Validate → Export (12.5s)
+🏥 Running dashboard health check...
+✅ Dashboard health check passed
+  ✓  3 [chromium] › e2e/smoke-real.spec.ts:195:7 › Skaldi Production Smoke Test › Quick health check - Dashboard loads (3.6s)
+🏥 Running projects health check...
+✅ Projects health check passed
+  ✓  4 [chromium] › e2e/smoke-real.spec.ts:210:7 › Skaldi Production Smoke Test › Quick health check - Projects page loads (4.0s)
+
+  4 passed (37.7s)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report e2e/report[39m
+[36m[39m

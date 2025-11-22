@@ -18,7 +18,7 @@ export default function NewProjectPage() {
   const [suggestedIndications, setSuggestedIndications] = useState<Array<{indication: string, source: string, count?: number}>>([])
   const [formData, setFormData] = useState({
     title: '',
-    product_type: 'innovator' as 'innovator' | 'generic' | 'hybrid',
+    product_type: 'generic' as 'innovator' | 'generic' | 'hybrid', // Changed default to 'generic'
     compound_name: '',
     sponsor: '',
     phase: 'Phase 2',
@@ -144,67 +144,73 @@ export default function NewProjectPage() {
                 <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             )}
-            {/* Product Type Selection */}
-            <div className="space-y-3">
+            {/* Product Type Selection - Improved UX */}
+            <div className="space-y-2.5">
               <div>
-                <Label className="text-base font-semibold">Product Type *</Label>
-                <p className="text-sm text-muted-foreground mt-1">Select the type of product for this project</p>
+                <Label className="text-sm font-medium">Product Type *</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Most common: Generic Drug (auto-fetches RLD data)</p>
               </div>
               <RadioGroup
                 value={formData.product_type}
                 onValueChange={(value: 'innovator' | 'generic' | 'hybrid') => 
                   setFormData({ ...formData, product_type: value })
                 }
+                className="gap-2"
               >
+                {/* Generic Drug - Most common, now first */}
                 <div
                   className={cn(
-                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
-                    formData.product_type === 'innovator'
-                      ? 'border-primary/60 bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
-                  )}
-                >
-                  <RadioGroupItem value="innovator" id="innovator" className="mt-1" />
-                  <div className="flex-1">
-                    <Label htmlFor="innovator" className="cursor-pointer">
-                      <div className="font-semibold text-foreground">Innovator / Original Compound</div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        New drug with full nonclinical and clinical data from sponsor
-                      </p>
-                    </Label>
-                  </div>
-                </div>
-                <div
-                  className={cn(
-                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
+                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
                     formData.product_type === 'generic'
-                      ? 'border-primary/60 bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
                   )}
                 >
-                  <RadioGroupItem value="generic" id="generic" className="mt-1" />
-                  <div className="flex-1">
+                  <RadioGroupItem value="generic" id="generic" className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="generic" className="cursor-pointer">
-                      <div className="font-semibold text-foreground">Generic Drug</div>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Based on existing approved product (RLD) — we'll auto-fetch data from FDA/EMA
+                      <div className="font-medium text-sm text-foreground">Generic Drug</div>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        Based on approved RLD · Auto-fetches FDA/Orange Book data
                       </p>
                     </Label>
                   </div>
                 </div>
+
+                {/* New Drug (Innovator) */}
                 <div
                   className={cn(
-                    'flex items-start gap-3 rounded-md border px-3 py-3 cursor-pointer transition-colors',
-                    formData.product_type === 'hybrid'
-                      ? 'border-primary/60 bg-primary/5'
-                      : 'border-border hover:bg-muted/50'
+                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
+                    formData.product_type === 'innovator'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
                   )}
                 >
-                  <RadioGroupItem value="hybrid" id="hybrid" className="mt-1" />
-                  <div className="flex-1">
+                  <RadioGroupItem value="innovator" id="innovator" className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <Label htmlFor="innovator" className="cursor-pointer">
+                      <div className="font-medium text-sm text-foreground">New Drug (Innovator)</div>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                        Full development with sponsor data
+                      </p>
+                    </Label>
+                  </div>
+                </div>
+
+                {/* Other (Combination/Biosimilar) */}
+                <div
+                  className={cn(
+                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
+                    formData.product_type === 'hybrid'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
+                  )}
+                >
+                  <RadioGroupItem value="hybrid" id="hybrid" className="mt-0.5" />
+                  <div className="flex-1 min-w-0">
                     <Label htmlFor="hybrid" className="cursor-pointer">
-                      <div className="font-semibold text-foreground">Hybrid / Combination Product</div>
-                      <p className="text-sm text-muted-foreground mt-1">
+                      <div className="font-medium text-sm text-foreground">Other (Combination/Biosimilar)</div>
+                      <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
                         Modified release, fixed-dose combination, or biosimilar
                       </p>
                     </Label>

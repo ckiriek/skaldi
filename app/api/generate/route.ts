@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { ValidatorAgent } from '@/lib/agents/validator'
 import { DocumentOrchestrator } from '@/lib/services/document-orchestrator'
+import { runPostGenerationChecks } from '@/lib/integration/run_post_generation_checks'
 
 const validatorAgent = new ValidatorAgent()
 const documentOrchestrator = new DocumentOrchestrator()
@@ -177,6 +178,34 @@ export async function POST(request: Request) {
       } catch (validationError) {
         console.error('Auto-validation failed:', validationError)
         // Don't fail the whole request if validation fails
+      }
+    }
+
+    // Phase G.10: Run post-generation validation checks (StudyFlow + CrossDoc)
+    if (data.success && data.document && data.document.id) {
+      console.log(`🔬 Running Phase G.10 post-generation checks...`)
+      
+      try {
+        const validationResults = await runPostGenerationChecks({
+          projectId,
+          documentId: data.document.id,
+          documentType,
+        })
+
+        console.log(`✅ Post-generation checks complete:`)
+        console.log(`   StudyFlow: ${validationResults.studyflow.summary.total} issues`)
+        console.log(`   CrossDoc: ${validationResults.crossdoc.summary.total} issues`)
+        console.log(`   Overall Status: ${validationResults.overallStatus}`)
+
+        // Add to response
+        data.phaseG10Validation = {
+          studyflow: validationResults.studyflow.summary,
+          crossdoc: validationResults.crossdoc.summary,
+          overallStatus: validationResults.overallStatus,
+        }
+      } catch (validationError) {
+        console.error('Phase G.10 validation failed:', validationError)
+        // Don't fail the whole request
       }
     }
 

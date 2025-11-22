@@ -8,6 +8,9 @@ import { FetchExternalDataButton } from '@/components/fetch-external-data-button
 import { EvidenceDisplay } from '@/components/evidence-display'
 import { GenerationPipeline } from '@/components/projects/generation-pipeline'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { CrossDocPanel } from '@/components/crossdoc'
+import { StudyFlowPanel } from '@/components/study-flow/StudyFlowPanel'
+import { ValidationHistory } from '@/components/integration/ValidationHistory'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
   const normalized = (status || '').toLowerCase()
@@ -155,6 +158,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
           <TabsTrigger value="documents" className="flex-1">Pipeline</TabsTrigger>
           <TabsTrigger value="files" className="flex-1">Files & Versions</TabsTrigger>
           <TabsTrigger value="evidence" className="flex-1">Evidence</TabsTrigger>
+          <TabsTrigger value="studyflow" className="flex-1">Study Flow</TabsTrigger>
+          <TabsTrigger value="crossdoc" className="flex-1">Cross-Document</TabsTrigger>
+          <TabsTrigger value="validation" className="flex-1">Validation History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="documents" className="pt-2">
@@ -295,6 +301,47 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               </CardHeader>
               <CardContent>
                 <EvidenceDisplay evidenceSources={evidenceSources} />
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
+        <TabsContent value="studyflow">
+          <StudyFlowPanel
+            protocolId={documents?.find(d => d.type === 'Protocol')?.id || ''}
+            studyFlowId={undefined}
+          />
+        </TabsContent>
+
+        <TabsContent value="crossdoc">
+          <CrossDocPanel
+            projectId={project.id}
+            documentIds={{
+              ibId: documents?.find(d => d.type === 'IB')?.id,
+              protocolId: documents?.find(d => d.type === 'Protocol')?.id,
+              icfId: documents?.find(d => d.type === 'ICF')?.id,
+              sapId: documents?.find(d => d.type === 'SAP')?.id,
+              csrId: documents?.find(d => d.type === 'CSR')?.id,
+            }}
+          />
+        </TabsContent>
+
+        <TabsContent value="validation">
+          {documents && documents.length > 0 ? (
+            <div className="space-y-4">
+              {documents.map((doc) => (
+                <div key={doc.id}>
+                  <h3 className="text-sm font-medium mb-3">{doc.type}</h3>
+                  <ValidationHistory documentId={doc.id} />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground">No documents to validate</p>
+                <p className="text-xs text-muted-foreground mt-1">Generate documents first</p>
               </CardContent>
             </Card>
           )}

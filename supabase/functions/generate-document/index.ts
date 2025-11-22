@@ -1612,7 +1612,14 @@ async function generateWithAI(documentType: string, context: any): Promise<strin
   const azureEndpoint = Deno.env.get('AZURE_OPENAI_ENDPOINT')
   const azureKey = Deno.env.get('AZURE_OPENAI_API_KEY')
   
+  console.log('🔍 Azure credentials check:', {
+    hasEndpoint: !!azureEndpoint,
+    hasKey: !!azureKey,
+    endpoint: azureEndpoint ? azureEndpoint.substring(0, 30) + '...' : 'MISSING'
+  })
+  
   if (!azureEndpoint || !azureKey) {
+    console.error('❌ Azure credentials missing! Returning placeholder.')
     // Return structured placeholder if Azure OpenAI not configured
     return generatePlaceholder(documentType, context)
   }
@@ -1643,18 +1650,29 @@ async function generateWithAI(documentType: string, context: any): Promise<strin
             content: prompt
           }
         ],
-        max_tokens: 8000,
-        temperature: 0.3, // Lower temperature for more consistent, factual output
+        // max_completion_tokens: 16384, // GPT-5.1 default - let model decide
+        // temperature: 1, // GPT-5.1 only supports default temperature of 1
       }),
     })
     
     if (!response.ok) {
-      console.error('Azure OpenAI error:', await response.text())
+      const errorText = await response.text()
+      console.error('❌ Azure OpenAI HTTP error:', errorText)
       return generatePlaceholder(documentType, context)
     }
     
     const data = await response.json()
-    return data.choices[0]?.message?.content || generatePlaceholder(documentType, context)
+    console.log('📦 Azure response:', JSON.stringify(data).substring(0, 500))
+    
+    const content = data.choices?.[0]?.message?.content
+    
+    if (!content) {
+      console.error('❌ No content in Azure response!')
+      return generatePlaceholder(documentType, context)
+    }
+    
+    console.log(`✅ Got content from Azure: ${content.length} characters`)
+    return content
     
   } catch (error) {
     console.error('Error calling Azure OpenAI:', error)

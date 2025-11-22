@@ -1,0 +1,38 @@
+
+Running 2 tests using 1 worker
+
+🔐 Setting up authentication...
+📍 On login page
+✅ Filled email
+✅ Filled password
+✅ Clicked login
+✅ Logged in - URL: https://app.skaldi.co/dashboard
+✅ Auth state saved
+  ✓  1 [setup] › e2e/auth.setup.ts:14:6 › authenticate (6.8s)
+🚀 Starting complete workflow test...
+
+📍 STEP 1: Creating new project...
+✅ Filled title
+✅ Filled compound
+✅ Filled sponsor
+✅ Filled indication
+✅ Clicked Create Project
+✅ Project created: 30e95118-3e4d-4a89-bfb8-3defbe80a3d5
+
+📍 STEP 2: Fetching external data...
+✅ Clicked Fetch External Data
+⏳ Waiting for data fetch (up to 60s)...
+✅ External data fetched
+
+📍 STEP 3: Generating IB...
+⚠️ Generate IB button not found
+
+🎉 Complete workflow test finished!
+  ✓  2 [chromium] › e2e/smoke-complete.spec.ts:19:7 › Skaldi Complete Workflow › Full workflow: Create → Fetch Data → Generate → Validate → Export (1.3m)
+
+  2 passed (1.5m)
+
+To open last HTML report run:
+[36m[39m
+[36m  npx playwright show-report e2e/report[39m
+[36m[39m

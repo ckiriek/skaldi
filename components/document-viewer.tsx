@@ -9,6 +9,8 @@ import rehypeHighlight from 'rehype-highlight'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ExportDocumentButtons } from '@/components/export-document-buttons'
+import { DocumentStatusBanner } from '@/components/integration/DocumentStatusBanner'
+import { getLatestValidationStatus } from '@/lib/integration/run_post_generation_checks'
 import 'highlight.js/styles/github.css'
 
 interface DocumentViewerProps {
@@ -27,6 +29,19 @@ interface TocItem {
 export function DocumentViewer({ content, documentType, documentId, documentTitle }: DocumentViewerProps) {
   const [toc, setToc] = useState<TocItem[]>([])
   const [activeSection, setActiveSection] = useState<string>('')
+  const [validationStatus, setValidationStatus] = useState<any>(null)
+  const [loadingValidation, setLoadingValidation] = useState(false)
+
+  // Load validation status
+  useEffect(() => {
+    if (documentId) {
+      setLoadingValidation(true)
+      getLatestValidationStatus(documentId)
+        .then((status) => setValidationStatus(status))
+        .catch((error) => console.error('Failed to load validation status:', error))
+        .finally(() => setLoadingValidation(false))
+    }
+  }, [documentId])
 
   // Extract table of contents from markdown
   useEffect(() => {
@@ -77,7 +92,17 @@ export function DocumentViewer({ content, documentType, documentId, documentTitl
   }
 
   return (
-    <div className="flex gap-6 print:block">
+    <div className="space-y-4">
+      {/* Validation Status Banner */}
+      {!loadingValidation && validationStatus && (
+        <DocumentStatusBanner
+          status={validationStatus.validation_status || 'pending'}
+          summary={validationStatus.validation_summary}
+          showAutoFix={true}
+        />
+      )}
+
+      <div className="flex gap-6 print:block">
       {/* Table of Contents - Sidebar */}
       {toc.length > 0 && (
         <aside className="hidden lg:block w-64 flex-shrink-0 print:hidden">
@@ -253,6 +278,7 @@ export function DocumentViewer({ content, documentType, documentId, documentTitl
             </div>
           </CardContent>
         </Card>
+      </div>
       </div>
     </div>
   )

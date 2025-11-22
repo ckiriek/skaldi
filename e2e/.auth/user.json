@@ -1,0 +1,15 @@
+{
+  "cookies": [
+    {
+      "name": "sb-qtlpjxjlwrjindgybsfd-auth-token",
+      "value": "%7B%22access_token%22%3A%22eyJhbGciOiJIUzI1NiIsImtpZCI6Ik9lem1nb2l5UDZMc0lCZ0wiLCJ0eXAiOiJKV1QifQ.eyJpc3MiOiJodHRwczovL3F0bHBqeGpsd3JqaW5kZ3lic2ZkLnN1cGFiYXNlLmNvL2F1dGgvdjEiLCJzdWIiOiIyZWYyM2VlNi03Y2QxLTQwMzQtYWU1Yy01OTNmNGQ1YmQ5YmEiLCJhdWQiOiJhdXRoZW50aWNhdGVkIiwiZXhwIjoxNzYzNzY3MzQ0LCJpYXQiOjE3NjM3NjM3NDQsImVtYWlsIjoiYWRtaW5AZGVtb2Nyby5jb20iLCJwaG9uZSI6IiIsImFwcF9tZXRhZGF0YSI6eyJwcm92aWRlciI6ImVtYWlsIiwicHJvdmlkZXJzIjpbImVtYWlsIl19LCJ1c2VyX21ldGFkYXRhIjp7fSwicm9sZSI6ImF1dGhlbnRpY2F0ZWQiLCJhYWwiOiJhYWwxIiwiYW1yIjpbeyJtZXRob2QiOiJwYXNzd29yZCIsInRpbWVzdGFtcCI6MTc2Mzc2Mzc0NH1dLCJzZXNzaW9uX2lkIjoiNzdkMTBmMTgtYzdjYS00MmViLTk1NjMtOTQ2ZTU5YWMwNjBjIiwiaXNfYW5vbnltb3VzIjpmYWxzZX0.mMAXIbYtHWfSBUZ-yNpyfUCxB2B3zNTYEYcz52ADpK8%22%2C%22token_type%22%3A%22bearer%22%2C%22expires_in%22%3A3600%2C%22expires_at%22%3A1763767344%2C%22refresh_token%22%3A%22qhk2ynwxial5%22%2C%22user%22%3A%7B%22id%22%3A%222ef23ee6-7cd1-4034-ae5c-593f4d5bd9ba%22%2C%22aud%22%3A%22authenticated%22%2C%22role%22%3A%22authenticated%22%2C%22email%22%3A%22admin%40democro.com%22%2C%22email_confirmed_at%22%3A%222025-11-09T20%3A59%3A18.835772Z%22%2C%22phone%22%3A%22%22%2C%22confirmed_at%22%3A%222025-11-09T20%3A59%3A18.835772Z%22%2C%22last_sign_in_at%22%3A%222025-11-21T22%3A22%3A24.965442945Z%22%2C%22app_metadata%22%3A%7B%22provider%22%3A%22email%22%2C%22providers%22%3A%5B%22email%22%5D%7D%2C%22user_metadata%22%3A%7B%7D%2C%22identities%22%3A%5B%7B%22identity_id%22%3A%22e80deb85-d21b-40b5-9be8-1010750d7afc%22%2C%22id%22%3A%222ef23ee6-7cd1-4034-ae5c-593f4d5bd9ba%22%2C%22user_id%22%3A%222ef23ee6-7cd1-4034-ae5c-593f4d5bd9ba%22%2C%22identity_data%22%3A%7B%22email%22%3A%22admin%40democro.com%22%2C%22email_verified%22%3Atrue%2C%22phone_verified%22%3Afalse%2C%22sub%22%3A%222ef23ee6-7cd1-4034-ae5c-593f4d5bd9ba%22%7D%2C%22provider%22%3A%22email%22%2C%22last_sign_in_at%22%3A%222025-11-09T20%3A59%3A29.975655Z%22%2C%22created_at%22%3A%222025-11-09T20%3A59%3A29.975655Z%22%2C%22updated_at%22%3A%222025-11-09T20%3A59%3A29.975655Z%22%2C%22email%22%3A%22admin%40democro.com%22%7D%5D%2C%22created_at%22%3A%222025-11-09T20%3A59%3A18.835772Z%22%2C%22updated_at%22%3A%222025-11-21T22%3A22%3A24.971179Z%22%2C%22is_anonymous%22%3Afalse%7D%2C%22weak_password%22%3Anull%7D",
+      "domain": "app.skaldi.co",
+      "path": "/",
+      "expires": 1798323744.940623,
+      "httpOnly": false,
+      "secure": false,
+      "sameSite": "Lax"
+    }
+  ],
+  "origins": []
+}

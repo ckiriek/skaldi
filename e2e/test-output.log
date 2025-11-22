@@ -1,0 +1,53 @@
+
+Running 3 tests using 1 worker
+
+🔐 Setting up authentication...
+📍 On login page
+✅ Filled email
+✅ Filled password
+✅ Clicked login
+✅ Logged in - URL: https://app.skaldi.co/dashboard
+✅ Auth state saved
+  ✓  1 [setup] › e2e/auth.setup.ts:14:6 › authenticate (7.4s)
+🚀 Starting smoke test...
+📍 Step 1: Opening dashboard...
+✅ Dashboard loaded - URL: https://app.skaldi.co/dashboard
+📍 Step 3: Creating new project...
+✅ Navigated to new project page
+  ✘  2 [chromium] › e2e/smoke.spec.ts:21:7 › Skaldi Production Smoke Test › Complete workflow: Login → Create Project → Generate → Validate → Export (18.3s)
+🏥 Running health check...
+✅ Health check passed
+  ✓  3 [chromium] › e2e/smoke.spec.ts:177:7 › Skaldi Production Smoke Test › Quick health check (3.4s)
+
+
+  1) [chromium] › e2e/smoke.spec.ts:21:7 › Skaldi Production Smoke Test › Complete workflow: Login → Create Project → Generate → Validate → Export 
+
+    TimeoutError: locator.waitFor: Timeout 10000ms exceeded.
+    Call log:
+    [2m  - waiting for locator('input[name="compound"], input[placeholder*="compound" i], input[id*="compound" i]').first() to be visible[22m
+
+
+      58 |     // Compound field
+      59 |     const compoundInput = page.locator('input[name="compound"], input[placeholder*="compound" i], input[id*="compound" i]').first()
+    > 60 |     await compoundInput.waitFor({ timeout: 10000 })
+         |                         ^
+      61 |     await compoundInput.fill(`Test Compound ${timestamp}`)
+      62 |     console.log('✅ Filled compound')
+      63 |     
+        at /Users/mitchkiriek/skaldi/e2e/smoke.spec.ts:60:25
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/smoke-Skaldi-Production-Sm-8c998-enerate-→-Validate-→-Export-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: video (video/webm) ──────────────────────────────────────────────────────────────
+    test-results/smoke-Skaldi-Production-Sm-8c998-enerate-→-Validate-→-Export-chromium/video.webm
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/smoke-Skaldi-Production-Sm-8c998-enerate-→-Validate-→-Export-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/smoke.spec.ts:21:7 › Skaldi Production Smoke Test › Complete workflow: Login → Create Project → Generate → Validate → Export 
+  2 passed (41.8s)
+
+[36m  Serving HTML report at http://localhost:52635. Press Ctrl+C to quit.[39m
