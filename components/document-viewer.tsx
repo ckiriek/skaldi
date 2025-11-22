@@ -10,7 +10,6 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { ExportDocumentButtons } from '@/components/export-document-buttons'
 import { DocumentStatusBanner } from '@/components/integration/DocumentStatusBanner'
-import { getLatestValidationStatus } from '@/lib/integration/run_post_generation_checks'
 import 'highlight.js/styles/github.css'
 
 interface DocumentViewerProps {
@@ -32,12 +31,17 @@ export function DocumentViewer({ content, documentType, documentId, documentTitl
   const [validationStatus, setValidationStatus] = useState<any>(null)
   const [loadingValidation, setLoadingValidation] = useState(false)
 
-  // Load validation status
+  // Load validation status via API
   useEffect(() => {
     if (documentId) {
       setLoadingValidation(true)
-      getLatestValidationStatus(documentId)
-        .then((status) => setValidationStatus(status))
+      fetch(`/api/validation/status?documentId=${documentId}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setValidationStatus(data.status)
+          }
+        })
         .catch((error) => console.error('Failed to load validation status:', error))
         .finally(() => setLoadingValidation(false))
     }
