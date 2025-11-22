@@ -78,7 +78,7 @@ CREATE POLICY "Users can view their project studyflow validations"
   ON studyflow_validations FOR SELECT
   USING (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
@@ -86,7 +86,7 @@ CREATE POLICY "Users can view their project crossdoc validations"
   ON crossdoc_validations FOR SELECT
   USING (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
@@ -94,7 +94,7 @@ CREATE POLICY "Users can view their project autofix history"
   ON autofix_history FOR SELECT
   USING (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
@@ -103,7 +103,7 @@ CREATE POLICY "Users can insert studyflow validations"
   ON studyflow_validations FOR INSERT
   WITH CHECK (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
@@ -111,7 +111,7 @@ CREATE POLICY "Users can insert crossdoc validations"
   ON crossdoc_validations FOR INSERT
   WITH CHECK (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
@@ -119,7 +119,7 @@ CREATE POLICY "Users can insert autofix history"
   ON autofix_history FOR INSERT
   WITH CHECK (
     project_id IN (
-      SELECT id FROM projects WHERE user_id = auth.uid()
+      SELECT id FROM projects WHERE created_by = auth.uid()
     )
   );
 
