@@ -10,12 +10,17 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FieldAutocomplete } from '@/components/forms/field-autocomplete'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
+import { normalizeFormulation } from '@/lib/engine/formulation'
+import { FormulationDebugPanel } from '@/components/formulation/FormulationDebugPanel'
+import { FormulationDisplay } from '@/components/formulation/FormulationDisplay'
+import type { ParsedFormulation } from '@/lib/engine/formulation/types'
 
 export default function NewProjectPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [suggestedIndications, setSuggestedIndications] = useState<Array<{indication: string, source: string, count?: number}>>([])
+  const [parsedFormulation, setParsedFormulation] = useState<ParsedFormulation | null>(null)
   const [formData, setFormData] = useState({
     title: '',
     product_type: 'generic' as 'innovator' | 'generic' | 'hybrid', // Changed default to 'generic'
@@ -94,6 +99,23 @@ export default function NewProjectPage() {
       setLoading(false)
     }
   }
+
+  // Parse formulation when compound name changes
+  useEffect(() => {
+    if (!formData.compound_name || formData.compound_name.length < 3) {
+      setParsedFormulation(null)
+      return
+    }
+
+    try {
+      const parsed = normalizeFormulation(formData.compound_name)
+      setParsedFormulation(parsed)
+      console.log('🔬 Parsed formulation:', parsed)
+    } catch (error) {
+      console.error('❌ Failed to parse formulation:', error)
+      setParsedFormulation(null)
+    }
+  }, [formData.compound_name])
 
   // Auto-fetch indications when compound changes
   useEffect(() => {
@@ -233,7 +255,7 @@ export default function NewProjectPage() {
             </div>
 
             {/* Compound Name */}
-            <div>
+            <div className="space-y-2">
               <label className="block text-sm font-medium text-foreground mb-2">
                 Compound / Drug Name *
               </label>
@@ -248,6 +270,13 @@ export default function NewProjectPage() {
                 <p className="mt-1 text-xs text-muted-foreground">
                   💡 Use the generic name (e.g., Metformin Hydrochloride, not Glucophage)
                 </p>
+              )}
+              
+              {/* Formulation Display */}
+              {parsedFormulation && (
+                <div className="mt-2">
+                  <FormulationDisplay parsed={parsedFormulation} compact />
+                </div>
               )}
             </div>
 
@@ -522,6 +551,9 @@ export default function NewProjectPage() {
           </CardContent>
         </Card>
       </form>
+      
+      {/* Formulation Debug Panel (DEV mode only) */}
+      <FormulationDebugPanel parsed={parsedFormulation} />
     </div>
   )
 }
