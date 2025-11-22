@@ -19,11 +19,11 @@ import {
 export function parseFormulation(rawInput: string): ParsedFormulation {
   const normalized = normalizeInput(rawInput)
   
-  // Extract components
-  const apiName = extractAPIName(normalized)
-  const dosageForm = extractDosageForm(normalized)
-  const route = extractRoute(normalized)
+  // Extract components (order matters!)
+  const dosageForm = extractDosageForm(normalized) // Extract form first
+  const route = extractRoute(normalized, dosageForm) // Then route (using form context)
   const strength = extractStrength(normalized)
+  const apiName = extractAPIName(normalized) // Extract name last (after removing other parts)
   const additionalProperties = extractAdditionalProperties(normalized)
   
   // Calculate confidence scores
@@ -77,8 +77,8 @@ function normalizeInput(input: string): string {
  * Extract API name (pure INN)
  */
 function extractAPIName(input: string): string {
-  // Remove strength patterns first
-  let cleaned = input.replace(/\d+\.?\d*\s*(mg|g|mcg|iu|%|mg\/ml|g\/ml|mcg\/ml|iu\/ml|units\/ml|units|u)\b/gi, '')
+  // Remove strength patterns first (including compound units like IU/ml)
+  let cleaned = input.replace(/\d+\.?\d*\s*(mg\/ml|g\/ml|mcg\/ml|iu\/ml|units\/ml|mg|g|mcg|iu|%|units|u|мг)/gi, '')
   
   // Remove common dosage forms (more comprehensive)
   const commonForms = [
@@ -146,16 +146,16 @@ function extractAPIName(input: string): string {
 function extractDosageForm(input: string): DosageForm | null {
   const lowerInput = input.toLowerCase()
   
-  // Check exact matches first
+  // Check for compound forms FIRST (before synonyms, to avoid false matches)
+  if ((lowerInput.includes('film-coated') || lowerInput.includes('film coated') || lowerInput.includes('filmcoated')) && (lowerInput.includes('tablet') || lowerInput.includes('таблетка'))) {
+    return 'film-coated tablet'
+  }
+  
+  // Check exact matches
   for (const [synonym, form] of Object.entries(DOSAGE_FORM_SYNONYMS)) {
     if (lowerInput.includes(synonym.toLowerCase())) {
       return form
     }
-  }
-  
-  // Check for compound forms
-  if (lowerInput.includes('film') && lowerInput.includes('tablet')) {
-    return 'film-coated tablet'
   }
   
   if (lowerInput.includes('vaginal') && lowerInput.includes('suppository')) {
@@ -207,18 +207,29 @@ function extractDosageForm(input: string): DosageForm | null {
 /**
  * Extract route of administration
  */
-function extractRoute(input: string): Route | null {
+function extractRoute(input: string, dosageForm: DosageForm | null): Route | null {
   const lowerInput = input.toLowerCase()
   
-  // Check synonyms first
-  for (const [synonym, route] of Object.entries(ROUTE_SYNONYMS)) {
-    if (lowerInput.includes(synonym.toLowerCase())) {
-      return route
+  // If dosage form is known, infer route from it first (most reliable)
+  if (dosageForm) {
+    if (dosageForm.includes('vaginal')) return 'vaginal'
+    if (dosageForm.includes('ophthalmic') || dosageForm === 'eye drops') return 'ophthalmic'
+    if (dosageForm.includes('nasal')) return 'intranasal'
+    if (dosageForm.includes('rectal')) return 'rectal'
+    if (dosageForm.includes('topical') || dosageForm === 'cream' || dosageForm === 'ointment' || dosageForm === 'gel' || dosageForm === 'lotion') return 'topical'
+    if (dosageForm.includes('inhalation') || dosageForm.includes('inhaler') || dosageForm.includes('nebulizer')) return 'inhalation'
+    if (dosageForm === 'tablet' || dosageForm === 'capsule' || dosageForm.includes('oral')) return 'oral'
+    if (dosageForm.includes('injection') || dosageForm.includes('infusion')) {
+      // Check for specific injection routes
+      if (lowerInput.includes('iv') || lowerInput.includes('intravenous')) return 'intravenous'
+      if (lowerInput.includes('im') || lowerInput.includes('intramuscular')) return 'intramuscular'
+      if (lowerInput.includes('sc') || lowerInput.includes('subcutaneous')) return 'subcutaneous'
+      return 'intravenous' // Default for injections
     }
   }
   
-  // Infer from dosage form (order matters - check specific before general)
-  if (lowerInput.includes('vaginal') || lowerInput.includes('intravaginal') || lowerInput.includes('suppository')) {
+  // Check explicit route keywords in input
+  if (lowerInput.includes('vaginal') || lowerInput.includes('intravaginal')) {
     return 'vaginal'
   }
   
@@ -266,8 +277,9 @@ function extractRoute(input: string): Route | null {
  * Extract strength
  */
 function extractStrength(input: string): Strength | null {
-  // Pattern: number + optional decimal + space + unit
-  const strengthPattern = /(\d+\.?\d*)\s*(mg|g|mcg|μg|ug|iu|%|mg\/ml|g\/ml|mcg\/ml|iu\/ml|units\/ml|units|u)\b/i
+  // Pattern: number + optional decimal + optional space + unit
+  // Support both "100 mg" and "100mg" and "0.3%" and "500мг"
+  const strengthPattern = /(\d+\.?\d*)\s*(mg\/ml|g\/ml|mcg\/ml|iu\/ml|units\/ml|mg|g|mcg|μg|ug|iu|units|u|%|мг)/i
   
   const match = input.match(strengthPattern)
   if (!match) return null

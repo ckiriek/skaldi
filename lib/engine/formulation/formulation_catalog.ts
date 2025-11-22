@@ -134,17 +134,23 @@ export const UNIT_NORMALIZATIONS: Record<string, { target: string; multiplier: n
   'μg': { target: 'mcg', multiplier: 1 },
   'ug': { target: 'mcg', multiplier: 1 },
   'mg': { target: 'mg', multiplier: 1 },
+  'мг': { target: 'mg', multiplier: 1 }, // Russian
   
   // Volume concentration
   'g/ml': { target: 'mg/ml', multiplier: 1000 },
   'mcg/ml': { target: 'mcg/ml', multiplier: 1 },
   'mg/ml': { target: 'mg/ml', multiplier: 1 },
+  'iu/ml': { target: 'IU/ml', multiplier: 1 },
+  'units/ml': { target: 'IU/ml', multiplier: 1 },
   
   // IU
   'iu': { target: 'IU', multiplier: 1 },
   'IU': { target: 'IU', multiplier: 1 },
   'units': { target: 'IU', multiplier: 1 },
   'u': { target: 'IU', multiplier: 1 },
+  
+  // Percentage
+  '%': { target: '%', multiplier: 1 },
 }
 
 /**
