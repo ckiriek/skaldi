@@ -120,6 +120,7 @@ async function runFullPipelineTest() {
   console.log('🚀 SKALDI FULL PIPELINE TEST')
   console.log('=' .repeat(80))
   console.log(`Testing ${TEST_PROJECTS.length} projects`)
+  console.log(`Base URL: ${BASE_URL}`)
   console.log('')
 
   const results: TestResult[] = []
@@ -283,10 +284,15 @@ function extractDesign(content: string): string {
 }
 
 /**
+ * Get base URL for API calls
+ */
+const BASE_URL = process.env.TEST_BASE_URL || 'http://localhost:3000'
+
+/**
  * Create project via API
  */
 async function createProject(project: typeof TEST_PROJECTS[0], metadata: any): Promise<string> {
-  const response = await fetch('http://localhost:3000/api/v1/intake', {
+  const response = await fetch(`${BASE_URL}/api/v1/intake`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -327,7 +333,7 @@ async function generateAllDocuments(projectId: string, project: typeof TEST_PROJ
 
   for (const docType of documentTypes) {
     try {
-      const response = await fetch('http://localhost:3000/api/generate', {
+      const response = await fetch(`${BASE_URL}/api/generate`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -367,7 +373,7 @@ async function generateAllDocuments(projectId: string, project: typeof TEST_PROJ
  */
 async function runCrossDocValidation(documentIds: any) {
   try {
-    const response = await fetch('http://localhost:3000/api/crossdoc/validate', {
+    const response = await fetch(`${BASE_URL}/api/crossdoc/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -406,7 +412,7 @@ async function runCrossDocValidation(documentIds: any) {
  */
 async function runCrossDocAutoFix(projectId: string, documentIds: any) {
   try {
-    const response = await fetch('http://localhost:3000/api/crossdoc/auto-fix', {
+    const response = await fetch(`${BASE_URL}/api/crossdoc/auto-fix`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -437,7 +443,7 @@ async function runCrossDocAutoFix(projectId: string, documentIds: any) {
  */
 async function generateStudyFlow(projectId: string, protocolId: string) {
   try {
-    const response = await fetch('http://localhost:3000/api/studyflow/generate', {
+    const response = await fetch(`${BASE_URL}/api/studyflow/generate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -468,7 +474,7 @@ async function generateStudyFlow(projectId: string, protocolId: string) {
  */
 async function validateStudyFlow(projectId: string) {
   try {
-    const response = await fetch('http://localhost:3000/api/studyflow/validate', {
+    const response = await fetch(`${BASE_URL}/api/studyflow/validate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
@@ -496,7 +502,7 @@ async function validateStudyFlow(projectId: string) {
  */
 async function runStudyFlowAutoFix(projectId: string) {
   try {
-    const response = await fetch('http://localhost:3000/api/studyflow/auto-fix', {
+    const response = await fetch(`${BASE_URL}/api/studyflow/auto-fix`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -528,7 +534,7 @@ async function runStudyFlowAutoFix(projectId: string) {
 async function validateStatistics(projectId: string, documentIds: any) {
   try {
     // Test sample size calculation
-    const sampleSizeResponse = await fetch('http://localhost:3000/api/statistics/sample-size', {
+    const sampleSizeResponse = await fetch(`${BASE_URL}/api/statistics/sample-size`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ projectId }),
