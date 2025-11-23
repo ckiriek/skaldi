@@ -97,8 +97,32 @@ async function getSnippetSuggestions(
 async function getCompletionSuggestions(
   context: SuggestionContext
 ): Promise<SectionSuggestion[]> {
-  // This would use OpenAI for inline completion
-  // For now, return placeholder
+  // Use Azure OpenAI for completion
+  try {
+    const { generateSectionCompletion } = await import('./azure_completion')
+    
+    const completion = await generateSectionCompletion(
+      context.sectionId,
+      context.currentText,
+      { projectData: context.projectData }
+    )
+    
+    if (completion) {
+      return [{
+        id: `completion-${context.sectionId}-${Date.now()}`,
+        sectionId: context.sectionId,
+        type: 'completion',
+        title: 'AI Completion',
+        preview: completion.substring(0, 100) + '...',
+        fullText: completion,
+        source: 'kg',
+        confidence: 0.85
+      }]
+    }
+  } catch (error) {
+    console.error('Azure completion failed:', error)
+  }
+  
   return []
 }
 
