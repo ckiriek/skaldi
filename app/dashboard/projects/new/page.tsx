@@ -15,7 +15,9 @@ import { FormulationDebugPanel } from '@/components/formulation/FormulationDebug
 import { FormulationDisplay } from '@/components/formulation/FormulationDisplay'
 import { KnowledgeGraphButton } from '@/components/knowledge/KnowledgeGraphButton'
 import { SmartField } from '@/components/knowledge-ui/SmartField'
+import { EndpointSmartField, SafetySmartField } from '@/components/smart-fields'
 import type { ParsedFormulation } from '@/lib/engine/formulation/types'
+import type { EndpointMetadata } from '@/components/smart-fields'
 
 export default function NewProjectPage() {
   const router = useRouter()
@@ -36,13 +38,14 @@ export default function NewProjectPage() {
     arms: '2',
     duration_weeks: '24',
     primary_endpoint: '',
+    primary_endpoint_metadata: null as EndpointMetadata | null,
     // Generic-specific fields
     rld_brand_name: '',
     // New clinical parameters (Step 6)
     visit_schedule: '',
-    safety_monitoring: '',
+    safety_monitoring: [] as string[],
     secondary_endpoints: '',
-    analysis_populations: '',
+    analysis_populations: ''
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -62,9 +65,10 @@ export default function NewProjectPage() {
         arms: parseInt(formData.arms),
         duration_weeks: parseInt(formData.duration_weeks),
         primary_endpoint: formData.primary_endpoint,
+        primary_endpoint_metadata: formData.primary_endpoint_metadata,
         // New clinical parameters
         visit_schedule: formData.visit_schedule || undefined,
-        safety_monitoring: formData.safety_monitoring || undefined,
+        safety_monitoring: formData.safety_monitoring.length > 0 ? formData.safety_monitoring.join(', ') : undefined,
         secondary_endpoints: formData.secondary_endpoints || undefined,
         analysis_populations: formData.analysis_populations || undefined,
       }
@@ -464,22 +468,20 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <SmartField
-                  label="Primary Endpoint"
+                <EndpointSmartField
+                  indication={formData.indication}
+                  phase={formData.phase}
                   value={formData.primary_endpoint}
-                  onChange={(value) => setFormData({ ...formData, primary_endpoint: value })}
-                  type="endpoint"
-                  placeholder="e.g., Change in HbA1c from baseline at Week 24"
-                  autoFetch={!!formData.indication}
-                  userContext={{
-                    compound: parsedFormulation?.apiName || formData.compound_name,
-                    indication: formData.indication,
-                    phase: formData.phase,
-                    productType: formData.product_type
+                  onChange={(value, metadata) => {
+                    setFormData({ 
+                      ...formData, 
+                      primary_endpoint: value,
+                      primary_endpoint_metadata: metadata || null
+                    })
                   }}
-                  onSuggestionSelect={(suggestion) => {
-                    console.log('✅ Selected endpoint:', suggestion)
-                  }}
+                  label="Primary Endpoint"
+                  placeholder="e.g., Change from baseline in HbA1c at Week 24"
+                  required
                 />
               </div>
 
@@ -512,17 +514,14 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Safety Monitoring
-                </label>
-                <Input
+                <SafetySmartField
+                  phase={formData.phase}
+                  indication={formData.indication}
                   value={formData.safety_monitoring}
-                  onChange={(e) => setFormData({ ...formData, safety_monitoring: e.target.value })}
-                  placeholder="e.g., Vital signs, ECG, laboratory tests"
+                  onChange={(value) => setFormData({ ...formData, safety_monitoring: value })}
+                  label="Safety Monitoring"
+                  placeholder="Select safety procedures"
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Optional: Key safety assessments (comma-separated)
-                </p>
               </div>
 
               <div className="mt-3">
