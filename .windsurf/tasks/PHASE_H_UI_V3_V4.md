@@ -190,17 +190,7 @@ inline completion (как в GitHub Copilot)
 
 находить релевантные чанки из:
 
-Протокол Ситаглиптин Канон.docx
-
-Protocol Perindopril Amlodipine Canon ...
-
-Протокол Фемилекс...
-
-EMA Tobi Podhaler EPAR
-
-ИЛП/IB файлы
-
-Результат - SectionSuggestion с type 'snippet' и source 'local_protocol'.
+/Users/mitchkiriek/skaldi/clinical_reference
 
 1.6 RegHints Engine
 
@@ -558,13 +548,10 @@ documents
 
 Важно: Designer должен использовать локальные референсы:
 
-/mnt/data/Протокол Ситаглиптин Канон.docx
-
-/mnt/data/Протокол_Фемилекс...
-
-/mnt/data/Protocol Perindopril Amlodipine Canon...
-
-EMA Tobi Podhaler etc.
+/Users/mitchkiriek/skaldi/clinical_reference/protocol_femilex.md
+/Users/mitchkiriek/skaldi/clinical_reference/protocol_perindopril.md
+/Users/mitchkiriek/skaldi/clinical_reference/protocol_sitaglipin.md
+/Users/mitchkiriek/skaldi/clinical_reference/summary_podhaler.md
 
 Через уже существующий RAG, как в H.2-H.6.
 

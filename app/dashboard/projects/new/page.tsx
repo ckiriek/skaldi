@@ -14,6 +14,7 @@ import { normalizeFormulation } from '@/lib/engine/formulation'
 import { FormulationDebugPanel } from '@/components/formulation/FormulationDebugPanel'
 import { FormulationDisplay } from '@/components/formulation/FormulationDisplay'
 import { KnowledgeGraphButton } from '@/components/knowledge/KnowledgeGraphButton'
+import { SmartField } from '@/components/knowledge-ui/SmartField'
 import type { ParsedFormulation } from '@/lib/engine/formulation/types'
 
 export default function NewProjectPage() {
@@ -366,44 +367,24 @@ export default function NewProjectPage() {
               </select>
             </div>
 
-            {/* Indication */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
-                Indication *
-              </label>
-              <FieldAutocomplete
-                value={formData.indication}
-                onChange={(value) => setFormData({ ...formData, indication: value })}
-                endpoint="/api/v1/autocomplete/indications"
-                placeholder="e.g., Type 2 Diabetes"
-                required
-              />
-              
-              {/* Show suggested indications from selected drug */}
-              {suggestedIndications.length > 0 && !formData.indication && (
-                <div className="mt-3 p-2.5 bg-blue-50/60 border border-blue-100 rounded-lg">
-                  <p className="text-sm font-medium text-blue-900 mb-2">
-                    💡 Common indications for {formData.compound_name}:
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    {suggestedIndications.slice(0, 5).map((item, index) => (
-                      <button
-                        key={index}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, indication: item.indication })}
-                        className="px-3 py-1.5 text-sm bg-white border border-blue-300 rounded-md hover:bg-blue-100 hover:border-blue-400 transition-colors"
-                      >
-                        {item.indication.length > 60 ? item.indication.substring(0, 60) + '...' : item.indication}
-                        {item.count && <span className="ml-1 text-xs text-blue-600">({item.count})</span>}
-                      </button>
-                    ))}
-                  </div>
-                  <p className="text-xs text-blue-700 mt-2">
-                    Click to select, or type your own indication above
-                  </p>
-                </div>
-              )}
-            </div>
+            {/* Indication - Smart Field */}
+            <SmartField
+              label="Indication"
+              value={formData.indication}
+              onChange={(value) => setFormData({ ...formData, indication: value })}
+              type="indication"
+              placeholder="e.g., Type 2 Diabetes Mellitus"
+              required
+              autoFetch={!!formData.compound_name}
+              userContext={{
+                compound: parsedFormulation?.apiName || formData.compound_name,
+                phase: formData.phase,
+                productType: formData.product_type
+              }}
+              onSuggestionSelect={(suggestion) => {
+                console.log('✅ Selected indication:', suggestion)
+              }}
+            />
 
             {/* Countries */}
             <div>
@@ -483,17 +464,23 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-foreground mb-2">
-                  Primary Endpoint
-                </label>
-                <Input
+                <SmartField
+                  label="Primary Endpoint"
                   value={formData.primary_endpoint}
-                  onChange={(e) => setFormData({ ...formData, primary_endpoint: e.target.value })}
+                  onChange={(value) => setFormData({ ...formData, primary_endpoint: value })}
+                  type="endpoint"
                   placeholder="e.g., Change in HbA1c from baseline at Week 24"
+                  autoFetch={!!formData.indication}
+                  userContext={{
+                    compound: parsedFormulation?.apiName || formData.compound_name,
+                    indication: formData.indication,
+                    phase: formData.phase,
+                    productType: formData.product_type
+                  }}
+                  onSuggestionSelect={(suggestion) => {
+                    console.log('✅ Selected endpoint:', suggestion)
+                  }}
                 />
-                <p className="mt-1 text-xs text-muted-foreground">
-                  💡 If left empty, we'll automatically use the most common endpoint from similar clinical trials for your indication.
-                </p>
               </div>
 
               <div className="mt-3">
