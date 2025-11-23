@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { normalizeFormulation } from '@/lib/engine/formulation'
 import { FormulationDebugPanel } from '@/components/formulation/FormulationDebugPanel'
 import { FormulationDisplay } from '@/components/formulation/FormulationDisplay'
+import { KnowledgeGraphButton } from '@/components/knowledge/KnowledgeGraphButton'
 import type { ParsedFormulation } from '@/lib/engine/formulation/types'
 
 export default function NewProjectPage() {
@@ -276,6 +277,24 @@ export default function NewProjectPage() {
               {parsedFormulation && (
                 <div className="mt-2">
                   <FormulationDisplay parsed={parsedFormulation} compact />
+                </div>
+              )}
+              
+              {/* Knowledge Graph Button */}
+              {formData.compound_name && formData.compound_name.length >= 3 && (
+                <div className="mt-3">
+                  <KnowledgeGraphButton 
+                    inn={parsedFormulation?.apiName || formData.compound_name}
+                    onDataFetched={(data) => {
+                      // Auto-populate indication if empty
+                      if (!formData.indication && data.indications.length > 0) {
+                        setFormData({ 
+                          ...formData, 
+                          indication: data.indications[0].indication 
+                        })
+                      }
+                    }}
+                  />
                 </div>
               )}
             </div>
