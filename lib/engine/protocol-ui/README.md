@@ -257,9 +257,10 @@ Built-in templates for common sections:
 
 ```bash
 # Azure OpenAI (for completions)
-AZURE_OPENAI_ENDPOINT=https://your-resource.openai.azure.com/
+AZURE_OPENAI_ENDPOINT=https://skillsy-east-ai.openai.azure.com/
 AZURE_OPENAI_API_KEY=your-key
-AZURE_OPENAI_DEPLOYMENT_NAME=gpt-4
+AZURE_OPENAI_DEPLOYMENT_NAME=gpt-5.1
+AZURE_OPENAI_API_VERSION=2025-01-01-preview
 
 # Supabase (for RAG)
 NEXT_PUBLIC_SUPABASE_URL=https://...

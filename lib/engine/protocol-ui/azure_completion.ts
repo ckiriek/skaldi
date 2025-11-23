@@ -6,8 +6,8 @@
 
 const AZURE_OPENAI_ENDPOINT = process.env.AZURE_OPENAI_ENDPOINT
 const AZURE_OPENAI_API_KEY = process.env.AZURE_OPENAI_API_KEY
-const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-4'
-const AZURE_API_VERSION = '2024-02-15-preview'
+const AZURE_OPENAI_DEPLOYMENT = process.env.AZURE_OPENAI_DEPLOYMENT_NAME || 'gpt-5.1'
+const AZURE_API_VERSION = process.env.AZURE_OPENAI_API_VERSION || '2025-01-01-preview'
 
 /**
  * Generate text completion using Azure OpenAI
