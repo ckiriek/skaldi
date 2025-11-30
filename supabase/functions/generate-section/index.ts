@@ -8,11 +8,24 @@ const corsHeaders = {
 }
 
 interface GenerateSectionRequest {
-  prompt: string
+  // NEW: Separate system and user prompts
+  systemPrompt?: string
+  userPrompt?: string
+  // OLD: Single prompt (deprecated but kept for backward compatibility)
+  prompt?: string
+  
   sectionId: string
   documentType: string
+  
+  // NEW: GPT-5.1 parameters
+  max_completion_tokens?: number
+  reasoning_effort?: 'none' | 'minimal' | 'low' | 'medium' | 'high'
+  verbosity?: 'low' | 'medium' | 'high'
+  
+  // DEPRECATED: Old parameters (kept for backward compatibility)
   maxTokens?: number
   temperature?: number
+  
   // RAG parameters
   useRag?: boolean
   ragQueries?: Array<{
@@ -48,23 +61,58 @@ serve(async (req) => {
 
   try {
     // Parse request
+    const requestData = await req.json() as GenerateSectionRequest
     const { 
+      // NEW parameters
+      systemPrompt,
+      userPrompt,
+      max_completion_tokens,
+      reasoning_effort = 'medium',
+      verbosity = 'medium',
+      // OLD parameters (backward compatibility)
       prompt, 
+      maxTokens,
+      temperature,
+      // Common parameters
       sectionId, 
       documentType, 
-      maxTokens = 2000, 
-      temperature = 0.7,
       useRag = false,
       ragQueries = [],
       compoundName,
       diseaseName
-    } = await req.json() as GenerateSectionRequest
+    } = requestData
 
-    if (!prompt || !sectionId || !documentType) {
+    // Backward compatibility: use old parameters if new ones not provided
+    const finalSystemPrompt = systemPrompt || `You are a clinical documentation expert specializing in regulatory-compliant ${documentType} documents.
+
+**Critical Requirements:**
+1. Generate content that adheres to ICH-GCP guidelines, FDA regulations, and EMA standards
+2. Use clear, precise medical and regulatory terminology
+3. Ensure all statements are evidence-based and audit-ready
+
+**Formatting Requirements:**
+- ALWAYS format your response in proper Markdown
+- Use ## for section headings, ### for subsections
+- Use **bold** for emphasis and key terms
+- Use bullet points (-) or numbered lists (1.) for lists
+- Add blank lines between paragraphs for readability
+- Use tables (| header | header |) where appropriate for structured data
+
+**Content Requirements:**
+- Be comprehensive and detailed
+- Include specific data, values, and statistics where available
+- Cite sources when referencing studies or data
+- Use proper medical and scientific terminology
+- Structure content logically with clear hierarchy`
+
+    const finalUserPrompt = userPrompt || prompt || ''
+    const finalMaxTokens = max_completion_tokens || maxTokens || 4000
+
+    if (!finalUserPrompt || !sectionId || !documentType) {
       return new Response(
         JSON.stringify({ 
           success: false, 
-          error: 'Missing required fields: prompt, sectionId, documentType' 
+          error: 'Missing required fields: userPrompt (or prompt), sectionId, documentType' 
         }),
         { 
           status: 400, 
@@ -72,6 +120,10 @@ serve(async (req) => {
         }
       )
     }
+
+    console.log(`🔧 Generating section: ${documentType}/${sectionId}`)
+    console.log(`📊 Config: max_tokens=${finalMaxTokens}, reasoning=${reasoning_effort}, verbosity=${verbosity}`)
+    console.log(`📊 RAG enabled: ${useRag}, Queries: ${ragQueries.length}`)
 
     console.log(`🔧 Generating section: ${documentType}/${sectionId}`)
     console.log(`📊 RAG enabled: ${useRag}, Queries: ${ragQueries.length}`)
@@ -118,9 +170,9 @@ serve(async (req) => {
     }
 
     // Inject references into prompt if available
-    let finalPrompt = prompt
+    let finalUserPromptWithRefs = finalUserPrompt
     if (referencesText) {
-      finalPrompt = prompt.replace('{{references}}', referencesText)
+      finalUserPromptWithRefs = finalUserPrompt.replace('{{references}}', referencesText)
       console.log('✅ References injected into prompt')
     }
 
@@ -134,32 +186,43 @@ serve(async (req) => {
       throw new Error('Azure OpenAI not configured. Please set AZURE_OPENAI_ENDPOINT and AZURE_OPENAI_API_KEY')
     }
 
+    console.log(`🤖 Calling Azure OpenAI: ${deployment} (API version: ${apiVersion})`)
+
     // Call Azure OpenAI API
     const url = `${azureEndpoint}/openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`
     
+    // Build request body with GPT-5.1 parameters
+    const requestBody: any = {
+      messages: [
+        {
+          role: 'system',
+          content: finalSystemPrompt
+        },
+        {
+          role: 'user',
+          content: finalUserPromptWithRefs
+        }
+      ],
+      max_completion_tokens: finalMaxTokens,
+    }
+
+    // Add GPT-5.1 specific parameters if provided
+    if (reasoning_effort && reasoning_effort !== 'none') {
+      requestBody.reasoning_effort = reasoning_effort
+    }
+    if (verbosity) {
+      requestBody.verbosity = verbosity
+    }
+
+    console.log(`📤 Request config: max_tokens=${finalMaxTokens}, reasoning=${reasoning_effort}, verbosity=${verbosity}`)
+
     const openaiResponse = await fetch(url, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'api-key': azureKey,
       },
-      body: JSON.stringify({
-        messages: [
-          {
-            role: 'system',
-            content: `You are a clinical documentation expert specializing in regulatory-compliant ${documentType} documents. 
-Generate content that adheres to ICH-GCP guidelines, FDA regulations, and EMA standards.
-Use clear, precise medical and regulatory terminology.
-Ensure all statements are evidence-based and audit-ready.`
-          },
-          {
-            role: 'user',
-            content: finalPrompt
-          }
-        ],
-        max_completion_tokens: maxTokens,
-        // temperature removed - gpt-5.1 only supports default value of 1
-      }),
+      body: JSON.stringify(requestBody),
     })
 
     if (!openaiResponse.ok) {

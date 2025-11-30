@@ -2,6 +2,18 @@ import { createClient } from '@/lib/supabase/server'
 import fs from 'fs/promises'
 import path from 'path'
 import { ReferenceRetriever } from './reference-retriever'
+import { DataAggregator } from './data-aggregator'
+import { ContextBuilder } from './context-builder'
+import { TokenBudgetCalculator } from './token-budget'
+import { GOVERNING_SYSTEM_PROMPT_V3 } from '@/lib/prompts/governing-prompt-v3'
+import { IB_SECTION_PROMPTS } from '@/lib/prompts/ib-prompts'
+import { PROTOCOL_SECTION_PROMPTS } from '@/lib/prompts/protocol-prompts'
+import { CSR_SECTION_PROMPTS } from '@/lib/prompts/csr-prompts'
+import { ICF_SECTION_PROMPTS } from '@/lib/prompts/icf-prompts'
+import { SYNOPSIS_SECTION_PROMPTS } from '@/lib/prompts/synopsis-prompts'
+import { SPC_SECTION_PROMPTS } from '@/lib/prompts/spc-prompts'
+import { SAP_SECTION_PROMPTS } from '@/lib/prompts/sap-prompts'
+import { CRF_SECTION_PROMPTS } from '@/lib/prompts/crf-prompts'
 
 // Types based on our schema
 export interface DocumentStructure {
@@ -32,11 +44,19 @@ export interface GenerationRequest {
 
 export class SectionGenerator {
   private templatesDir: string
+  private dataAggregator: DataAggregator
+  private contextBuilder: ContextBuilder
+  private tokenCalculator: TokenBudgetCalculator
 
   constructor() {
     // In production, we might fetch from DB only. 
     // For now, we can fallback to filesystem if DB is empty or for dev speed.
     this.templatesDir = path.join(process.cwd(), 'templates_en')
+    
+    // Initialize new services
+    this.dataAggregator = new DataAggregator()
+    this.contextBuilder = new ContextBuilder()
+    this.tokenCalculator = new TokenBudgetCalculator()
   }
 
   /**
@@ -125,7 +145,13 @@ export class SectionGenerator {
   }
 
   /**
-   * Construct the final prompt for the LLM with RAG reference material
+   * Construct the final prompt for the LLM
+   * 
+   * ARCHITECTURE:
+   * 1. Template prompt_text with placeholders
+   * 2. STRUCTURE EXAMPLES from RAG (universal, not compound-specific)
+   * 3. COMPOUND DATA from Knowledge Graph (specific to this drug)
+   * 4. Clear instruction to use structure but write about actual compound
    */
   async constructPrompt(
     template: DocumentTemplate, 
@@ -134,48 +160,274 @@ export class SectionGenerator {
       includeReferences?: boolean
       sectionId?: string
       documentType?: string
+      knowledgeGraph?: any  // Knowledge Graph data for this compound
     }
   ): Promise<string> {
     let prompt = template.prompt_text || ''
     
-    // Simple variable substitution (Handlebars-like)
-    // In a real implementation, use the TemplateEngine we already have
+    // 1. Simple variable substitution (Handlebars-like)
     for (const [key, value] of Object.entries(context)) {
       const placeholder = `{{${key}}}`
-      // Replace all occurrences
       prompt = prompt.split(placeholder).join(String(value || ''))
     }
 
-    // Add RAG reference material if enabled
+    // 2. Add STRUCTURE EXAMPLES from RAG (universal examples)
     if (options?.includeReferences !== false) {
       try {
         const retriever = new ReferenceRetriever()
         const references = await retriever.retrieveReferences({
-          compoundName: context.compoundName,
-          disease: context.disease || context.indication,
           sectionId: options?.sectionId,
           documentType: options?.documentType,
-          topK: 3, // Top 3 most relevant chunks
-          minSimilarity: 0.75, // Higher threshold for quality
+          topK: 2,  // Just 1-2 structure examples
+          minSimilarity: 0.6,
         })
 
         if (references.combined.length > 0) {
-          const referenceMaterial = retriever.formatReferencesForPrompt(references.combined)
-          prompt += referenceMaterial
-          console.log(`✅ Added ${references.combined.length} reference chunks to prompt`)
+          const structureExamples = retriever.formatReferencesForPrompt(references.combined)
+          prompt += structureExamples
+          console.log(`✅ Added ${references.combined.length} structure examples to prompt`)
         } else {
-          console.log(`⚠️ No reference material found for ${context.compoundName || 'unknown compound'}`)
+          console.log(`⚠️ No structure examples found for ${options?.documentType}/${options?.sectionId}`)
         }
       } catch (error) {
-        console.error('❌ Error retrieving references:', error)
-        // Continue without references rather than failing
+        console.error('❌ Error retrieving structure examples:', error)
       }
     }
+
+    // 3. Add KNOWLEDGE GRAPH DATA (compound-specific)
+    if (options?.knowledgeGraph && context.knowledgeGraph) {
+      prompt += this.formatKnowledgeGraphForPrompt(context.knowledgeGraph, context.compoundName)
+    }
+
+    // 4. Add explicit instruction
+    prompt += `\n\n**CRITICAL INSTRUCTION:**
+Write about the ACTUAL compound ${context.compoundName || '[compound]'}.
+- Use the STRUCTURE from examples above (formatting, length, organization)
+- Use ACTUAL DATA for ${context.compoundName || '[compound]'} from Knowledge Graph
+- DO NOT copy data from structure examples - they are just for format reference
+- Include specific values, statistics, and references where available\n`
 
     // Add constraints as system instructions
     if (template.constraints && template.constraints.length > 0) {
         prompt += `\n\nCONSTRAINTS:\n`
         template.constraints.forEach(c => prompt += `- ${c}\n`)
+    }
+
+    return prompt
+  }
+
+  /**
+   * Format Knowledge Graph data for prompt
+   */
+  private formatKnowledgeGraphForPrompt(kg: any, compoundName?: string): string {
+    if (!kg) return ''
+    
+    let kgText = `\n\n**KNOWLEDGE GRAPH DATA FOR ${compoundName || 'THIS COMPOUND'}:**\n\n`
+    
+    if (kg.indications && kg.indications.length > 0) {
+      kgText += '**Approved Indications:**\n'
+      kg.indications.forEach((ind: any) => {
+        // Support both formats: ind.name (old) and ind.indication (new KG builder)
+        const indicationName = ind.name || ind.indication || 'Unknown'
+        const confidence = ind.confidence ? (ind.confidence * 100).toFixed(0) : '?'
+        kgText += `- ${indicationName} (confidence: ${confidence}%)\n`
+      })
+      kgText += '\n'
+    }
+    
+    if (kg.endpoints && kg.endpoints.length > 0) {
+      kgText += '**Common Endpoints:**\n'
+      kg.endpoints.forEach((ep: any) => {
+        // Support both formats: ep.name (old) and ep.normalized (new KG builder)
+        const endpointName = ep.name || ep.normalized || 'Unknown'
+        const endpointType = ep.type || ''
+        kgText += `- ${endpointName}${endpointType ? ` (${endpointType})` : ''}\n`
+      })
+      kgText += '\n'
+    }
+    
+    if (kg.procedures && kg.procedures.length > 0) {
+      kgText += '**Typical Procedures:**\n'
+      kg.procedures.forEach((proc: any) => {
+        kgText += `- ${proc.name}\n`
+      })
+      kgText += '\n'
+    }
+    
+    if (kg.eligibility && kg.eligibility.length > 0) {
+      kgText += '**Eligibility Patterns:**\n'
+      kg.eligibility.forEach((elig: any) => {
+        kgText += `- ${elig.criterion}\n`
+      })
+      kgText += '\n'
+    }
+    
+    return kgText
+  }
+
+  /**
+   * NEW METHOD: Generate section with FULL data integration
+   * Uses Data Aggregator, Context Builder, and new prompts
+   */
+  async generateSectionWithFullData(
+    projectId: string,
+    documentType: string,
+    sectionId: string
+  ): Promise<{
+    systemPrompt: string
+    userPrompt: string
+    config: {
+      max_completion_tokens: number
+      reasoning_effort: string
+      verbosity: string
+    }
+    metadata: {
+      sourcesUsed: string[]
+      tokenBudget: any
+    }
+  }> {
+    console.log(`🚀 Generating ${documentType}/${sectionId} with FULL data integration`)
+
+    // 1. Get section configuration (with fallback)
+    let sectionConfig = this.tokenCalculator.getSectionConfig(documentType, sectionId)
+    if (!sectionConfig) {
+      console.warn(`⚠️  No config for ${documentType}/${sectionId}, using default`)
+      // Create a default config for unknown sections
+      sectionConfig = {
+        sectionId,
+        sectionTitle: sectionId.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase()),
+        targetPages: 3,
+        targetTokens: 2000,
+        contextTokens: 3000,
+        completionTokens: 2000,
+        reasoning_effort: 'high' as const,
+        verbosity: 'high' as const,
+        dataSources: ['studyDesign', 'knowledgeGraph'],
+        priority: []
+      }
+    }
+
+    // 2. Token budget - NO LONGER USED, keeping for metadata only
+    // All sections now get unlimited context and 16000 completion tokens
+    console.log(`💰 Token budget: UNLIMITED (no restrictions)`)
+
+    // 3. Aggregate ALL data
+    console.log(`📊 Aggregating data from all sources...`)
+    const aggregatedData = await this.dataAggregator.aggregateForSection(
+      projectId,
+      documentType,
+      sectionId
+    )
+    
+    console.log(`📊 Aggregated data summary:`)
+    console.log(`   - KG compound: ${aggregatedData.knowledgeGraph?.compound_name || 'none'}`)
+    console.log(`   - Clinical trials: ${aggregatedData.clinicalTrials.totalStudies}`)
+    console.log(`   - Safety reports: ${aggregatedData.safetyData.faersReports.length}`)
+    console.log(`   - FDA labels: ${aggregatedData.fdaLabels.labels.length}`)
+    console.log(`   - Literature: ${aggregatedData.literature.pubmedArticles.length}`)
+    console.log(`   - RAG refs: ${aggregatedData.ragReferences.structuralExamples.length}`)
+
+    // 4. Build formatted context
+    // NO TOKEN LIMIT - include ALL available data, let the model use what it needs
+    console.log(`🏗️  Building formatted context (NO TOKEN LIMIT)...`)
+    const formattedContext = this.contextBuilder.buildContext(aggregatedData, {
+      maxTokens: 100000,  // Effectively unlimited - include ALL data
+      prioritySources: ['studyDesign', 'knowledgeGraph', 'clinicalTrials', 'safetyData', 'fdaLabels', 'literature', 'ragReferences'],  // ALL sources
+      includeFullText: true,  // Include full text, not truncated
+      includeMetadata: true,
+      sectionId,
+      documentType
+    })
+
+    console.log(`✅ Context built: ${formattedContext.tokenCount} tokens, ${formattedContext.sourcesUsed.length} sources`)
+    
+    // DEBUG: Log actual context content
+    console.log(`📝 CONTEXT TEXT (first 2000 chars):`)
+    console.log(formattedContext.text.substring(0, 2000))
+    console.log(`--- END CONTEXT PREVIEW ---`)
+
+    // 5. Get section-specific prompt
+    const sectionPrompt = this.getSectionPrompt(documentType, sectionId)
+
+    // 6. Extract key identifiers for prompt substitution
+    // These MUST be substituted to eliminate placeholders like [INVESTIGATIONAL PRODUCT]
+    // Primary sources: studyDesign (from project) and knowledgeGraph (from enrichment)
+    const compoundName = 
+      aggregatedData.studyDesign?.compound ||
+      aggregatedData.knowledgeGraph?.compound_name ||
+      '[Compound Name Not Available]'
+    
+    const indication = 
+      aggregatedData.studyDesign?.indication ||
+      aggregatedData.knowledgeGraph?.indications?.[0]?.name ||
+      aggregatedData.knowledgeGraph?.indications?.[0]?.indication ||
+      aggregatedData.fdaLabels?.indications?.[0] ||
+      '[Indication Not Specified]'
+    
+    const phase = aggregatedData.studyDesign?.phase || '[Phase Not Specified]'
+    const phaseStr = phase.toString().toLowerCase().startsWith('phase') ? phase : `Phase ${phase}`
+    
+    console.log(`🏷️  Product identifiers for prompt:`)
+    console.log(`   - Compound: ${compoundName}`)
+    console.log(`   - Indication: ${indication}`)
+    console.log(`   - Phase: ${phaseStr}`)
+
+    // 7. Substitute variables in section prompt
+    // NOTE: Token budgeting REMOVED - model decides output length based on content needs
+    const userPrompt = sectionPrompt
+      .replace(/\{\{dataContext\}\}/g, formattedContext.text)
+      .replace(/\{\{compoundName\}\}/g, compoundName)
+      .replace(/\{\{indication\}\}/g, indication)
+      .replace(/\{\{phase\}\}/g, phaseStr)
+
+    // 8. Return complete prompt package
+    // NO TOKEN BUDGETING - model decides how much to write based on:
+    // - Section complexity and regulatory requirements
+    // - Available data richness
+    // - Clinical documentation standards
+    // max_completion_tokens is set high to allow full content generation
+    const UNIFIED_MAX_TOKENS = 64000 // High limit - model self-regulates output length
+    
+    return {
+      systemPrompt: GOVERNING_SYSTEM_PROMPT_V3,
+      userPrompt,
+      config: {
+        max_completion_tokens: UNIFIED_MAX_TOKENS, // Includes reasoning + content tokens
+        reasoning_effort: 'medium', // Medium for clinical docs - reduces overthinking
+        verbosity: 'high' // Keep high for completeness
+      },
+      metadata: {
+        sourcesUsed: formattedContext.sourcesUsed,
+        tokenBudget: { total: 'unlimited', prompt: 'unlimited', completion: 16000 }
+      }
+    }
+  }
+
+  /**
+   * Get section-specific prompt from new prompt library
+   */
+  private getSectionPrompt(documentType: string, sectionId: string): string {
+    const prompts: Record<string, Record<string, string>> = {
+      'IB': IB_SECTION_PROMPTS,
+      'Protocol': PROTOCOL_SECTION_PROMPTS,
+      'CSR': CSR_SECTION_PROMPTS,
+      'ICF': ICF_SECTION_PROMPTS,
+      'Synopsis': SYNOPSIS_SECTION_PROMPTS,
+      'SPC': SPC_SECTION_PROMPTS,
+      'SAP': SAP_SECTION_PROMPTS,
+      'CRF': CRF_SECTION_PROMPTS
+    }
+
+    const docPrompts = prompts[documentType]
+    if (!docPrompts) {
+      console.warn(`⚠️  No prompts found for document type: ${documentType}`)
+      return 'Generate the section based on provided data.'
+    }
+
+    const prompt = docPrompts[sectionId]
+    if (!prompt) {
+      console.warn(`⚠️  No prompt found for section: ${sectionId}`)
+      return 'Generate the section based on provided data.'
     }
 
     return prompt

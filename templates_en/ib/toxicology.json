@@ -1,0 +1,22 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_toxicology",
+  "section_name": "Toxicology",
+  "description": "Summary of toxicology studies including acute, subacute, chronic toxicity, and special studies.",
+  "prompt_text": "Write the Toxicology section for {{compoundName}} Investigator's Brochure.\n\nWrite about the ACTUAL drug {{compoundName}}, using real nonclinical data from toxicology reports and regulatory submissions.\n\nFormat in Markdown with ## headings, tables, and bullet points.\n\nCover:\n\n## Single-Dose Toxicity\nAcute toxicity in species\n\n## Repeat-Dose Toxicity\nSubacute/chronic findings, NOAELs\n\n## Genotoxicity\nAmes, chromosomal aberration, micronucleus\n\n## Carcinogenicity\nLong-term studies if available\n\n## Reproductive Toxicity\nFertility, embryo-fetal, pre/postnatal\n\n## Local Tolerance\nIrritation, sensitization\n\n## Safety Margins\nNOAEL vs clinical doses\n\nWrite 6-8 pages for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "toxicology_studies",
+    "safety_margins",
+    "noel_noael_data"
+  ],
+  "constraints": [
+    "Include species, doses, and key findings",
+    "Calculate safety margins",
+    "Address human relevance",
+    "Follow ICH M3(R2) and S9 guidelines"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

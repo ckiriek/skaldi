@@ -1,0 +1,22 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_clinical_studies",
+  "section_name": "Effects in Humans",
+  "description": "Summary of clinical experience including efficacy, safety, and pharmacokinetics in humans.",
+  "prompt_text": "Write the Clinical Studies (Effects in Humans) section for {{compoundName}} in {{indication}} for the Investigator's Brochure.\n\nYou are writing about the ACTUAL drug {{compoundName}}, not a template. Use real clinical trial data from ClinicalTrials.gov, FDA labels, and published studies.\n\nFormat in Markdown with ## headings, tables, and bullet points.\n\nCover:\n\n## Clinical Development Overview\nPhases completed, total patients\n\n## Phase 1 Studies\nSAD/MAD studies, PK/PD, DDI studies\n\n## Phase 2 Studies  \nKey trials with NCT numbers, design, results\n\n## Phase 3 Pivotal Studies\nFor each major study: NCT#, design, N, endpoints, efficacy results (with p-values), safety\n\n## Integrated Efficacy\nPooled results, consistency, dose-response\n\n## Integrated Safety\nCommon AEs (≥5%), serious AEs, deaths, lab abnormalities\n\n## Special Populations\nElderly, pediatric, renal/hepatic impairment\n\n## Long-Term Safety\nExtension studies, post-marketing data\n\nInclude specific study IDs, statistics, and data. Write 15-25 pages for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "clinical_trials_data",
+    "safety_profile"
+  ],
+  "constraints": [
+    "Include trial identifiers (NCT numbers)",
+    "Present efficacy data with statistics",
+    "Summarize safety comprehensively",
+    "Follow ICH E6 GCP guidelines"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

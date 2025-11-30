@@ -1,0 +1,23 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_physical_chemical",
+  "section_name": "Physical, Chemical, and Pharmaceutical Properties",
+  "description": "Description of the physical, chemical, and pharmaceutical properties of the investigational product.",
+  "prompt_text": "Write the Physical, Chemical, and Pharmaceutical Properties section for {{compoundName}} Investigator's Brochure.\n\nYou are writing for the actual drug {{compoundName}}, not a template. Use real data from FDA labels, DailyMed, and scientific literature.\n\nFormat in Markdown with ## headings, **bold**, bullet points, and tables.\n\nInclude:\n\n## Chemical Structure and Formula\n- Molecular formula, weight, IUPAC name\n- Structural description\n\n## Physical Properties  \n- Appearance, solubility, melting point, log P\n\n## Chemical Properties\n- Stability, pH, pKa, degradation\n\n## Pharmaceutical Formulation\n- Dosage forms, excipients\n\n## Storage and Stability\n- Storage conditions, shelf life\n\n## Handling Instructions\n- Preparation, safety precautions\n\nWrite 4-6 pages of detailed, specific content for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "formulation_desc",
+    "storage_conditions",
+    "handling_instructions",
+    "structural_formula"
+  ],
+  "constraints": [
+    "Include storage stability",
+    "Include instructions for reconstitution if applicable",
+    "Follow ICH E6 GCP guidelines",
+    "Use precise scientific terminology"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

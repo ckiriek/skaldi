@@ -1,51 +1,25 @@
 /**
- * Clinical Document Generation Prompts
+ * Clinical Prompts Index
  * 
- * This module exports specialized prompts for generating regulatory-compliant
- * clinical trial documents using Azure OpenAI GPT-4.
+ * Central export for all clinical document prompts
  * 
- * Based on:
- * - ICH E6 (R2) Good Clinical Practice
- * - ICH E3 Structure and Content of Clinical Study Reports
- * - FDA 21 CFR Part 50 (Informed Consent)
- * - Best practices from clinical trial protocol authoring research
+ * Version: 1.1.0
+ * Date: 2025-11-29
  */
 
-import { generateIBPrompt, IB_EXAMPLES } from './ib-prompt'
-import { generateProtocolPrompt } from './protocol-prompt'
-import { generateICFPrompt } from './icf-prompt'
-import { generateSynopsisPrompt } from './synopsis-prompt'
+export { GOVERNING_SYSTEM_PROMPT_V3 } from './governing-prompt-v3'
+export { IB_SECTION_PROMPTS } from './ib-prompts'
+export { PROTOCOL_SECTION_PROMPTS } from './protocol-prompts'
+export { CSR_SECTION_PROMPTS } from './csr-prompts'
+export { ICF_SECTION_PROMPTS } from './icf-prompts'
+export { SAP_SECTION_PROMPTS } from './sap-prompts'
+export { CRF_SECTION_PROMPTS } from './crf-prompts'
 
-export { generateIBPrompt, IB_EXAMPLES }
-export { generateProtocolPrompt }
-export { generateICFPrompt }
-export { generateSynopsisPrompt }
-
-export type { 
-  DocumentSection,
-  DocumentMetadata,
-  GeneratedDocument,
-  ExtractedEntity,
-  EntityExtractionResult,
-  ClinicalTrialData,
-  PublicationData,
-  SafetyData
-} from './schemas'
-
-/**
- * Get the appropriate prompt generator for a document type
- */
-export function getPromptGenerator(documentType: string) {
-  switch (documentType.toUpperCase()) {
-    case 'IB':
-      return generateIBPrompt
-    case 'PROTOCOL':
-      return generateProtocolPrompt
-    case 'ICF':
-      return generateICFPrompt
-    case 'SYNOPSIS':
-      return generateSynopsisPrompt
-    default:
-      throw new Error(`Unknown document type: ${documentType}`)
-  }
-}
+// Re-export default
+export { default as GoverningPrompt } from './governing-prompt-v3'
+export { default as IBPrompts } from './ib-prompts'
+export { default as ProtocolPrompts } from './protocol-prompts'
+export { default as CSRPrompts } from './csr-prompts'
+export { default as ICFPrompts } from './icf-prompts'
+export { default as SAPPrompts } from './sap-prompts'
+export { default as CRFPrompts } from './crf-prompts'

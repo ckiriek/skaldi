@@ -49,10 +49,10 @@ export function FormulationDisplay({ parsed, className, compact = false }: Formu
           </Badge>
         )}
         
+        {/* Show hints only if there are missing fields - less alarming style */}
         {parsed.warnings.length > 0 && (
-          <Badge variant="destructive" className="text-xs">
-            <AlertTriangle className="h-3 w-3 mr-1" />
-            {parsed.warnings.length} warnings
+          <Badge variant="outline" className="text-xs text-muted-foreground border-muted-foreground/30">
+            {parsed.warnings.length === 1 ? '1 field missing' : `${parsed.warnings.length} fields missing`}
           </Badge>
         )}
       </div>

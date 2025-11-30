@@ -7,12 +7,11 @@
 'use client'
 
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { FileText, Database, Activity, GitCompareArrows, CheckCircle2, Edit3 } from 'lucide-react'
+import { PROJECT_TAB_ICONS } from './constants'
 
 export interface ProjectTab {
   id: string
   label: string
-  icon?: React.ComponentType<{ className?: string }>
   content?: React.ReactNode
 }
 
@@ -27,7 +26,9 @@ export function ProjectTabs({ defaultTab = 'overview', tabs, className }: Projec
     <Tabs defaultValue={defaultTab} className={className}>
       <TabsList className="w-full h-9 grid" style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map(tab => {
-          const Icon = tab.icon
+          // Resolve icon from constants based on tab ID
+          const Icon = PROJECT_TAB_ICONS[tab.id as keyof typeof PROJECT_TAB_ICONS]
+          
           return (
             <TabsTrigger 
               key={tab.id} 
@@ -50,25 +51,3 @@ export function ProjectTabs({ defaultTab = 'overview', tabs, className }: Projec
   )
 }
 
-// Predefined tab configurations
-export const PROJECT_TAB_IDS = {
-  OVERVIEW: 'overview',
-  DOCUMENTS: 'documents',
-  FILES: 'files',
-  EVIDENCE: 'evidence',
-  STUDY_FLOW: 'studyflow',
-  CROSS_DOC: 'crossdoc',
-  VALIDATION: 'validation',
-  PROTOCOL_EDITOR: 'protocol-editor'
-} as const
-
-export const PROJECT_TAB_ICONS = {
-  [PROJECT_TAB_IDS.OVERVIEW]: Activity,
-  [PROJECT_TAB_IDS.DOCUMENTS]: FileText,
-  [PROJECT_TAB_IDS.FILES]: FileText,
-  [PROJECT_TAB_IDS.EVIDENCE]: Database,
-  [PROJECT_TAB_IDS.STUDY_FLOW]: Activity,
-  [PROJECT_TAB_IDS.CROSS_DOC]: GitCompareArrows,
-  [PROJECT_TAB_IDS.VALIDATION]: CheckCircle2,
-  [PROJECT_TAB_IDS.PROTOCOL_EDITOR]: Edit3
-}

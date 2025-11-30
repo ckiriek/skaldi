@@ -1,0 +1,23 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_safety",
+  "section_name": "Summary of Data and Guidance for Investigator",
+  "description": "Overall summary of safety data and practical guidance for investigators conducting the trial.",
+  "prompt_text": "Write the Summary and Guidance for Investigator section for {{compoundName}} in {{indication}} for the Investigator's Brochure.\n\nWrite about the ACTUAL drug {{compoundName}}, using real safety data from clinical trials and FDA labels.\n\nFormat in Markdown with ## headings, tables, and bullet points.\n\nCover:\n\n## Risk-Benefit Assessment\nOverall safety summary\n\n## Known and Potential Risks\nCommon AEs, serious AEs, warnings\n\n## Precautions and Contraindications\nExclusions, monitoring\n\n## Dose Modifications\nGuidance for adjustments\n\n## Adverse Event Management\nHow to manage common AEs\n\n## Reporting Requirements\nWhat and when to report\n\n## Investigator Responsibilities\nKey safety obligations\n\nWrite 8-10 pages for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "safety_profile",
+    "contraindications",
+    "monitoring_requirements"
+  ],
+  "constraints": [
+    "Provide clear, actionable guidance",
+    "Emphasize patient safety",
+    "Include monitoring schedules",
+    "Follow ICH E6 GCP guidelines"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

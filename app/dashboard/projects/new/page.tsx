@@ -8,12 +8,13 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { FieldAutocomplete } from '@/components/forms/field-autocomplete'
+import { SmartPrefill } from '@/components/forms/SmartPrefill'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { cn } from '@/lib/utils'
 import { normalizeFormulation } from '@/lib/engine/formulation'
 import { FormulationDebugPanel } from '@/components/formulation/FormulationDebugPanel'
 import { FormulationDisplay } from '@/components/formulation/FormulationDisplay'
-import { KnowledgeGraphButton } from '@/components/knowledge/KnowledgeGraphButton'
+// KnowledgeGraphButton removed - now auto-fetches
 import { SmartField } from '@/components/knowledge-ui/SmartField'
 import { EndpointSmartField, SafetySmartField } from '@/components/smart-fields'
 import type { ParsedFormulation } from '@/lib/engine/formulation/types'
@@ -41,11 +42,23 @@ export default function NewProjectPage() {
     primary_endpoint_metadata: null as EndpointMetadata | null,
     // Generic-specific fields
     rld_brand_name: '',
+    // Formulation details (from SmartPrefill)
+    dosage_form: '',
+    route: '',
+    strength: '',
     // New clinical parameters (Step 6)
     visit_schedule: '',
     safety_monitoring: [] as string[],
-    secondary_endpoints: '',
-    analysis_populations: ''
+    secondary_endpoints: [] as string[], // Changed to array for multi-select
+    analysis_populations: '',
+    // Phase 7: New study design fields
+    comparator_type: 'placebo' as 'placebo' | 'active' | 'none',
+    comparator_name: '',
+    number_of_arms: '2',
+    randomization_ratio: '1:1',
+    target_sample_size: '',
+    rescue_allowed: 'yes' as 'yes' | 'no' | 'conditional',
+    rescue_criteria: '',
   })
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -66,11 +79,23 @@ export default function NewProjectPage() {
         duration_weeks: parseInt(formData.duration_weeks),
         primary_endpoint: formData.primary_endpoint,
         primary_endpoint_metadata: formData.primary_endpoint_metadata,
+        // Formulation details
+        dosage_form: formData.dosage_form || undefined,
+        route: formData.route || undefined,
+        strength: formData.strength || undefined,
         // New clinical parameters
         visit_schedule: formData.visit_schedule || undefined,
         safety_monitoring: formData.safety_monitoring.length > 0 ? formData.safety_monitoring.join(', ') : undefined,
-        secondary_endpoints: formData.secondary_endpoints || undefined,
+        secondary_endpoints: formData.secondary_endpoints.length > 0 ? formData.secondary_endpoints.join('; ') : undefined,
         analysis_populations: formData.analysis_populations || undefined,
+        // Phase 7: New study design fields
+        comparator_type: formData.comparator_type,
+        comparator_name: formData.comparator_type !== 'none' ? formData.comparator_name : undefined,
+        number_of_arms: parseInt(formData.number_of_arms),
+        randomization_ratio: formData.randomization_ratio,
+        target_sample_size: formData.target_sample_size ? parseInt(formData.target_sample_size) : undefined,
+        rescue_allowed: formData.rescue_allowed,
+        rescue_criteria: formData.rescue_allowed !== 'no' ? formData.rescue_criteria : undefined,
       }
 
       // Call Intake Agent API
@@ -285,23 +310,32 @@ export default function NewProjectPage() {
                 </div>
               )}
               
-              {/* Knowledge Graph Button */}
-              {formData.compound_name && formData.compound_name.length >= 3 && (
-                <div className="mt-3">
-                  <KnowledgeGraphButton 
-                    inn={parsedFormulation?.apiName || formData.compound_name}
-                    onDataFetched={(data) => {
-                      // Auto-populate indication if empty
-                      if (!formData.indication && data.indications.length > 0) {
-                        setFormData({ 
-                          ...formData, 
-                          indication: data.indications[0].indication 
-                        })
-                      }
-                    }}
-                  />
-                </div>
-              )}
+              {/* Smart Prefill - Auto-suggestions based on compound */}
+              <SmartPrefill
+                compoundName={parsedFormulation?.apiName || formData.compound_name}
+                productType={formData.product_type}
+                selectedIndication={formData.indication}
+                selectedPrimaryEndpoint={formData.primary_endpoint}
+                selectedSecondaryEndpoints={formData.secondary_endpoints}
+                selectedRld={formData.rld_brand_name}
+                selectedSafetyTerms={formData.safety_monitoring}
+                selectedFormulation={{
+                  dosageForm: formData.dosage_form,
+                  route: formData.route,
+                  strength: formData.strength
+                }}
+                onSelectRld={(brand) => setFormData({ ...formData, rld_brand_name: brand })}
+                onSelectIndication={(indication) => setFormData({ ...formData, indication })}
+                onSelectEndpoint={(endpoint) => setFormData({ ...formData, primary_endpoint: endpoint })}
+                onSelectSecondaryEndpoint={(endpoints) => setFormData({ ...formData, secondary_endpoints: endpoints })}
+                onSelectSafety={(terms) => setFormData({ ...formData, safety_monitoring: terms })}
+                onSelectFormulation={(form) => setFormData({ 
+                  ...formData, 
+                  dosage_form: form.dosageForm,
+                  route: form.route,
+                  strength: form.strength
+                })}
+              />
             </div>
 
             {/* Sponsor */}
@@ -320,37 +354,40 @@ export default function NewProjectPage() {
               </p>
             </div>
 
-            {/* Generic-specific: RLD Information */}
-            {formData.product_type === 'generic' && (
-              <Card className="bg-blue-50/60 border-blue-200">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base">Reference Listed Drug (RLD) Information</CardTitle>
-                  <CardDescription>
-                    We'll automatically fetch nonclinical and clinical data from FDA/EMA databases
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
-                      RLD Brand Name *
-                    </label>
-                    <FieldAutocomplete
-                      value={formData.rld_brand_name}
-                      onChange={(value) => setFormData({ ...formData, rld_brand_name: value })}
-                      endpoint="/api/v1/autocomplete/rld?type=brand"
-                      placeholder="e.g., GLUCOPHAGE"
-                      required={formData.product_type === 'generic'}
-                    />
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      We'll automatically fetch Application Number and TE Code from FDA Orange Book
-                    </p>
-                  </div>
-                  <p className="text-xs text-blue-800">
-                    🤖 Auto-enrichment enabled: We'll fetch pharmacology, PK/PD, safety data, and references from FDA labels,
-                    EMA EPAR, and PubMed.
-                  </p>
-                </CardContent>
-              </Card>
+            {/* RLD Brand Name - shown only for Generic if not selected via SmartPrefill */}
+            {formData.product_type === 'generic' && !formData.rld_brand_name && (
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-2">
+                  RLD Brand Name *
+                </label>
+                <FieldAutocomplete
+                  value={formData.rld_brand_name}
+                  onChange={(value) => setFormData({ ...formData, rld_brand_name: value })}
+                  endpoint="/api/v1/autocomplete/rld?type=brand"
+                  placeholder="e.g., GLUCOPHAGE"
+                  required={formData.product_type === 'generic'}
+                />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Or select from suggestions above
+                </p>
+              </div>
+            )}
+            
+            {/* Show selected RLD */}
+            {formData.product_type === 'generic' && formData.rld_brand_name && (
+              <div className="flex items-center gap-2">
+                <Label className="text-sm">RLD Brand:</Label>
+                <span className="font-medium text-primary">{formData.rld_brand_name}</span>
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm"
+                  onClick={() => setFormData({ ...formData, rld_brand_name: '' })}
+                  className="text-xs text-muted-foreground"
+                >
+                  Change
+                </Button>
+              </div>
             )}
 
             {/* Phase */}
@@ -446,12 +483,16 @@ export default function NewProjectPage() {
                   <label className="block text-sm font-medium text-foreground mb-2">
                     Number of Arms
                   </label>
-                  <Input
-                    type="number"
-                    min="1"
-                    value={formData.arms}
-                    onChange={(e) => setFormData({ ...formData, arms: e.target.value })}
-                  />
+                  <select
+                    value={formData.number_of_arms}
+                    onChange={(e) => setFormData({ ...formData, number_of_arms: e.target.value, arms: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="1">1 (Single arm)</option>
+                    <option value="2">2 (Two arms)</option>
+                    <option value="3">3 (Three arms)</option>
+                    <option value="4">4 (Four arms)</option>
+                  </select>
                 </div>
 
                 <div>
@@ -464,6 +505,106 @@ export default function NewProjectPage() {
                     value={formData.duration_weeks}
                     onChange={(e) => setFormData({ ...formData, duration_weeks: e.target.value })}
                   />
+                </div>
+
+                {/* Comparator Type */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Comparator Type
+                  </label>
+                  <select
+                    value={formData.comparator_type}
+                    onChange={(e) => setFormData({ ...formData, comparator_type: e.target.value as 'placebo' | 'active' | 'none' })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="placebo">Placebo</option>
+                    <option value="active">Active Comparator</option>
+                    <option value="none">No Comparator (Single Arm)</option>
+                  </select>
+                </div>
+
+                {/* Comparator Name - shown only for active comparator */}
+                {formData.comparator_type === 'active' && (
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Comparator Name
+                    </label>
+                    <Input
+                      value={formData.comparator_name}
+                      onChange={(e) => setFormData({ ...formData, comparator_name: e.target.value })}
+                      placeholder="e.g., Metformin 500mg"
+                    />
+                  </div>
+                )}
+
+                {/* Randomization Ratio */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Randomization Ratio
+                  </label>
+                  <select
+                    value={formData.randomization_ratio}
+                    onChange={(e) => setFormData({ ...formData, randomization_ratio: e.target.value })}
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                  >
+                    <option value="1:1">1:1</option>
+                    <option value="2:1">2:1</option>
+                    <option value="3:1">3:1</option>
+                    <option value="1:1:1">1:1:1 (3 arms)</option>
+                    <option value="2:1:1">2:1:1 (3 arms)</option>
+                    <option value="1:1:1:1">1:1:1:1 (4 arms)</option>
+                  </select>
+                </div>
+
+                {/* Target Sample Size */}
+                <div>
+                  <label className="block text-sm font-medium text-foreground mb-2">
+                    Target Sample Size
+                  </label>
+                  <Input
+                    type="number"
+                    min="1"
+                    value={formData.target_sample_size}
+                    onChange={(e) => setFormData({ ...formData, target_sample_size: e.target.value })}
+                    placeholder="e.g., 300"
+                  />
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Total planned enrollment
+                  </p>
+                </div>
+              </div>
+
+              {/* Rescue Therapy Section */}
+              <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                <h4 className="text-sm font-medium text-foreground mb-2">Rescue Therapy</h4>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">
+                      Rescue Allowed
+                    </label>
+                    <select
+                      value={formData.rescue_allowed}
+                      onChange={(e) => setFormData({ ...formData, rescue_allowed: e.target.value as 'yes' | 'no' | 'conditional' })}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                      <option value="conditional">Conditional</option>
+                    </select>
+                  </div>
+                  
+                  {formData.rescue_allowed !== 'no' && (
+                    <div>
+                      <label className="block text-sm font-medium text-foreground mb-2">
+                        Rescue Criteria
+                      </label>
+                      <Input
+                        value={formData.rescue_criteria}
+                        onChange={(e) => setFormData({ ...formData, rescue_criteria: e.target.value })}
+                        placeholder="e.g., FPG > 270 mg/dL"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -490,9 +631,12 @@ export default function NewProjectPage() {
                   Secondary Endpoints
                 </label>
                 <Input
-                  value={formData.secondary_endpoints}
-                  onChange={(e) => setFormData({ ...formData, secondary_endpoints: e.target.value })}
-                  placeholder="e.g., Change in fasting glucose, lipid profile"
+                  value={formData.secondary_endpoints.join('; ')}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    secondary_endpoints: e.target.value.split(';').map(s => s.trim()).filter(s => s) 
+                  })}
+                  placeholder="e.g., Change in fasting glucose; lipid profile; body weight"
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Optional: List secondary endpoints separated by semicolons

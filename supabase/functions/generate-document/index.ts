@@ -612,6 +612,46 @@ Generate the complete CRF specification in Markdown, ready for EDC programming a
 
 function promptIBV2(c: any): string {
   const evidenceSummary = c.evidenceSummaryForIB || {}
+  
+  // Build FDA label section if available
+  let fdaLabelSection = ''
+  if (c.fdaLabel) {
+    fdaLabelSection = `
+## FDA APPROVED LABEL DATA (USE THIS AS PRIMARY SOURCE)
+${c.fdaLabel.indications_and_usage ? `### Indications and Usage (from FDA label):
+${c.fdaLabel.indications_and_usage.substring(0, 2000)}${c.fdaLabel.indications_and_usage.length > 2000 ? '...' : ''}` : ''}
+
+${c.fdaLabel.dosage_and_administration ? `### Dosage and Administration (from FDA label):
+${c.fdaLabel.dosage_and_administration.substring(0, 2000)}${c.fdaLabel.dosage_and_administration.length > 2000 ? '...' : ''}` : ''}
+
+${c.fdaLabel.contraindications ? `### Contraindications (from FDA label):
+${c.fdaLabel.contraindications.substring(0, 1500)}${c.fdaLabel.contraindications.length > 1500 ? '...' : ''}` : ''}
+
+${c.fdaLabel.warnings_and_precautions ? `### Warnings and Precautions (from FDA label):
+${c.fdaLabel.warnings_and_precautions.substring(0, 2000)}${c.fdaLabel.warnings_and_precautions.length > 2000 ? '...' : ''}` : ''}
+
+${c.fdaLabel.adverse_reactions_label ? `### Adverse Reactions (from FDA label):
+${c.fdaLabel.adverse_reactions_label.substring(0, 2000)}${c.fdaLabel.adverse_reactions_label.length > 2000 ? '...' : ''}` : ''}
+
+${c.fdaLabel.drug_interactions ? `### Drug Interactions (from FDA label):
+${c.fdaLabel.drug_interactions.substring(0, 1500)}${c.fdaLabel.drug_interactions.length > 1500 ? '...' : ''}` : ''}
+`
+  }
+
+  // Build compound chemistry section if available
+  let compoundSection = ''
+  if (c.compound) {
+    compoundSection = `
+## COMPOUND CHEMICAL DATA (from PubChem)
+- **IUPAC Name:** ${c.compound.name || 'Not available'}
+- **Molecular Formula:** ${c.compound.molecular_formula || 'Not available'}
+- **Molecular Weight:** ${c.compound.molecular_weight ? c.compound.molecular_weight + ' g/mol' : 'Not available'}
+- **SMILES:** ${c.compound.smiles || 'Not available'}
+- **InChIKey:** ${c.compound.inchikey || 'Not available'}
+${c.compound.synonyms?.length ? `- **Synonyms:** ${c.compound.synonyms.slice(0, 5).join(', ')}` : ''}
+`
+  }
+
   return `You are an expert medical writer specializing in Investigator's Brochures for global clinical trials.
 Generate an Investigator's Brochure (IB) aligned with ICH E6 (R2) Section 7.
 
@@ -624,7 +664,8 @@ Indication: ${c.indication}
 Phase: ${c.phase}
 Sponsor: ${c.sponsor}
 Product Type: ${c.productType}
-
+${compoundSection}
+${fdaLabelSection}
 ## EVIDENCE SUMMARY
 - Clinical trials: ${evidenceSummary.trialCount || 0}
 - Publications: ${evidenceSummary.publicationCount || 0}
@@ -638,14 +679,16 @@ ${evidenceSummary.examplePublications?.length ? `### Key Publications (cite thes
 ${evidenceSummary.examplePublications.slice(0, 5).map((p: any) => `- PMID ${p.pmid || 'N/A'}: ${p.title || 'Untitled'}`).join('\n')}` : ''}
 
 ## EVIDENCE USE POLICY
+${c.fdaLabel ? '**IMPORTANT: Use FDA label data as the PRIMARY source for indications, dosing, contraindications, warnings, and adverse reactions.**' : ''}
 From PubMed publications: Summarize pharmacology, mechanism, nonclinical data, human PK/PD, safety profile qualitatively.
 From safety data: Describe known or class-related risks.
 From trials: Reference specific trials when discussing efficacy or safety (e.g., "as demonstrated in NCT12345678").
 
 You MUST:
+- ${c.fdaLabel ? 'Use FDA label data for approved indications, dosing, contraindications, warnings, and adverse reactions' : 'Cite specific PMIDs in References section'}
 - Cite specific PMIDs in References section (e.g., "PMID 30521516")
 - Reference trials by NCT ID when relevant
-- Keep descriptions qualitative unless you have concrete values from publications
+- Keep descriptions qualitative unless you have concrete values from FDA label or publications
 - Avoid inventing AE percentages, hazard ratios, p-values
 - If not supported by evidence, write "Not adequately characterized in available data"
 
@@ -655,15 +698,17 @@ You MUST:
 3. SUMMARY
 4. INTRODUCTION
 5. PHYSICAL, CHEMICAL, AND PHARMACEUTICAL PROPERTIES AND FORMULATION
+   ${c.compound ? '- Use the PubChem chemical data provided above' : ''}
 6. NONCLINICAL STUDIES
 7. EFFECTS IN HUMANS
+   ${c.fdaLabel ? '- Use FDA label data for clinical pharmacology, adverse reactions, drug interactions' : ''}
 8. SUMMARY AND GUIDANCE FOR THE INVESTIGATOR
 9. REFERENCES (cite specific PMIDs and NCT IDs)
 
 ## MANDATORY RULES
 1. NO PLACEHOLDERS: Use actual dates (current date), Version 1.0, compound name "${c.compoundName}", sponsor "${c.sponsor}"
 2. CITE SOURCES: Reference specific PMIDs and NCT IDs in References section
-3. QUALITATIVE ONLY: No fabricated quantitative data unless from cited sources
+3. ${c.fdaLabel ? 'USE FDA LABEL: Incorporate FDA-approved label information for dosing, safety, and interactions' : 'QUALITATIVE ONLY: No fabricated quantitative data unless from cited sources'}
 
 Generate the complete IB in Markdown with clear distinction between nonclinical and clinical information.`
 }
@@ -774,18 +819,91 @@ serve(async (req) => {
     console.log(`📊 Fetched ${entities?.length || 0} entities`)
 
     // 3. Fetch enriched data from database
+    // NOTE: trials and literature are linked by inchikey (from enrichment), not project_id
     console.log('🔍 Step 3: Fetching enriched data...')
-    const { data: trials, error: trialsError } = await supabaseClient
-      .from('trials')
-      .select('*')
-      .eq('project_id', projectId)
-      .limit(20)
+    console.log(`   Project inchikey: ${project.inchikey || 'NOT SET'}`)
+    
+    let trials: any[] = []
+    let publications: any[] = []
+    
+    // Try to fetch by inchikey first (from enrichment)
+    if (project.inchikey) {
+      const { data: trialsByInchikey, error: trialsError } = await supabaseClient
+        .from('trials')
+        .select('*')
+        .eq('inchikey', project.inchikey)
+        .limit(20)
+      
+      if (!trialsError && trialsByInchikey) {
+        trials = trialsByInchikey
+        console.log(`✅ Found ${trials.length} trials by inchikey`)
+      }
 
-    const { data: publications, error: pubsError } = await supabaseClient
-      .from('literature')
-      .select('*')
-      .eq('project_id', projectId)
-      .limit(30)
+      const { data: pubsByInchikey, error: pubsError } = await supabaseClient
+        .from('literature')
+        .select('*')
+        .eq('inchikey', project.inchikey)
+        .limit(30)
+      
+      if (!pubsError && pubsByInchikey) {
+        publications = pubsByInchikey
+        console.log(`✅ Found ${publications.length} publications by inchikey`)
+      }
+    }
+    
+    // Fallback: try by compound_name if inchikey didn't work
+    if (trials.length === 0 && project.compound_name) {
+      console.log(`⚠️ No trials by inchikey, trying compound_name search...`)
+      // Note: This requires a text search or exact match on compound field
+    }
+
+    // Fetch adverse events by inchikey
+    let adverseEvents: any[] = []
+    if (project.inchikey) {
+      const { data: aeData, error: aeError } = await supabaseClient
+        .from('adverse_events')
+        .select('*')
+        .eq('inchikey', project.inchikey)
+        .limit(20)
+      
+      if (!aeError && aeData) {
+        adverseEvents = aeData
+        console.log(`✅ Found ${adverseEvents.length} adverse events by inchikey`)
+      }
+    }
+
+    // Fetch FDA label sections from external_data_cache
+    let fdaLabelSections: Record<string, string> = {}
+    if (project.inchikey || project.compound_name) {
+      const { data: labelData, error: labelError } = await supabaseClient
+        .from('external_data_cache')
+        .select('section_name, normalized_content, raw_content')
+        .eq('source', 'fda_label')
+        .or(`inchikey.eq.${project.inchikey},compound_name.eq.${project.compound_name}`)
+      
+      if (!labelError && labelData && labelData.length > 0) {
+        for (const section of labelData) {
+          fdaLabelSections[section.section_name] = section.normalized_content || section.raw_content
+        }
+        console.log(`✅ Found ${labelData.length} FDA label sections`)
+        console.log(`   Sections: ${Object.keys(fdaLabelSections).join(', ')}`)
+      }
+    }
+
+    // Fetch compound chemical data
+    let compoundData: any = null
+    if (project.inchikey) {
+      const { data: compound, error: compoundError } = await supabaseClient
+        .from('compounds')
+        .select('*')
+        .eq('inchikey', project.inchikey)
+        .single()
+      
+      if (!compoundError && compound) {
+        compoundData = compound
+        console.log(`✅ Found compound data: ${compound.name || compound.inchikey}`)
+      }
+    }
 
     // Fallback to evidence_sources if no enriched data
     const { data: evidence, error: evidenceError } = await supabaseClient
@@ -795,7 +913,8 @@ serve(async (req) => {
 
     if (evidenceError) throw evidenceError
     
-    console.log(`📊 Enriched data: ${trials?.length || 0} trials, ${publications?.length || 0} publications`)
+    console.log(`📊 Enriched data: ${trials?.length || 0} trials, ${publications?.length || 0} publications, ${adverseEvents?.length || 0} AEs`)
+    console.log(`📊 FDA Labels: ${Object.keys(fdaLabelSections).length} sections`)
     console.log(`📊 Legacy data: ${evidence?.length || 0} evidence sources`)
 
     // 4. Build context for AI generation
@@ -810,6 +929,18 @@ serve(async (req) => {
         product_type: project.product_type,
         design: project.design_json,
       },
+      // Chemical/compound data from PubChem
+      compound: compoundData ? {
+        inchikey: compoundData.inchikey,
+        name: compoundData.name,
+        synonyms: compoundData.synonyms,
+        molecular_weight: compoundData.molecular_weight,
+        molecular_formula: compoundData.molecular_formula,
+        smiles: compoundData.smiles,
+        chemical_structure_url: compoundData.chemical_structure_url,
+      } : null,
+      // FDA approved label sections (from DailyMed/openFDA)
+      fda_label: Object.keys(fdaLabelSections).length > 0 ? fdaLabelSections : null,
       entities: (entities || []).reduce((acc: Record<string, any>, entity: any) => {
         if (!acc[entity.entity_type]) acc[entity.entity_type] = {}
         acc[entity.entity_type][entity.entity_key] = entity.entity_value
@@ -825,7 +956,10 @@ serve(async (req) => {
               status: t.status,
               enrollment: t.enrollment,
               design: t.design,
-              outcomes: t.outcomes,
+              arms: t.arms,
+              outcomes_primary: t.outcomes_primary,
+              outcomes_secondary: t.outcomes_secondary,
+              results: t.results,
               source: t.source || 'ClinicalTrials.gov',
               source_url: t.source_url,
             }))
@@ -845,7 +979,13 @@ serve(async (req) => {
               source_url: p.source_url,
             }))
           : (evidence || []).filter((e: any) => e.source === 'PubMed'),
-        safety_data: (evidence || []).filter((e: any) => e.source === 'openFDA'),
+        safety_data: adverseEvents.length > 0
+          ? adverseEvents.map((ae: any) => ({
+              term: ae.term,
+              frequency: ae.frequency,
+              source: ae.source || 'openFDA FAERS',
+            }))
+          : (evidence || []).filter((e: any) => e.source === 'openFDA'),
       },
     }
 
@@ -1075,6 +1215,10 @@ function generatePrompt(documentType: string, context: any): string {
     countries: context.project.countries,
     design: context.project.design,
     entities: context.entities,
+    // Chemical/compound data from PubChem
+    compound: context.compound || null,
+    // FDA approved label sections (from DailyMed/openFDA)
+    fdaLabel: context.fda_label || null,
     clinicalTrials: context.evidence.clinical_trials || [],
     publications: context.evidence.publications || [],
     safetyData: context.evidence.safety_data || [],

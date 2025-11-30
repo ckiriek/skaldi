@@ -3,7 +3,7 @@
 import * as React from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { cn } from '@/lib/utils'
 import {
   LayoutDashboard,
@@ -19,7 +19,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Avatar, AvatarFallback } from '@/components/ui/avatar'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { createClient } from '@/lib/supabase/client'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
@@ -32,6 +33,40 @@ const navigation = [
 
 export function DashboardLayout({ children }: DashboardLayoutProps) {
   const pathname = usePathname()
+  const router = useRouter()
+  const supabase = createClient()
+  const [user, setUser] = React.useState<{ name: string; initials: string; avatar?: string }>({ 
+    name: 'User', 
+    initials: 'U' 
+  })
+
+  React.useEffect(() => {
+    const loadUser = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser()
+      if (authUser) {
+        const { data: profile } = await supabase
+          .from('users')
+          .select('first_name, last_name, avatar_url')
+          .eq('id', authUser.id)
+          .single()
+        
+        const firstName = profile?.first_name || ''
+        const lastName = profile?.last_name || ''
+        const name = [firstName, lastName].filter(Boolean).join(' ') || authUser.email?.split('@')[0] || 'User'
+        const initials = firstName && lastName 
+          ? `${firstName[0]}${lastName[0]}`.toUpperCase()
+          : name.slice(0, 2).toUpperCase()
+        
+        setUser({ name, initials, avatar: profile?.avatar_url })
+      }
+    }
+    loadUser()
+  }, [])
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    router.push('/auth/login')
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -83,26 +118,31 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
               <DropdownMenuTrigger asChild>
                 <button className="flex items-center gap-2 rounded-full hover:bg-muted/50 transition-colors pl-2 pr-1 py-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                   <div className="text-right hidden sm:block">
-                    <p className="text-xs font-medium leading-none">Admin User</p>
+                    <p className="text-xs font-medium leading-none">{user.name}</p>
                   </div>
                   <Avatar className="h-7 w-7">
-                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">AD</AvatarFallback>
+                    {user.avatar && <AvatarImage src={user.avatar} alt={user.name} />}
+                    <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">{user.initials}</AvatarFallback>
                   </Avatar>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuLabel className="text-xs">My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <User className="mr-2 h-4 w-4" />
-                  Profile
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/dashboard/settings">
+                    <User className="mr-2 h-4 w-4" />
+                    Profile
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Settings className="mr-2 h-4 w-4" />
-                  Settings
+                <DropdownMenuItem asChild className="cursor-pointer">
+                  <Link href="/dashboard/settings">
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 focus:text-red-600">
                   <LogOut className="mr-2 h-4 w-4" />
                   Log out
                 </DropdownMenuItem>

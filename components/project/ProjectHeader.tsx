@@ -6,13 +6,9 @@
 
 'use client'
 
-import { useState } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
-import { CheckCircle2, Settings, Download, Edit3, Database } from 'lucide-react'
-import { KnowledgeGraphPanel } from '@/components/knowledge'
-import Link from 'next/link'
+import { Settings, Download, Edit3, Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet, CheckCircle2 } from 'lucide-react'
 
 interface ProjectHeaderProps {
   project: {
@@ -25,7 +21,6 @@ interface ProjectHeaderProps {
     enrichment_status?: string | null
     icon_name?: string | null
   }
-  IconComponent: React.ComponentType<{ className?: string }>
   enrichmentStatus: {
     variant: 'success' | 'info' | 'secondary' | 'warning'
     label: string
@@ -38,17 +33,17 @@ interface ProjectHeaderProps {
 
 export function ProjectHeader({
   project,
-  IconComponent,
   enrichmentStatus,
   hasExternalData,
   onEditProtocol,
   onExport,
   onSettings
 }: ProjectHeaderProps) {
-  const [kgModalOpen, setKgModalOpen] = useState(false)
-  
-  // Extract INN from compound name (simplified)
-  const inn = project.compound_name?.split(' ')[0] || ''
+  // Resolve Icon Component
+  const iconMap: Record<string, any> = {
+    Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet
+  }
+  const IconComponent = iconMap[project.icon_name || 'Pill'] || Pill
   
   return (
     <div className="flex items-start justify-between">
@@ -108,28 +103,6 @@ export function ProjectHeader({
 
       {/* Right: Actions */}
       <div className="flex items-center gap-2">
-        {/* Knowledge Graph Button */}
-        {inn && (
-          <Dialog open={kgModalOpen} onOpenChange={setKgModalOpen}>
-            <DialogTrigger asChild>
-              <Button
-                variant="outline"
-                size="sm"
-                className="gap-2"
-              >
-                <Database className="h-4 w-4" />
-                <span className="hidden sm:inline">Knowledge Graph</span>
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Knowledge Graph: {inn}</DialogTitle>
-              </DialogHeader>
-              <KnowledgeGraphPanel inn={inn} autoFetch />
-            </DialogContent>
-          </Dialog>
-        )}
-        
         {hasExternalData && onEditProtocol && (
           <Button
             variant="outline"

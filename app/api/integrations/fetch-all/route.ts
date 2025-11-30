@@ -62,10 +62,10 @@ export async function POST(request: Request) {
 
     // 2. Fetch from PubMed
     try {
-      const pubmedClient = new PubMedClient()
+      const pubmedClient = new PubMedClient(process.env.NCBI_API_KEY)
       
-      // Search by compound name or indication (increased from 10 to 30)
-      const searchTerm = `${project.title} ${project.indication}`
+      // Search by INN (compound_name) + indication for better results
+      const searchTerm = `${project.compound_name || project.title} ${project.indication}`
       const publications = await pubmedClient.search(searchTerm, 30)
       results.publications = publications
 

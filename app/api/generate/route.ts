@@ -1,20 +1,12 @@
 import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
-import { ValidatorAgent } from '@/lib/agents/validator'
 import { DocumentOrchestrator } from '@/lib/services/document-orchestrator'
 import { runPostGenerationChecks } from '@/lib/integration/run_post_generation_checks'
 
-const validatorAgent = new ValidatorAgent()
 const documentOrchestrator = new DocumentOrchestrator()
 
-// Feature flags
-const USE_NEW_ORCHESTRATOR = process.env.USE_NEW_ORCHESTRATOR === 'true'
-const USE_ORCHESTRATOR_FOR_ALL = process.env.USE_ORCHESTRATOR_FOR_ALL === 'true'
-
-// Document types supported by new orchestrator
-const NEW_ORCHESTRATOR_TYPES = USE_ORCHESTRATOR_FOR_ALL 
-  ? ['Protocol', 'IB', 'ICF', 'Synopsis', 'CSR', 'SPC'] 
-  : ['Protocol'] // Start with Protocol only if not using all
+// Supported document types - all use the new orchestrator
+const SUPPORTED_DOCUMENT_TYPES = ['Protocol', 'IB', 'ICF', 'Synopsis', 'CSR', 'SPC', 'SAP', 'CRF']
 
 export async function POST(request: Request) {
   try {
@@ -36,68 +28,73 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log(`📝 Generating ${documentType} for project ${projectId}`)
+    // Validate document type
+    if (!SUPPORTED_DOCUMENT_TYPES.includes(documentType)) {
+      return NextResponse.json(
+        { error: `Unsupported document type: ${documentType}. Supported types: ${SUPPORTED_DOCUMENT_TYPES.join(', ')}` },
+        { status: 400 }
+      )
+    }
 
-    // Determine which generation path to use
-    const useNewOrchestrator = USE_NEW_ORCHESTRATOR && NEW_ORCHESTRATOR_TYPES.includes(documentType)
+    console.log(`📝 Generating ${documentType} for project ${projectId}`)
     
+    // Log to file for debugging
+    const fs = require('fs')
+    const logPath = '/tmp/skaldi-generation.log'
+    fs.appendFileSync(logPath, `\n\n=== ${new Date().toISOString()} ===\n`)
+    fs.appendFileSync(logPath, `Generating ${documentType} for project ${projectId}\n`)
+
     let data: any
     let error: any
 
-    if (useNewOrchestrator) {
-      console.log(`🚀 Using NEW DocumentOrchestrator for ${documentType}`)
-      console.log(`   Project ID: ${projectId}`)
-      console.log(`   User ID: ${user.id}`)
-      
-      try {
-        const result = await documentOrchestrator.generateDocument({
-          projectId,
-          documentType,
-          userId: user.id,
-        })
-
-        console.log(`   Orchestrator result:`, { success: result.success, sections: Object.keys(result.sections).length, errors: result.errors?.length })
-
-        if (result.success) {
-          data = {
-            success: true,
-            document: {
-              id: result.documentId,
-              type: documentType,
-              sections: result.sections,
-            },
-            validation: result.validation,
-            duration_ms: result.duration_ms,
-            orchestrator: 'new', // Flag to indicate new path
-          }
-        } else {
-          console.error(`   Orchestrator failed:`, result.errors)
-          error = {
-            message: 'Document generation failed',
-            details: result.errors,
-          }
-        }
-      } catch (err) {
-        console.error(`   Orchestrator exception:`, err)
-        error = {
-          message: err instanceof Error ? err.message : 'Unknown error',
-          details: err,
-        }
-      }
-    } else {
-      console.log(`🔄 Using LEGACY Edge Function for ${documentType}`)
-      
-      // Call legacy Supabase Edge Function
-      const response = await supabase.functions.invoke('generate-document', {
-        body: {
-          projectId,
-          documentType,
-          userId: user.id,
-        },
+    // All document types now use the DocumentOrchestrator
+    console.log(`🚀 Using DocumentOrchestrator for ${documentType}`)
+    console.log(`   Project ID: ${projectId}`)
+    console.log(`   User ID: ${user.id}`)
+    
+    try {
+      const result = await documentOrchestrator.generateDocument({
+        projectId,
+        documentType,
+        userId: user.id,
+        supabase, // Pass Supabase client with request context
       })
 
-      data = response.data
-      error = response.error
+      console.log(`   Orchestrator result:`, { success: result.success, sections: Object.keys(result.sections).length, errors: result.errors?.length })
+
+      if (result.success) {
+        data = {
+          success: true,
+          document: {
+            id: result.documentId,
+            type: documentType,
+            sections: result.sections,
+          },
+          validation: result.validation,
+          duration_ms: result.duration_ms,
+        }
+      } else {
+        console.error(`   Orchestrator failed:`, result.errors)
+        error = {
+          message: 'Document generation failed',
+          details: result.errors,
+        }
+      }
+    } catch (err) {
+      console.error(`❌ Orchestrator exception:`, err)
+      console.error(`   Error type:`, typeof err)
+      console.error(`   Error name:`, err instanceof Error ? err.name : 'N/A')
+      console.error(`   Error message:`, err instanceof Error ? err.message : String(err))
+      console.error(`   Error stack:`, err instanceof Error ? err.stack : 'N/A')
+      
+      // Log to file
+      fs.appendFileSync('/tmp/skaldi-generation.log', `ERROR: ${err instanceof Error ? err.message : String(err)}\n`)
+      fs.appendFileSync('/tmp/skaldi-generation.log', `Stack: ${err instanceof Error ? err.stack : 'N/A'}\n`)
+      
+      error = {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        details: err,
+      }
     }
 
     if (error) {
@@ -105,7 +102,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ 
         error: error.message,
         details: error,
-        context: useNewOrchestrator ? 'New orchestrator failed' : 'Edge function invocation failed'
+        context: 'Document orchestrator failed'
       }, { status: 500 })
     }
 
@@ -119,67 +116,7 @@ export async function POST(request: Request) {
       }, { status: 500 })
     }
 
-    // Auto-validate the generated document (skip if new orchestrator already validated)
-    if (data.success && data.document && data.document.id && !useNewOrchestrator) {
-      console.log(`🔍 Auto-validating generated document ${data.document.id}`)
-      
-      try {
-        // Fetch the generated content
-        const { data: versionData } = await supabase
-          .from('document_versions')
-          .select('content')
-          .eq('document_id', data.document.id)
-          .eq('is_current', true)
-          .single()
-
-        const content = versionData?.content || (data.document as any).content
-
-        if (content && content.length > 100) {
-          // Run validation
-          const validationResult = await validatorAgent.validate({
-            content,
-            section_id: 'full-document',
-            document_type: documentType,
-            validation_level: 'standard',
-          })
-
-          // Save validation results
-          const totalChecks = 13
-          const passedChecks = totalChecks - validationResult.summary.errors
-          
-          await supabase
-            .from('validation_results')
-            .insert({
-              document_id: data.document.id,
-              completeness_score: Math.round(validationResult.score),
-              status: validationResult.passed ? 'approved' : 'review',
-              total_rules: totalChecks,
-              passed: passedChecks,
-              failed: validationResult.summary.errors,
-              results: {
-                issues: validationResult.issues,
-                summary: validationResult.summary,
-                validation_level: 'standard',
-                duration_ms: validationResult.duration_ms,
-              },
-              validation_date: new Date().toISOString(),
-            })
-
-          console.log(`✅ Auto-validation complete: ${validationResult.score}% (${validationResult.passed ? 'PASSED' : 'FAILED'})`)
-          
-          // Add validation info to response
-          data.validation = {
-            score: Math.round(validationResult.score),
-            passed: validationResult.passed,
-            errors: validationResult.summary.errors,
-            warnings: validationResult.summary.warnings,
-          }
-        }
-      } catch (validationError) {
-        console.error('Auto-validation failed:', validationError)
-        // Don't fail the whole request if validation fails
-      }
-    }
+    // Note: Validation is now handled by DocumentOrchestrator internally
 
     // Phase G.10: Run post-generation validation checks (StudyFlow + CrossDoc)
     if (data.success && data.document && data.document.id) {

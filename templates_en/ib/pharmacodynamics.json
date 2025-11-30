@@ -1,0 +1,22 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_pharmacodynamics",
+  "section_name": "Pharmacodynamics and Mechanism of Action",
+  "description": "Mechanism of action and pharmacodynamic effects of the investigational product.",
+  "prompt_text": "Write the Pharmacodynamics section for {{compoundName}} in {{indication}} for the Investigator's Brochure.\n\nWrite about the ACTUAL drug {{compoundName}}, using real data from FDA labels, preclinical studies, and literature.\n\nFormat in Markdown with ## headings and bullet points.\n\nCover:\n\n## Mechanism of Action\nMolecular targets, signaling pathways, cellular effects\n\n## Pharmacological Effects\nTherapeutic effects, dose-response\n\n## Biomarkers\nPD biomarkers, target engagement\n\n## Clinical Pharmacology\nExposure-response, PK/PD\n\n## Rationale for {{indication}}\nHow mechanism addresses disease\n\nWrite 6-8 pages for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "indication",
+    "mechanism_of_action",
+    "pharmacodynamics_data"
+  ],
+  "constraints": [
+    "Explain mechanism clearly for clinicians",
+    "Link mechanism to therapeutic indication",
+    "Include relevant biomarkers",
+    "Follow ICH E6 GCP guidelines"
+  ],
+  "template_type": "text_block",
+  "language": "en",
+  "version": 1
+}

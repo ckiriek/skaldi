@@ -12,6 +12,7 @@ import { DocumentViewer } from '@/components/document-viewer'
 import { ValidationResultsDetailed } from '@/components/validation-results-detailed'
 import { AuditLogViewer } from '@/components/audit-log-viewer'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
+import { ScrollToTop } from '@/components/floating-nav'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
   const normalized = (status || '').toLowerCase()
@@ -98,8 +99,12 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
   // Transform validation results to match expected format
   const validationResults = rawValidationResults ? {
     ...rawValidationResults,
-    issues: (rawValidationResults.results as any)?.issues || [],
-    summary: (rawValidationResults.results as any)?.summary || { errors: 0, warnings: 0, info: 0 },
+    issues: rawValidationResults.results && typeof rawValidationResults.results === 'object' 
+      ? ((rawValidationResults.results as any)?.issues || [])
+      : [],
+    summary: rawValidationResults.results && typeof rawValidationResults.results === 'object'
+      ? ((rawValidationResults.results as any)?.summary || { errors: 0, warnings: 0, info: 0 })
+      : { errors: 0, warnings: 0, info: 0 },
   } : null
 
   // Fetch Audit Logs
@@ -202,7 +207,112 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           {/* Document Content */}
           {(document as any).content ? (
             <DocumentViewer 
-              content={(document as any).content} 
+              content={(() => {
+                // Get raw content - safely handle undefined
+                let rawContent = (document as any).content;
+                
+                // If no content, return empty string
+                if (!rawContent) {
+                  return '';
+                }
+                
+                // If content is a JSON string, parse it first
+                if (typeof rawContent === 'string' && rawContent.length > 0) {
+                  // Check if it looks like JSON (starts with { or [)
+                  const trimmed = rawContent.trim();
+                  if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+                    try {
+                      rawContent = JSON.parse(rawContent);
+                    } catch (e) {
+                      // Not valid JSON, keep as string
+                      console.log('Content is not valid JSON, using as markdown');
+                    }
+                  }
+                }
+                
+                // If content is JSON object with sections, combine into single markdown string
+                // IMPORTANT: Sort sections by their order_index to ensure correct document structure
+                if (typeof rawContent === 'object' && rawContent !== null && !Array.isArray(rawContent)) {
+                  // Define the correct section order for each document type (matches document_structure.order_index)
+                  const SECTION_ORDER: Record<string, string[]> = {
+                    'IB': [
+                      'ib_title_page',      // 1
+                      'ib_toc',             // 2
+                      'ib_summary',         // 3
+                      'ib_introduction',    // 4
+                      'ib_physical_chemical', // 5
+                      'ib_nonclinical',     // 6
+                      'ib_clinical_studies', // 7 (Effects in Humans)
+                      'ib_safety',          // 8 (Summary of Data and Guidance)
+                    ],
+                    'Protocol': [
+                      'protocol_title_page',
+                      'protocol_synopsis',
+                      'protocol_toc',
+                      'protocol_abbreviations',
+                      'protocol_background',
+                      'protocol_objectives',
+                      'protocol_study_design',
+                      'protocol_population',
+                      'protocol_treatment',
+                      'protocol_assessments',
+                      'protocol_safety',
+                      'protocol_statistics',
+                      'protocol_ethics',
+                      'protocol_references',
+                    ],
+                    'ICF': [
+                      'icf_header',
+                      'icf_introduction',
+                      'icf_purpose',
+                      'icf_procedures',
+                      'icf_risks',
+                      'icf_benefits',
+                      'icf_alternatives',
+                      'icf_confidentiality',
+                      'icf_compensation',
+                      'icf_voluntary',
+                      'icf_contact',
+                      'icf_signature',
+                    ],
+                    'Synopsis': [
+                      'synopsis_title',
+                      'synopsis_objectives',
+                      'synopsis_design',
+                      'synopsis_population',
+                      'synopsis_treatment',
+                      'synopsis_endpoints',
+                      'synopsis_statistics',
+                      'synopsis_timeline',
+                    ],
+                  };
+                  
+                  const docType = document.type || 'IB';
+                  const sectionOrder = SECTION_ORDER[docType] || [];
+                  
+                  // Sort entries by defined order, unknown sections go to the end
+                  const sortedEntries = Object.entries(rawContent)
+                    .filter(([_, v]) => v != null)
+                    .sort(([keyA], [keyB]) => {
+                      const indexA = sectionOrder.indexOf(keyA);
+                      const indexB = sectionOrder.indexOf(keyB);
+                      // If not found in order, put at end
+                      const orderA = indexA === -1 ? 999 : indexA;
+                      const orderB = indexB === -1 ? 999 : indexB;
+                      return orderA - orderB;
+                    });
+                  
+                  // Join sorted section values with horizontal rule separator
+                  rawContent = sortedEntries.map(([_, v]) => v).join('\n\n---\n\n');
+                }
+                
+                // Ensure it's a string at this point
+                if (typeof rawContent !== 'string') {
+                  rawContent = String(rawContent || '');
+                }
+                
+                return rawContent;
+              })()} 
               documentType={document.type}
               documentId={document.id}
               documentTitle={document.type}
@@ -247,6 +357,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ id: s
           <AuditLogViewer logs={auditLogs || []} />
         </TabsContent>
       </Tabs>
+      
+      {/* Floating navigation buttons (scroll-to-top + back) */}
+      <ScrollToTop showBack={true} backHref={`/dashboard/projects/${(document as any).project_id}`} />
     </div>
   )
 }

@@ -3,6 +3,7 @@
   "section_id": "ib_summary",
   "section_name": "Summary",
   "description": "A brief summary (preferably not exceeding 2 pages) highlighting the significant physical, chemical, pharmaceutical, pharmacological, toxicological, pharmacokinetic, metabolic, and clinical information.",
+  "prompt_text": "Write a 2-page executive summary for {{compoundName}} Investigator's Brochure.\n\nSummarize:\n- Physical/chemical properties\n- Pharmacology and mechanism\n- Nonclinical safety\n- Clinical experience\n- Key risks and benefits\n\nFormat in Markdown. Write for {{compoundName}}, not a template.",
   "expected_inputs": [
     "compound_name",
     "indication",

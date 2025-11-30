@@ -3,6 +3,7 @@
   "section_id": "ib_title_page",
   "section_name": "Title Page",
   "description": "Title page with sponsor and product details.",
+  "prompt_text": "Create the title page for {{compoundName}} Investigator's Brochure.\n\nInclude:\n- Product name: {{compoundName}}\n- Sponsor: [Sponsor Name]\n- Version and date\n- Confidentiality statement\n- Regulatory compliance statement\n\nFormat in Markdown.",
   "expected_inputs": [
     "sponsor_name",
     "product_name",

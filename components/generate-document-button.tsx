@@ -1,12 +1,103 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { FileText, Book, FileCheck, FileSignature, Loader2, Microscope, ClipboardList, FileSpreadsheet } from 'lucide-react'
+import { FileText, Book, FileCheck, FileSignature, Loader2, Microscope, ClipboardList, FileSpreadsheet, Clock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { useToast } from '@/components/ui/use-toast'
 
 type DocumentType = 'IB' | 'Protocol' | 'ICF' | 'Synopsis' | 'SAP' | 'CRF'
+
+// Estimated generation times in seconds (based on logs ~900k ms for IB)
+const ESTIMATED_TIMES: Record<DocumentType, number> = {
+  IB: 900,        // ~15 minutes
+  Protocol: 720,  // ~12 minutes
+  ICF: 300,       // ~5 minutes
+  Synopsis: 180,  // ~3 minutes
+  SAP: 420,       // ~7 minutes
+  CRF: 600,       // ~10 minutes
+}
+
+// Section names for each document type
+const DOCUMENT_SECTIONS: Record<DocumentType, string[]> = {
+  IB: [
+    'Title Page',
+    'Table of Contents', 
+    'Summary',
+    'Introduction',
+    'Physical & Chemical Properties',
+    'Nonclinical Studies',
+    'Pharmacokinetics',
+    'Pharmacodynamics',
+    'Toxicology',
+    'Clinical Studies',
+    'Safety Summary'
+  ],
+  Protocol: [
+    'Title Page',
+    'Synopsis',
+    'Background',
+    'Objectives',
+    'Study Design',
+    'Population',
+    'Treatments',
+    'Assessments',
+    'Statistics',
+    'Safety',
+    'Ethics',
+    'Administration'
+  ],
+  ICF: [
+    'Introduction',
+    'Purpose',
+    'Procedures',
+    'Risks',
+    'Benefits',
+    'Alternatives',
+    'Confidentiality',
+    'Compensation',
+    'Contact Information',
+    'Voluntary Participation',
+    'Signatures'
+  ],
+  Synopsis: [
+    'Title',
+    'Objectives',
+    'Design',
+    'Population',
+    'Treatments',
+    'Endpoints',
+    'Statistics',
+    'Timeline'
+  ],
+  SAP: [
+    'Introduction',
+    'Objectives',
+    'Populations',
+    'Endpoints',
+    'Statistical Methods',
+    'Missing Data',
+    'Subgroups',
+    'Tables & Figures'
+  ],
+  CRF: [
+    'Demographics',
+    'Medical History',
+    'Eligibility',
+    'Treatments',
+    'Efficacy',
+    'Safety',
+    'Labs',
+    'Conclusions'
+  ]
+}
+
+// Helper to format time as MM:SS
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
 
 const GENERATION_PHRASES: Record<DocumentType, string[]> = {
   IB: [
@@ -131,8 +222,44 @@ export function GenerateDocumentButton({
   const router = useRouter()
   const [loadingType, setLoadingType] = useState<string | null>(null)
   const [loadingTermIndex, setLoadingTermIndex] = useState(0)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
   const { toast } = useToast()
 
+  // Timer effect - counts elapsed time
+  useEffect(() => {
+    if (!loadingType) {
+      setElapsedSeconds(0)
+      setCurrentSectionIndex(0)
+      startTimeRef.current = null
+      return
+    }
+    
+    startTimeRef.current = Date.now()
+    
+    const timerInterval = setInterval(() => {
+      if (startTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+        setElapsedSeconds(elapsed)
+        
+        // Update current section based on elapsed time
+        const docType = loadingType as DocumentType
+        const sections = DOCUMENT_SECTIONS[docType]
+        const estimatedTime = ESTIMATED_TIMES[docType]
+        const timePerSection = estimatedTime / sections.length
+        const newSectionIndex = Math.min(
+          Math.floor(elapsed / timePerSection),
+          sections.length - 1
+        )
+        setCurrentSectionIndex(newSectionIndex)
+      }
+    }, 1000)
+    
+    return () => clearInterval(timerInterval)
+  }, [loadingType])
+
+  // Phrase rotation effect
   useEffect(() => {
     if (!loadingType) {
       setLoadingTermIndex(0)
@@ -144,7 +271,7 @@ export function GenerateDocumentButton({
     
     const interval = setInterval(() => {
       setLoadingTermIndex(prev => (prev + 1) % phrases.length)
-    }, 2000)
+    }, 3000) // Slower rotation - 3 seconds
     
     return () => clearInterval(interval)
   }, [loadingType])
@@ -247,7 +374,11 @@ export function GenerateDocumentButton({
   if (documentType) {
     const Icon = getIconForType(documentType)
     const loading = isLoading(documentType)
-    const phrases = GENERATION_PHRASES[documentType]
+    const sections = DOCUMENT_SECTIONS[documentType]
+    const estimatedTime = ESTIMATED_TIMES[documentType]
+    const remainingSeconds = Math.max(0, estimatedTime - elapsedSeconds)
+    const progressPercent = Math.min((elapsedSeconds / estimatedTime) * 100, 99) // Cap at 99% until done
+    const currentSection = sections[currentSectionIndex]
     
     return (
       <Button 
@@ -255,20 +386,48 @@ export function GenerateDocumentButton({
         disabled={loadingType !== null || disabled}
         variant={variant}
         size={size}
-        className={`${disabled ? "opacity-50 " : ""}w-full justify-start ${loading ? "h-auto py-2" : ""}`}
+        className={`${disabled ? "opacity-50 " : ""}w-full justify-start ${loading ? "h-auto py-3 px-4" : ""}`}
       >
         {loading ? (
-          <div className="flex flex-col w-full text-left">
-             <div className="flex items-center">
-                <Loader2 className="w-3 h-3 mr-2 animate-spin text-emerald-600" />
-                <span className="text-emerald-700 text-xs animate-pulse font-medium">{phrases[loadingTermIndex]}</span>
-             </div>
-             <div className="h-1 w-full bg-emerald-100/50 mt-1.5 rounded-full overflow-hidden">
-                <div 
-                  className="h-full bg-emerald-400 transition-all duration-500 ease-in-out" 
-                  style={{ width: `${Math.min(((loadingTermIndex + 1) / phrases.length) * 100, 100)}%` }} 
-                />
-             </div>
+          <div className="flex flex-col w-full text-left space-y-2">
+            {/* Timer and estimated time */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Loader2 className="w-4 h-4 animate-spin text-emerald-600" />
+                <span className="text-emerald-800 text-sm font-semibold">
+                  Generating {getLabel(documentType)}
+                </span>
+              </div>
+              <div className="flex items-center gap-1 text-emerald-600">
+                <Clock className="w-3 h-3" />
+                <span className="text-xs font-mono">
+                  {remainingSeconds > 0 ? `~${formatTime(remainingSeconds)} remaining` : 'Finishing...'}
+                </span>
+              </div>
+            </div>
+            
+            {/* Current section being generated */}
+            <div className="flex items-center gap-2">
+              <span className="text-emerald-600 text-xs">
+                Creating section {currentSectionIndex + 1}/{sections.length}:
+              </span>
+              <span className="text-emerald-700 text-xs font-medium animate-pulse">
+                {currentSection}
+              </span>
+            </div>
+            
+            {/* Progress bar */}
+            <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+              <div 
+                className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-1000 ease-linear" 
+                style={{ width: `${progressPercent}%` }} 
+              />
+            </div>
+            
+            {/* Elapsed time */}
+            <div className="text-[10px] text-emerald-500 text-right">
+              Elapsed: {formatTime(elapsedSeconds)}
+            </div>
           </div>
         ) : (
           <>

@@ -1,16 +1,17 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
-import Link from 'next/link'
+
+// Disable caching for this page to always show fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { Database, FileText, Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet, CheckCircle2 } from 'lucide-react'
+import { Database, FileText } from 'lucide-react'
 import { FetchExternalDataButton } from '@/components/fetch-external-data-button'
 import { EvidenceDisplay } from '@/components/evidence-display'
 import { GenerationPipeline } from '@/components/projects/generation-pipeline'
-import { CrossDocPanel } from '@/components/crossdoc'
-import { StudyFlowPanel } from '@/components/study-flow/StudyFlowPanel'
-import { ValidationHistory } from '@/components/integration/ValidationHistory'
-import { ProjectHeader, ProjectTabs, ProjectOverview, PROJECT_TAB_IDS, PROJECT_TAB_ICONS } from '@/components/project'
+import { CrossDocValidation } from '@/components/crossdoc'
+import { ProjectHeader, ProjectTabs, PROJECT_TAB_IDS } from '@/components/project'
 import type { ProjectTab } from '@/components/project'
 
 function getDocumentStatusMeta(status: string | null | undefined) {
@@ -84,117 +85,95 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
   // Auto-update enrichment status if we have evidence but status is not completed
   // This fixes projects stuck in "Awaiting Enrichment" or "Failed" despite having data
-  if (hasExternalData && ['in_progress', 'failed', 'pending', 'skipped'].includes(project.enrichment_status || '')) {
-    await supabase
-      .from('projects')
-      .update({ enrichment_status: 'completed' })
-      .eq('id', id)
-    
-    // Update local project object
-    project.enrichment_status = 'completed'
-  }
+  // DISABLED: Allow manual re-enrichment even if data exists
+  // if (hasExternalData && ['in_progress', 'failed', 'pending', 'skipped'].includes(project.enrichment_status || '')) {
+  //   await supabase
+  //     .from('projects')
+  //     .update({ enrichment_status: 'completed' })
+  //     .eq('id', id)
+  //   
+  //   // Update local project object
+  //   project.enrichment_status = 'completed'
+  // }
 
-  // Get icon component
-  const iconMap: Record<string, any> = {
-    Pill, Syringe, Microscope, Dna, HeartPulse, Stethoscope, TestTube, Activity, Brain, Droplet
-  }
-  const IconComponent = iconMap[project.icon_name || 'Pill'] || Pill
   const enrichmentStatus = getEnrichmentStatusMeta(project.enrichment_status)
+
+  // Calculate stats for overview section
+  // Count unique document types (not versions)
+  const uniqueDocTypes = new Set(documents?.map(d => d.type) || [])
+  const generatedDocuments = uniqueDocTypes.size
+  const totalDocTypes = 6 // IB, Synopsis, Protocol, ICF, SAP, CRF
+  const progress = Math.round((generatedDocuments / totalDocTypes) * 100)
+  const totalEvidence = evidenceSources?.length || 0
 
   // Build tabs configuration
   const tabs: ProjectTab[] = [
     {
-      id: PROJECT_TAB_IDS.OVERVIEW,
-      label: 'Overview',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.OVERVIEW],
-      content: (
-        <ProjectOverview
-          project={project}
-          documents={documents || []}
-          evidenceSources={evidenceSources || []}
-        />
-      )
-    },
-    {
       id: PROJECT_TAB_IDS.DOCUMENTS,
       label: 'Pipeline',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.DOCUMENTS],
       content: (
-        <Card className="border-none shadow-none bg-transparent">
-          <CardHeader className="px-0 pt-0 pb-6">
-            <CardTitle className="text-lg">Documentation Pipeline</CardTitle>
-            <CardDescription>Sequential generation of regulatory documents based on ICH E6 (R2)</CardDescription>
-          </CardHeader>
-          <CardContent className="px-0">
-            {hasExternalData ? (
-              <GenerationPipeline projectId={project.id} documents={documents || []} />
-            ) : (
-              <div className="text-center py-12 border rounded-xl bg-white">
-                <Database className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
-                <h3 className="text-base font-medium text-foreground">Enrichment Required</h3>
-                <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
-                  Please fetch external data first to enable the document generation pipeline.
-                </p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )
-    },
-    {
-      id: PROJECT_TAB_IDS.FILES,
-      label: 'Files',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.FILES],
-      content: (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Generated Documents</CardTitle>
-            <CardDescription className="text-xs">View and manage your project documents</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {!documents || documents.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-8 text-center">
-                <FileText className="h-12 w-12 text-muted-foreground/50" />
-                <p className="mt-2 text-sm font-medium text-muted-foreground">No documents yet</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  {hasExternalData ? 'Generate your first document in the Pipeline tab' : 'Fetch external data to get started'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {documents.map((doc) => (
-                  <Link
-                    key={doc.id}
-                    href={`/dashboard/documents/${doc.id}`}
-                    className="flex items-center justify-between rounded-md px-3 py-2 hover:bg-muted/50 transition-colors border border-transparent hover:border-border"
-                  >
-                    <div className="flex flex-col">
-                      <p className="text-sm font-medium">
-                        {doc.type} 
-                        <span className="text-xs text-muted-foreground"> · v{doc.version}</span>
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Created {new Date(doc.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <Badge
-                      size="sm"
-                      variant={getDocumentStatusMeta(doc.status).variant}
-                    >
-                      {getDocumentStatusMeta(doc.status).label}
-                    </Badge>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <div className="space-y-6">
+          {/* Quick Stats */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Generated</p>
+                    <p className="text-2xl font-bold">
+                      <span className={generatedDocuments === totalDocTypes ? "text-emerald-600" : ""}>
+                        {generatedDocuments}
+                      </span>
+                      <span className="text-muted-foreground text-lg">/{totalDocTypes}</span>
+                    </p>
+                  </div>
+                  <FileText className="h-8 w-8 text-muted-foreground/30" />
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Progress</p>
+                    <p className={`text-2xl font-bold ${progress === 100 ? 'text-emerald-600' : ''}`}>
+                      {progress}%
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-4 pb-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Evidence Sources</p>
+                    <p className="text-2xl font-bold">{totalEvidence}</p>
+                  </div>
+                  <Database className="h-8 w-8 text-muted-foreground/30" />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Pipeline */}
+          {hasExternalData ? (
+            <GenerationPipeline projectId={project.id} documents={documents || []} />
+          ) : (
+            <div className="text-center py-12 border rounded-xl bg-white">
+              <Database className="mx-auto h-10 w-10 text-muted-foreground/50 mb-3" />
+              <h3 className="text-base font-medium text-foreground">Enrichment Required</h3>
+              <p className="text-sm text-muted-foreground max-w-sm mx-auto mt-1 mb-4">
+                Please fetch external data first to enable the document generation pipeline.
+              </p>
+            </div>
+          )}
+        </div>
       )
     },
     {
       id: PROJECT_TAB_IDS.EVIDENCE,
       label: 'Evidence',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.EVIDENCE],
       content: (
         <div className="space-y-4">
           {project.enrichment_status === 'completed' && project.enrichment_metadata && (
@@ -266,72 +245,10 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       )
     },
     {
-      id: PROJECT_TAB_IDS.STUDY_FLOW,
-      label: 'Study Flow',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.STUDY_FLOW],
-      content: (
-        <StudyFlowPanel
-          protocolId={documents?.find(d => d.type === 'Protocol')?.id || ''}
-          studyFlowId={undefined}
-        />
-      )
-    },
-    {
       id: PROJECT_TAB_IDS.CROSS_DOC,
-      label: 'Cross-Document',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.CROSS_DOC],
-      content: (
-        <CrossDocPanel
-          projectId={project.id}
-          documentIds={{
-            ibId: documents?.find(d => d.type === 'IB')?.id,
-            protocolId: documents?.find(d => d.type === 'Protocol')?.id,
-            icfId: documents?.find(d => d.type === 'ICF')?.id,
-            sapId: documents?.find(d => d.type === 'SAP')?.id,
-            csrId: documents?.find(d => d.type === 'CSR')?.id,
-          }}
-        />
-      )
-    },
-    {
-      id: PROJECT_TAB_IDS.VALIDATION,
       label: 'Validation',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.VALIDATION],
-      content: (
-        documents && documents.length > 0 ? (
-          <div className="space-y-4">
-            {documents.map((doc) => (
-              <div key={doc.id}>
-                <h3 className="text-sm font-medium mb-3">{doc.type}</h3>
-                <ValidationHistory documentId={doc.id} />
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-12">
-              <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" />
-              <p className="text-sm font-medium text-muted-foreground">No documents to validate</p>
-              <p className="text-xs text-muted-foreground mt-1">Generate documents first</p>
-            </CardContent>
-          </Card>
-        )
-      )
+      content: <CrossDocValidation projectId={project.id} />
     },
-    {
-      id: PROJECT_TAB_IDS.PROTOCOL_EDITOR,
-      label: 'Protocol Editor',
-      icon: PROJECT_TAB_ICONS[PROJECT_TAB_IDS.PROTOCOL_EDITOR],
-      content: (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <FileText className="h-12 w-12 text-muted-foreground/50 mb-3" />
-            <p className="text-sm font-medium text-muted-foreground">Protocol Editor Coming Soon</p>
-            <p className="text-xs text-muted-foreground mt-1">AI-powered protocol editing with suggestions</p>
-          </CardContent>
-        </Card>
-      )
-    }
   ]
 
   return (
@@ -339,7 +256,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       {/* Header */}
       <ProjectHeader
         project={project}
-        IconComponent={IconComponent}
         enrichmentStatus={enrichmentStatus}
         hasExternalData={!!hasExternalData}
       />
@@ -362,7 +278,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       {/* Tabs */}
       <ProjectTabs
-        defaultTab={PROJECT_TAB_IDS.OVERVIEW}
+        defaultTab={PROJECT_TAB_IDS.DOCUMENTS}
         tabs={tabs}
         className="space-y-6"
       />

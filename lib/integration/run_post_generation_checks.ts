@@ -185,18 +185,32 @@ export async function runPostGenerationChecks({
 export async function getValidationHistory(documentId: string) {
   const supabase = await createClient()
 
+  // First get project_id from document
+  const { data: docData } = await supabase
+    .from('documents')
+    .select('project_id')
+    .eq('id', documentId)
+    .single()
+
+  const projectId = docData?.project_id
+
   const [studyflowHistory, crossdocHistory] = await Promise.all([
+    // Studyflow validations are per-document
     supabase
       .from('studyflow_validations')
       .select('*')
       .eq('document_id', documentId)
       .order('created_at', { ascending: false })
       .limit(10),
-    supabase
-      .from('crossdoc_validations')
-      .select('*')
-      .order('created_at', { ascending: false })
-      .limit(10),
+    // Crossdoc validations are per-project
+    projectId
+      ? supabase
+          .from('crossdoc_validations')
+          .select('*')
+          .eq('project_id', projectId)
+          .order('created_at', { ascending: false })
+          .limit(10)
+      : Promise.resolve({ data: [] }),
   ])
 
   return {

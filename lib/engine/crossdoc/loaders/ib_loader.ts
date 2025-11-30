@@ -17,7 +17,6 @@ export async function loadIbForCrossDoc(docId: string): Promise<StructuredIbDocu
     .from('documents')
     .select('*')
     .eq('id', docId)
-    .eq('type', 'IB')
     .single()
 
   if (error || !doc) {

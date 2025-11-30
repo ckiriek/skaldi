@@ -1,0 +1,22 @@
+{
+  "document_type": "IB",
+  "section_id": "ib_pharmacokinetics",
+  "section_name": "Pharmacokinetics and Product Metabolism",
+  "description": "Pharmacokinetic properties including absorption, distribution, metabolism, and excretion (ADME).",
+  "prompt_text": "Write the Pharmacokinetics section for {{compoundName}} Investigator's Brochure.\n\nYou are writing about the ACTUAL drug {{compoundName}}, not a template. Use real PK data from FDA label, clinical pharmacology studies, and literature.\n\nFormat in Markdown with ## headings, tables, and bullet points.\n\nCover:\n\n## Absorption\nBioavailability, Tmax, Cmax, food effect\n\n## Distribution  \nVd, protein binding, tissue distribution\n\n## Metabolism\nCYP enzymes, metabolites, pathways\n\n## Excretion\nHalf-life, clearance, routes\n\n## Special Populations\nRenal/hepatic impairment, elderly, pediatric\n\n## Drug-Drug Interactions\nCYP interactions, clinically significant DDIs\n\nInclude specific values with units. Write 8-12 pages for {{compoundName}}.",
+  "expected_inputs": [
+    "compound_name",
+    "pharmacokinetics_data",
+    "metabolism_pathways",
+    "drug_interactions"
+  ],
+  "constraints": [
+    "Include ADME parameters with units",
+    "Cite data sources where applicable",
+    "Address special populations",
+    "Follow ICH E6 GCP guidelines"
+  ],
+  "template_type": "mixed_block",
+  "language": "en",
+  "version": 1
+}

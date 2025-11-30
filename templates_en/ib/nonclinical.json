@@ -3,6 +3,7 @@
   "section_id": "ib_nonclinical",
   "section_name": "Nonclinical Studies",
   "description": "Results of all relevant nonclinical pharmacology, toxicology, pharmacokinetic, and investigational product metabolism studies.",
+  "prompt_text": "Write the Nonclinical Studies overview for {{compoundName}} Investigator's Brochure.\n\nSummarize:\n- Nonclinical pharmacology\n- Animal pharmacokinetics\n- Toxicology findings\n\nFormat in Markdown. Write about {{compoundName}} using real preclinical data.",
   "expected_inputs": [
     "nonclinical_pharmacology",
     "pharmacokinetics_animals",

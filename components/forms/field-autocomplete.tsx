@@ -39,6 +39,7 @@ export function FieldAutocomplete({
   const [loading, setLoading] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(-1)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const justSelectedRef = useRef(false) // Flag to skip search after selection
 
   // Debounced search
   const debouncedSearch = useDebouncedCallback(async (searchQuery: string) => {
@@ -80,6 +81,11 @@ export function FieldAutocomplete({
   }, 300)
 
   useEffect(() => {
+    // Skip search if we just selected an item
+    if (justSelectedRef.current) {
+      justSelectedRef.current = false
+      return
+    }
     debouncedSearch(value)
   }, [value, debouncedSearch])
 
@@ -120,12 +126,15 @@ export function FieldAutocomplete({
     else if (item.country) selectedValue = item.country
     else if (item.application_number) selectedValue = item.application_number
 
-    // Close dropdown first to prevent re-search
+    // Set flag to skip next search triggered by onChange
+    justSelectedRef.current = true
+    
+    // Close dropdown and clear suggestions
     setIsOpen(false)
     setSelectedIndex(-1)
     setSuggestions([])
     
-    // Then update value
+    // Update value (this will trigger useEffect but justSelectedRef will skip search)
     onChange(selectedValue)
     onSelect?.(item)
   }

@@ -23,7 +23,6 @@ export async function loadProtocolForCrossDoc(docId: string): Promise<Structured
     .from('documents')
     .select('*')
     .eq('id', docId)
-    .eq('type', 'PROTOCOL')
     .single()
 
   if (error || !doc) {

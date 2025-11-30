@@ -80,10 +80,11 @@ export async function POST(request: NextRequest): Promise<NextResponse<EnrichRes
       .eq('id', project_id)
     
     // 6. Call Edge Function for enrichment
-    const edgeFunctionUrl = `${process.env.SUPABASE_URL}/functions/v1/enrich-data`
-    const edgeFunctionKey = process.env.SUPABASE_ANON_KEY
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL
+    const edgeFunctionUrl = `${supabaseUrl}/functions/v1/enrich-data`
+    const edgeFunctionKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY
     
-    if (!edgeFunctionUrl || !edgeFunctionKey) {
+    if (!supabaseUrl || !edgeFunctionKey) {
       console.error('Missing Supabase configuration')
       await supabase
         .from('projects')

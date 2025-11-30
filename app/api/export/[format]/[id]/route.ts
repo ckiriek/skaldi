@@ -41,11 +41,47 @@ export async function GET(
       .single()
 
     // Use content from document_versions if available, otherwise fall back to document.content
-    const content = version?.content || (document as any).content
+    let rawContent = version?.content || (document as any).content
 
-    if (!content) {
+    if (!rawContent) {
       console.error('No content found in document_versions or document.content')
       return NextResponse.json({ error: 'Document has no content' }, { status: 404 })
+    }
+    
+    // Handle JSON content - convert to markdown
+    let content: string
+    if (typeof rawContent === 'string') {
+      const trimmed = rawContent.trim()
+      if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+        try {
+          const parsed = JSON.parse(rawContent)
+          // If it's an object with section keys, join them
+          if (typeof parsed === 'object' && !Array.isArray(parsed)) {
+            content = Object.entries(parsed)
+              .map(([key, value]) => {
+                const sectionTitle = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+                return `# ${sectionTitle}\n\n${value}`
+              })
+              .join('\n\n---\n\n')
+          } else {
+            content = rawContent
+          }
+        } catch {
+          content = rawContent
+        }
+      } else {
+        content = rawContent
+      }
+    } else if (typeof rawContent === 'object') {
+      // Already parsed JSON object
+      content = Object.entries(rawContent)
+        .map(([key, value]) => {
+          const sectionTitle = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+          return `# ${sectionTitle}\n\n${value}`
+        })
+        .join('\n\n---\n\n')
+    } else {
+      content = String(rawContent)
     }
 
     if (format === 'pdf') {
@@ -78,22 +114,34 @@ async function exportToPDF(document: any, content: string) {
     format: 'a4',
   })
 
-  let yPosition = 20
+  // Set default font with proper character spacing
+  pdf.setFont('helvetica', 'normal')
+  
+  let yPosition = 25
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
   const margin = 20
   const maxWidth = pageWidth - 2 * margin
   const tocItems: TocItem[] = []
+  const lineHeight = 4.5 // Tighter line height
+
+  // Helper to render text without justify issues
+  const renderText = (text: string, x: number, y: number, options: any = {}) => {
+    // Split long text into lines
+    const lines = pdf.splitTextToSize(text, options.maxWidth || maxWidth)
+    lines.forEach((line: string, i: number) => {
+      pdf.text(line, x, y + i * lineHeight)
+    })
+    return lines.length
+  }
 
   // Add title page
-  pdf.setFontSize(16)
+  pdf.setFontSize(14)
   pdf.setFont('helvetica', 'bold')
-  const typeLines = pdf.splitTextToSize(document.type.toUpperCase(), maxWidth)
-  pdf.text(typeLines, pageWidth / 2, 80, { align: 'center' })
+  pdf.text(document.type.toUpperCase(), pageWidth / 2, 80, { align: 'center' })
   
-  pdf.setFontSize(20)
-  const titleLines = pdf.splitTextToSize(document.type, maxWidth - 40)
-  pdf.text(titleLines, pageWidth / 2, 100, { align: 'center' })
+  pdf.setFontSize(16)
+  pdf.text(document.type, pageWidth / 2, 92, { align: 'center' })
   
   pdf.setFontSize(10)
   pdf.setFont('helvetica', 'normal')
@@ -102,7 +150,7 @@ async function exportToPDF(document: any, content: string) {
     month: 'long', 
     day: 'numeric' 
   })
-  pdf.text(`Generated: ${date}`, pageWidth / 2, 120, { align: 'center' })
+  pdf.text(`Generated: ${date}`, pageWidth / 2, 105, { align: 'center' })
 
   // Parse markdown and render
   const tokens = marked.lexer(content)
@@ -157,57 +205,95 @@ async function exportToPDF(document: any, content: string) {
 
   // Add content
   pdf.addPage()
-  yPosition = 20
+  yPosition = 25
 
   tokens.forEach((token: any) => {
     // Check if we need a new page
-    if (yPosition > pageHeight - 40) {
+    if (yPosition > pageHeight - 35) {
       pdf.addPage()
-      yPosition = 20
+      yPosition = 25
     }
 
     switch (token.type) {
       case 'heading':
-        if (yPosition > 20) yPosition += 8
+        // Add space before heading
+        if (yPosition > 30) yPosition += 8
         
-        const fontSize = token.depth === 1 ? 16 : token.depth === 2 ? 14 : 12
+        // Check page break before heading
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 20
+        }
+        
+        const fontSize = token.depth === 1 ? 13 : token.depth === 2 ? 11 : 10
+        
         pdf.setFontSize(fontSize)
         pdf.setFont('helvetica', 'bold')
         
-        const headingLines = pdf.splitTextToSize(token.text, maxWidth)
-        pdf.text(headingLines, margin, yPosition)
-        yPosition += headingLines.length * (fontSize * 0.5) + 6
+        // Render heading line by line
+        const headingLines = pdf.splitTextToSize(token.text || '', maxWidth)
+        headingLines.forEach((line: string, i: number) => {
+          pdf.text(line, margin, yPosition + i * (fontSize * 0.45))
+        })
+        yPosition += headingLines.length * (fontSize * 0.45) + 5
         
         pdf.setFont('helvetica', 'normal')
         pdf.setFontSize(10)
         break
 
       case 'paragraph':
-        const paraLines = pdf.splitTextToSize(token.text, maxWidth)
-        pdf.text(paraLines, margin, yPosition)
-        yPosition += paraLines.length * 5 + 4
+        // Clean text from markdown artifacts
+        const cleanText = (token.text || '')
+          .replace(/\*\*(.*?)\*\*/g, '$1')
+          .replace(/\*(.*?)\*/g, '$1')
+          .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+        
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'normal')
+        
+        const paraLines = pdf.splitTextToSize(cleanText, maxWidth)
+        
+        // Check if we need a new page
+        const paraHeight = paraLines.length * lineHeight + 2
+        if (yPosition + paraHeight > pageHeight - 20) {
+          pdf.addPage()
+          yPosition = 20
+        }
+        
+        // Render each line separately to avoid spacing issues
+        paraLines.forEach((line: string, i: number) => {
+          pdf.text(line, margin, yPosition + i * lineHeight)
+        })
+        yPosition += paraHeight
         break
 
       case 'list':
-        token.items.forEach((item: any) => {
-          if (yPosition > pageHeight - 40) {
+        pdf.setFontSize(10)
+        pdf.setFont('helvetica', 'normal')
+        
+        const items = token.items || []
+        items.forEach((item: any, idx: number) => {
+          if (yPosition > pageHeight - 30) {
             pdf.addPage()
             yPosition = 20
           }
           
-          const bullet = token.ordered ? `${item.index}. ` : '• '
-          const itemText = bullet + item.text
-          const itemLines = pdf.splitTextToSize(itemText, maxWidth - 5)
-          pdf.text(itemLines, margin + 5, yPosition)
-          yPosition += itemLines.length * 5 + 2
+          const bullet = token.ordered ? `${idx + 1}. ` : '- '
+          const itemText = bullet + (item.text || '')
+          const itemLines = pdf.splitTextToSize(itemText, maxWidth - 10)
+          
+          itemLines.forEach((line: string, i: number) => {
+            pdf.text(line, margin + 5, yPosition + i * lineHeight)
+          })
+          yPosition += itemLines.length * lineHeight + 1
         })
-        yPosition += 4
+        yPosition += 2
         break
 
       case 'table':
         if (yPosition > pageHeight - 60) {
           pdf.addPage()
-          yPosition = 20
+          yPosition = 25
         }
 
         const tableData = token.rows.map((row: any) => 
@@ -232,10 +318,44 @@ async function exportToPDF(document: any, content: string) {
         yPosition += 4
         break
 
+      case 'hr':
+        if (yPosition > pageHeight - 30) {
+          pdf.addPage()
+          yPosition = 25
+        }
+        yPosition += 5
+        pdf.setDrawColor(200, 200, 200)
+        pdf.line(margin, yPosition, pageWidth - margin, yPosition)
+        yPosition += 10
+        break
+
+      case 'blockquote':
+        if (yPosition > pageHeight - 40) {
+          pdf.addPage()
+          yPosition = 25
+        }
+        
+        const quoteText = token.text || (token.tokens?.[0]?.text) || ''
+        const quoteLines = pdf.splitTextToSize(quoteText, maxWidth - 15)
+        
+        // Draw left border
+        pdf.setDrawColor(180, 180, 180)
+        pdf.setLineWidth(2)
+        pdf.line(margin, yPosition - 2, margin, yPosition + quoteLines.length * 5 + 4)
+        pdf.setLineWidth(0.5)
+        
+        // Draw text
+        pdf.setFont('helvetica', 'italic')
+        pdf.text(quoteLines, margin + 10, yPosition)
+        pdf.setFont('helvetica', 'normal')
+        
+        yPosition += quoteLines.length * 5 + 8
+        break
+
       case 'code':
         if (yPosition > pageHeight - 40) {
           pdf.addPage()
-          yPosition = 20
+          yPosition = 25
         }
         
         pdf.setFont('courier', 'normal')
@@ -405,6 +525,32 @@ async function exportToDOCX(document: any, content: string) {
           new Paragraph({
             children: [new TextRun({ text: token.text, font: 'Courier New' })],
             shading: { fill: 'F5F5F5' },
+            spacing: { before: 200, after: 200 },
+          })
+        )
+        break
+
+      case 'hr':
+        docChildren.push(
+          new Paragraph({
+            text: '',
+            border: {
+              bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' }
+            },
+            spacing: { before: 200, after: 200 },
+          })
+        )
+        break
+
+      case 'blockquote':
+        const quoteText = token.text || (token.tokens?.[0]?.text) || ''
+        docChildren.push(
+          new Paragraph({
+            children: [new TextRun({ text: quoteText, italics: true })],
+            indent: { left: 720 }, // 0.5 inch
+            border: {
+              left: { style: BorderStyle.SINGLE, size: 24, color: 'CCCCCC' }
+            },
             spacing: { before: 200, after: 200 },
           })
         )

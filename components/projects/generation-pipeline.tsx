@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { Check, Lock, Play, FileText, Book, FileSignature, Activity, Database, Loader2, Eye, RefreshCw, ArrowRight } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Check, Lock, Play, FileText, Book, FileSignature, Activity, Database, Loader2, Eye, RefreshCw, ArrowRight, Clock, Download, FileDown } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { useRouter } from 'next/navigation'
@@ -10,6 +10,33 @@ import { Progress } from '@/components/ui/progress'
 import { ValidationResultsCard, ValidationResults } from '@/components/documents/validation-results-card'
 
 type DocType = 'IB' | 'Synopsis' | 'Protocol' | 'ICF' | 'SAP' | 'CRF'
+
+// Estimated generation times in seconds (based on logs)
+const ESTIMATED_TIMES: Record<DocType, number> = {
+  IB: 900,        // ~15 minutes
+  Synopsis: 180,  // ~3 minutes
+  Protocol: 720,  // ~12 minutes
+  ICF: 300,       // ~5 minutes
+  SAP: 420,       // ~7 minutes
+  CRF: 600,       // ~10 minutes
+}
+
+// Section names for progress display
+const DOCUMENT_SECTIONS: Record<DocType, string[]> = {
+  IB: ['Title Page', 'Summary', 'Introduction', 'Physical Properties', 'Nonclinical', 'PK/PD', 'Toxicology', 'Clinical Studies', 'Safety'],
+  Synopsis: ['Title', 'Objectives', 'Design', 'Population', 'Treatments', 'Endpoints', 'Statistics', 'Timeline'],
+  Protocol: ['Synopsis', 'Background', 'Objectives', 'Design', 'Population', 'Treatments', 'Assessments', 'Statistics', 'Safety', 'Ethics'],
+  ICF: ['Introduction', 'Purpose', 'Procedures', 'Risks', 'Benefits', 'Confidentiality', 'Compensation', 'Contact', 'Signatures'],
+  SAP: ['Introduction', 'Objectives', 'Populations', 'Endpoints', 'Methods', 'Missing Data', 'Subgroups', 'Tables'],
+  CRF: ['Demographics', 'Medical History', 'Eligibility', 'Treatments', 'Efficacy', 'Safety', 'Labs', 'Conclusions']
+}
+
+// Helper to format time as MM:SS
+const formatTime = (seconds: number): string => {
+  const mins = Math.floor(seconds / 60)
+  const secs = Math.floor(seconds % 60)
+  return `${mins}:${secs.toString().padStart(2, '0')}`
+}
 
 const STEPS: { type: DocType; label: string; icon: any; description: string }[] = [
   { type: 'IB', label: "Investigator's Brochure", icon: Book, description: "Comprehensive summary of clinical and nonclinical data" },
@@ -137,6 +164,9 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
   const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0)
   const [animatingSuccess, setAnimatingSuccess] = useState<DocType | null>(null)
   const [validationResults, setValidationResults] = useState<{ type: DocType; validation: ValidationResults } | null>(null)
+  const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [currentSectionIndex, setCurrentSectionIndex] = useState(0)
+  const startTimeRef = useRef<number | null>(null)
 
   // Calculate status for each step
   const stepStatus = STEPS.map((step, index) => {
@@ -158,7 +188,38 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
   const uniqueDocTypes = new Set(documents.map(d => d.type)).size
   const progress = Math.round((uniqueDocTypes / STEPS.length) * 100)
 
-  // Animation loop for phrases
+  // Timer effect - counts elapsed time and updates current section
+  useEffect(() => {
+    if (!loadingType) {
+      setElapsedSeconds(0)
+      setCurrentSectionIndex(0)
+      startTimeRef.current = null
+      return
+    }
+    
+    startTimeRef.current = Date.now()
+    
+    const timerInterval = setInterval(() => {
+      if (startTimeRef.current) {
+        const elapsed = Math.floor((Date.now() - startTimeRef.current) / 1000)
+        setElapsedSeconds(elapsed)
+        
+        // Update current section based on elapsed time
+        const sections = DOCUMENT_SECTIONS[loadingType]
+        const estimatedTime = ESTIMATED_TIMES[loadingType]
+        const timePerSection = estimatedTime / sections.length
+        const newSectionIndex = Math.min(
+          Math.floor(elapsed / timePerSection),
+          sections.length - 1
+        )
+        setCurrentSectionIndex(newSectionIndex)
+      }
+    }, 1000)
+    
+    return () => clearInterval(timerInterval)
+  }, [loadingType])
+
+  // Animation loop for phrases (slower)
   useEffect(() => {
     if (!loadingType) {
       setLoadingPhraseIndex(0)
@@ -167,7 +228,7 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
     
     const interval = setInterval(() => {
       setLoadingPhraseIndex(prev => (prev + 1) % GENERATION_PHRASES[loadingType].length)
-    }, 2000)
+    }, 3000) // Slower - 3 seconds
     
     return () => clearInterval(interval)
   }, [loadingType])
@@ -184,9 +245,14 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
       })
 
       const data = await response.json()
+      
+      console.log('[DEBUG] API Response:', { ok: response.ok, status: response.status, data })
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Generation failed')
+        const errorDetails = data.details ? JSON.stringify(data.details) : ''
+        const errorContext = data.context ? ` (${data.context})` : ''
+        const fullError = `${data.error || 'Generation failed'}${errorContext}${errorDetails ? ': ' + errorDetails : ''}`
+        throw new Error(fullError)
       }
 
       // Store validation results if available
@@ -206,10 +272,24 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
       
       router.refresh()
     } catch (error) {
-      console.error('Generation error:', error)
+      console.error('[ERROR] Generation error:', error)
+      console.error('[ERROR] Error type:', typeof error)
+      console.error('[ERROR] Error keys:', error ? Object.keys(error) : 'null')
+      
+      let errorMessage = "Unknown error"
+      if (error instanceof Error) {
+        errorMessage = error.message
+      } else if (typeof error === 'object' && error !== null) {
+        errorMessage = JSON.stringify(error)
+      } else if (typeof error === 'string') {
+        errorMessage = error
+      }
+      
+      console.error('[ERROR] Final error message:', errorMessage)
+      
       toast({
         title: "Generation Failed",
-        description: error instanceof Error ? error.message : "Unknown error",
+        description: errorMessage,
         variant: "error",
       })
     } finally {
@@ -223,7 +303,23 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
       <div className="space-y-2">
         <div className="flex justify-between items-center text-sm">
           <span className="font-medium text-muted-foreground">Documentation Suite Progress</span>
-          <span className="font-bold text-emerald-600">{progress}%</span>
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-emerald-600">{progress}%</span>
+            {progress === 100 && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-7 text-xs gap-1.5 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+                onClick={() => {
+                  // Direct download of ZIP file
+                  window.open(`/api/projects/${projectId}/download-all`, '_blank')
+                }}
+              >
+                <Download className="h-3.5 w-3.5" />
+                Download All
+              </Button>
+            )}
+          </div>
         </div>
         <Progress value={progress} className="h-2 bg-muted/50" indicatorClassName="bg-emerald-500" />
         <div className="flex justify-between text-[10px] uppercase tracking-wider text-muted-foreground/70 pt-1">
@@ -296,9 +392,40 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
                   </p>
 
                   {isGenerating && (
-                    <div className="text-xs font-medium text-blue-600 flex items-center gap-2 animate-pulse">
-                       <Loader2 className="h-3 w-3 animate-spin" />
-                       {GENERATION_PHRASES[step.type][loadingPhraseIndex]}...
+                    <div className="space-y-2 mt-2">
+                      {/* Timer and remaining time */}
+                      <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center gap-2 text-emerald-700">
+                          <Clock className="h-3 w-3" />
+                          <span className="font-mono">
+                            {Math.max(0, ESTIMATED_TIMES[step.type] - elapsedSeconds) > 0 
+                              ? `~${formatTime(Math.max(0, ESTIMATED_TIMES[step.type] - elapsedSeconds))} remaining`
+                              : 'Finishing up...'}
+                          </span>
+                        </div>
+                        <span className="text-muted-foreground font-mono">
+                          {formatTime(elapsedSeconds)} elapsed
+                        </span>
+                      </div>
+                      
+                      {/* Current section */}
+                      <div className="flex items-center gap-2 text-xs">
+                        <Loader2 className="h-3 w-3 animate-spin text-emerald-600" />
+                        <span className="text-emerald-600">
+                          Section {currentSectionIndex + 1}/{DOCUMENT_SECTIONS[step.type].length}:
+                        </span>
+                        <span className="text-emerald-700 font-medium animate-pulse">
+                          {DOCUMENT_SECTIONS[step.type][currentSectionIndex]}
+                        </span>
+                      </div>
+                      
+                      {/* Progress bar */}
+                      <div className="h-1.5 w-full bg-emerald-100 rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-emerald-400 to-emerald-500 transition-all duration-1000 ease-linear" 
+                          style={{ width: `${Math.min((elapsedSeconds / ESTIMATED_TIMES[step.type]) * 100, 99)}%` }} 
+                        />
+                      </div>
                     </div>
                   )}
                   
@@ -323,6 +450,23 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
                         <Eye className="h-4 w-4 mr-2" />
                         View
                       </Button>
+                      {/* Export buttons - download from Storage */}
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => window.open(`/api/documents/${step.docId}/download?format=pdf`, '_blank')}
+                          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 transition-colors"
+                        >
+                          <FileDown className="h-3 w-3" />
+                          PDF
+                        </button>
+                        <button
+                          onClick={() => window.open(`/api/documents/${step.docId}/download?format=docx`, '_blank')}
+                          className="text-[10px] text-muted-foreground hover:text-foreground flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 transition-colors"
+                        >
+                          <FileDown className="h-3 w-3" />
+                          DOCX
+                        </button>
+                      </div>
                       <button 
                         onClick={() => handleGenerate(step.type)}
                         className="text-[10px] text-muted-foreground hover:text-foreground flex items-center justify-end gap-1 transition-colors"

@@ -3,6 +3,7 @@
   "section_id": "ib_introduction",
   "section_name": "Introduction",
   "description": "Chemical name, generic name, trade name, active ingredients, pharmacological class, and rationale for performing research.",
+  "prompt_text": "Write the Introduction section for {{compoundName}} Investigator's Brochure.\n\nInclude:\n- Chemical and generic names\n- Pharmacological class\n- Molecular structure reference\n- Rationale for development in {{indication}}\n\nFormat in Markdown. Write about the ACTUAL drug {{compoundName}}.",
   "expected_inputs": [
     "chemical_name",
     "generic_name",
