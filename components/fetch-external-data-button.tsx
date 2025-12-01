@@ -4,11 +4,12 @@ import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Progress } from '@/components/ui/progress'
-import { Database, Loader2, FlaskConical, BookOpen, Shield, CheckCircle, XCircle } from 'lucide-react'
+import { RefreshCw, Loader2, FlaskConical, BookOpen, Shield, CheckCircle, XCircle } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface FetchExternalDataButtonProps {
   projectId: string
+  variant?: 'default' | 'compact'
 }
 
 type SourceStatus = 'pending' | 'loading' | 'success' | 'error'
@@ -17,6 +18,13 @@ interface ProgressState {
   clinicalTrials: SourceStatus
   publications: SourceStatus
   safetyData: SourceStatus
+}
+
+interface SafetySummary {
+  totalReports: number
+  seriousReports: number
+  deathReports: number
+  hospitalizationReports: number
 }
 
 export function FetchExternalDataButton({ projectId }: FetchExternalDataButtonProps) {
@@ -106,16 +114,16 @@ export function FetchExternalDataButton({ projectId }: FetchExternalDataButtonPr
         variant="outline"
         size="sm"
       >
-        <Database className="w-4 h-4 mr-2" />
-        Fetch External Data
+        <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+        Refresh Evidence
       </Button>
 
       <Dialog open={loading} onOpenChange={setLoading}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Fetching External Data</DialogTitle>
+            <DialogTitle>Enriching Evidence Data</DialogTitle>
             <DialogDescription>
-              Please wait while we gather data from multiple sources...
+              Fetching clinical trials (2015+), publications (RCT/Meta-Analysis), and safety reports...
             </DialogDescription>
           </DialogHeader>
           
@@ -185,11 +193,17 @@ export function FetchExternalDataButton({ projectId }: FetchExternalDataButtonPr
             {/* Results Summary */}
             {results && (
               <div className="pt-2 border-t">
-                <p className="text-sm font-medium mb-2">Results:</p>
+                <p className="text-sm font-medium mb-2">Enrichment Complete:</p>
                 <div className="space-y-1 text-sm text-gray-600">
-                  <p>✅ {results.clinicalTrials} clinical trials</p>
-                  <p>✅ {results.publications} publications</p>
-                  <p>✅ {results.safetyData} safety reports</p>
+                  <p>✅ {results.clinicalTrials} clinical trials (Phase 2-4, 2015+)</p>
+                  <p>✅ {results.publications} publications (RCT, Meta-Analysis)</p>
+                  <p>✅ {results.safetyData} safety signals from FAERS</p>
+                  {results.safetySummary && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      📊 {results.safetySummary.totalReports?.toLocaleString()} total FAERS reports
+                      {results.safetySummary.seriousReports > 0 && ` | ${results.safetySummary.seriousReports?.toLocaleString()} serious`}
+                    </p>
+                  )}
                 </div>
               </div>
             )}

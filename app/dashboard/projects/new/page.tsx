@@ -177,28 +177,28 @@ export default function NewProjectPage() {
   }, [formData.compound_name])
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4">
+    <div className="max-w-6xl mx-auto space-y-3 px-4">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">New Project</h1>
+        <h1 className="text-xl font-semibold tracking-tight">New Project</h1>
         <p className="mt-1 text-sm text-muted-foreground">Create a new clinical trial project</p>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Card>
-          <CardHeader className="pb-4">
+          <CardHeader className="pb-2">
             <CardTitle>Project Details</CardTitle>
             <CardDescription>
               Enter the basic information about your clinical trial
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-5 pt-0">
+          <CardContent className="space-y-3 pt-0">
             {submitError && (
               <Alert variant="error">
                 <AlertDescription>{submitError}</AlertDescription>
               </Alert>
             )}
             {/* Product Type Selection - Improved UX */}
-            <div className="space-y-2.5">
+            <div className="space-y-1.5">
               <div>
                 <Label className="text-sm font-medium">Product Type *</Label>
                 <p className="text-xs text-muted-foreground mt-0.5">Most common: Generic Drug (auto-fetches RLD data)</p>
@@ -213,7 +213,7 @@ export default function NewProjectPage() {
                 {/* Generic Drug - Most common, now first */}
                 <div
                   className={cn(
-                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
+                    'flex items-start gap-2 rounded-md border px-2.5 py-1.5 cursor-pointer transition-all',
                     formData.product_type === 'generic'
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
@@ -233,7 +233,7 @@ export default function NewProjectPage() {
                 {/* New Drug (Innovator) */}
                 <div
                   className={cn(
-                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
+                    'flex items-start gap-2 rounded-md border px-2.5 py-1.5 cursor-pointer transition-all',
                     formData.product_type === 'innovator'
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
@@ -253,7 +253,7 @@ export default function NewProjectPage() {
                 {/* Other (Combination/Biosimilar) */}
                 <div
                   className={cn(
-                    'flex items-start gap-2.5 rounded-lg border px-3 py-2.5 cursor-pointer transition-all',
+                    'flex items-start gap-2 rounded-md border px-2.5 py-1.5 cursor-pointer transition-all',
                     formData.product_type === 'hybrid'
                       ? 'border-primary bg-primary/5 shadow-sm'
                       : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
@@ -274,7 +274,7 @@ export default function NewProjectPage() {
 
             {/* Title */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Project Title *
               </label>
               <Input
@@ -286,8 +286,8 @@ export default function NewProjectPage() {
             </div>
 
             {/* Compound Name */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-foreground mb-2">
+            <div className="space-y-1">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Compound / Drug Name *
               </label>
               <FieldAutocomplete
@@ -340,7 +340,7 @@ export default function NewProjectPage() {
 
             {/* Sponsor */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Sponsor Organization *
               </label>
               <Input
@@ -357,7 +357,7 @@ export default function NewProjectPage() {
             {/* RLD Brand Name - shown only for Generic if not selected via SmartPrefill */}
             {formData.product_type === 'generic' && !formData.rld_brand_name && (
               <div>
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   RLD Brand Name *
                 </label>
                 <FieldAutocomplete
@@ -392,14 +392,14 @@ export default function NewProjectPage() {
 
             {/* Phase */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Phase *
               </label>
               <select
                 required
                 value={formData.phase}
                 onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
               >
                 <option value="Phase 1">Phase 1</option>
                 <option value="Phase 2">Phase 2</option>
@@ -429,7 +429,7 @@ export default function NewProjectPage() {
 
             {/* Countries */}
             <div>
-              <label className="block text-sm font-medium text-foreground mb-2">
+              <label className="block text-sm font-medium text-foreground mb-1">
                 Countries
               </label>
               <FieldAutocomplete
@@ -450,13 +450,13 @@ export default function NewProjectPage() {
               
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Design Type
                   </label>
                   <select
                     value={formData.design_type}
                     onChange={(e) => setFormData({ ...formData, design_type: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                   >
                     <option value="randomized">Randomized</option>
                     <option value="non-randomized">Non-randomized</option>
@@ -465,13 +465,13 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Blinding
                   </label>
                   <select
                     value={formData.blinding}
                     onChange={(e) => setFormData({ ...formData, blinding: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                   >
                     <option value="open-label">Open Label</option>
                     <option value="single-blind">Single Blind</option>
@@ -480,13 +480,13 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Number of Arms
                   </label>
                   <select
                     value={formData.number_of_arms}
                     onChange={(e) => setFormData({ ...formData, number_of_arms: e.target.value, arms: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                   >
                     <option value="1">1 (Single arm)</option>
                     <option value="2">2 (Two arms)</option>
@@ -496,7 +496,7 @@ export default function NewProjectPage() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Duration (weeks)
                   </label>
                   <Input
@@ -509,13 +509,13 @@ export default function NewProjectPage() {
 
                 {/* Comparator Type */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Comparator Type
                   </label>
                   <select
                     value={formData.comparator_type}
                     onChange={(e) => setFormData({ ...formData, comparator_type: e.target.value as 'placebo' | 'active' | 'none' })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                   >
                     <option value="placebo">Placebo</option>
                     <option value="active">Active Comparator</option>
@@ -526,7 +526,7 @@ export default function NewProjectPage() {
                 {/* Comparator Name - shown only for active comparator */}
                 {formData.comparator_type === 'active' && (
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Comparator Name
                     </label>
                     <Input
@@ -539,13 +539,13 @@ export default function NewProjectPage() {
 
                 {/* Randomization Ratio */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Randomization Ratio
                   </label>
                   <select
                     value={formData.randomization_ratio}
                     onChange={(e) => setFormData({ ...formData, randomization_ratio: e.target.value })}
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                    className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                   >
                     <option value="1:1">1:1</option>
                     <option value="2:1">2:1</option>
@@ -558,7 +558,7 @@ export default function NewProjectPage() {
 
                 {/* Target Sample Size */}
                 <div>
-                  <label className="block text-sm font-medium text-foreground mb-2">
+                  <label className="block text-sm font-medium text-foreground mb-1">
                     Target Sample Size
                   </label>
                   <Input
@@ -579,13 +579,13 @@ export default function NewProjectPage() {
                 <h4 className="text-sm font-medium text-foreground mb-2">Rescue Therapy</h4>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-sm font-medium text-foreground mb-2">
+                    <label className="block text-sm font-medium text-foreground mb-1">
                       Rescue Allowed
                     </label>
                     <select
                       value={formData.rescue_allowed}
                       onChange={(e) => setFormData({ ...formData, rescue_allowed: e.target.value as 'yes' | 'no' | 'conditional' })}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
                     >
                       <option value="yes">Yes</option>
                       <option value="no">No</option>
@@ -595,7 +595,7 @@ export default function NewProjectPage() {
                   
                   {formData.rescue_allowed !== 'no' && (
                     <div>
-                      <label className="block text-sm font-medium text-foreground mb-2">
+                      <label className="block text-sm font-medium text-foreground mb-1">
                         Rescue Criteria
                       </label>
                       <Input
@@ -627,7 +627,7 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Secondary Endpoints
                 </label>
                 <Input
@@ -644,7 +644,7 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Visit Schedule
                 </label>
                 <Input
@@ -669,7 +669,7 @@ export default function NewProjectPage() {
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-foreground mb-2">
+                <label className="block text-sm font-medium text-foreground mb-1">
                   Analysis Populations
                 </label>
                 <Input

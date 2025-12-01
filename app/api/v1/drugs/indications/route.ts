@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
     try {
       console.log('🔬 Searching ClinicalTrials.gov for:', drug)
       const ctResponse = await fetch(
-        `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=20`
+        `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=50`
       )
 
       if (ctResponse.ok) {
@@ -65,10 +65,10 @@ export async function GET(request: NextRequest) {
             }
           }
 
-          // Sort by frequency and take top 5
+          // Sort by frequency and take top 15
           const sortedConditions = Array.from(conditionCounts.entries())
             .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
+            .slice(0, 15)
 
           for (const [condition, count] of sortedConditions) {
             // Only add if not already from DailyMed
@@ -99,7 +99,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: sortedIndications.slice(0, 10), // Limit to 10
+      data: sortedIndications.slice(0, 15), // Limit to 15
       drug,
       total: sortedIndications.length
     })

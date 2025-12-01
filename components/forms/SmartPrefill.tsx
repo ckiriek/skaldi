@@ -119,13 +119,46 @@ export function SmartPrefill({
       let safetySignals: Array<{ term: string; frequency?: number }> = []
       
       if (kgData.success && kgData.data) {
-        // Formulations
+        // Formulations - deduplicate by route and show all unique routes
         if (kgData.data.formulations && Array.isArray(kgData.data.formulations)) {
-          formulations = kgData.data.formulations.slice(0, 4).map((f: any) => ({
-            dosageForm: f.dosageForms?.[0] || 'Tablet',
-            route: f.routes?.[0] || 'Oral',
-            strengths: f.strengths || []
-          }))
+          const seenRoutes = new Set<string>()
+          const uniqueFormulations: FormulationOption[] = []
+          
+          for (const f of kgData.data.formulations) {
+            const route = f.routes?.[0]?.toUpperCase() || ''
+            const dosageForm = f.dosageForms?.[0] || ''
+            
+            // Skip if no route or dosage form
+            if (!route && !dosageForm) continue
+            
+            // Create unique key based on route + dosageForm
+            const key = `${route}:${dosageForm}`
+            if (!seenRoutes.has(key)) {
+              seenRoutes.add(key)
+              uniqueFormulations.push({
+                dosageForm: dosageForm || 'Unknown',
+                route: route || 'Unknown',
+                strengths: f.strengths || []
+              })
+            }
+          }
+          
+          // Sort to prioritize common routes: ORAL, INTRAVENOUS, then others
+          const routePriority: Record<string, number> = {
+            'ORAL': 1,
+            'INTRAVENOUS': 2,
+            'INTRAMUSCULAR': 3,
+            'SUBCUTANEOUS': 4,
+            'OPHTHALMIC': 5,
+            'TOPICAL': 6
+          }
+          uniqueFormulations.sort((a, b) => {
+            const priorityA = routePriority[a.route] || 99
+            const priorityB = routePriority[b.route] || 99
+            return priorityA - priorityB
+          })
+          
+          formulations = uniqueFormulations.slice(0, 6) // Show up to 6 formulations
         }
         // Safety signals
         if (kgData.data.safetySignals) {
@@ -135,8 +168,8 @@ export function SmartPrefill({
 
       setData({
         formulations,
-        rldBrands: rldData.success ? rldData.data?.slice(0, 5) || [] : [],
-        indications: indicationsData.success ? indicationsData.data?.slice(0, 5) || [] : [],
+        rldBrands: rldData.success ? rldData.data || [] : [], // Show all RLDs from Orange Book
+        indications: indicationsData.success ? indicationsData.data?.slice(0, 12) || [] : [], // Show up to 12 indications
         primaryEndpoints: [], // Will be fetched when indication is selected
         secondaryEndpoints: [],
         safetySignals,

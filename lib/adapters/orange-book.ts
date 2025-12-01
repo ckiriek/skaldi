@@ -195,22 +195,20 @@ export class OrangeBookAdapter {
   }
 
   /**
-   * Search for RLD by brand name
+   * Search for RLD by brand name or generic name (INN)
    * 
-   * @param brandName - e.g., "GLUCOPHAGE"
+   * @param searchTerm - e.g., "GLUCOPHAGE" or "metformin"
    * @returns Array of RLD information
    */
-  async searchRLDByBrandName(brandName: string): Promise<RLDInfo[]> {
+  async searchRLDByBrandName(searchTerm: string): Promise<RLDInfo[]> {
     try {
       await this.rateLimit()
 
-      // Use wildcard for partial matching (e.g., "gluco" matches "Glucophage")
-      // Also search generic_name to allow finding brands by active ingredient
-      // AND search products.brand_name because some discontinued RLDs lack the openfda section
-      // NOTE: Do NOT use quotes with wildcards (e.g. "term"*) as it breaks OpenFDA search
+      // Search by brand name, generic name, and products.brand_name
+      // Use wildcard for partial matching
       const url = this.buildUrl({
-        search: `openfda.brand_name:${brandName}* OR openfda.generic_name:${brandName}* OR products.brand_name:${brandName}*`,
-        limit: '10',
+        search: `openfda.brand_name:${searchTerm}* OR openfda.generic_name:${searchTerm}* OR products.brand_name:${searchTerm}*`,
+        limit: '50', // Increased to find all RLDs
       })
 
       console.log('🔶 Orange Book search URL:', url)
@@ -223,7 +221,7 @@ export class OrangeBookAdapter {
         console.error('🔶 Orange Book error response:', errorText)
         
         if (response.status === 404) {
-          console.warn(`Orange Book: No data found for ${brandName}`)
+          console.warn(`Orange Book: No data found for ${searchTerm}`)
           return []
         }
         throw new Error(`Orange Book API error: ${response.status} - ${errorText}`)
@@ -236,37 +234,49 @@ export class OrangeBookAdapter {
       }
 
       const rldInfos: RLDInfo[] = []
+      const seenApps = new Set<string>() // Deduplicate by application number
 
       for (const result of data.results) {
         const openfda = result.openfda || {}
-        const rldProduct = result.products?.find(p => p.reference_drug === 'Yes')
         
-        if (!rldProduct) continue
+        // Find ALL RLD products in this application
+        const rldProducts = result.products?.filter(p => p.reference_drug === 'Yes') || []
+        
+        for (const rldProduct of rldProducts) {
+          const appNumber = result.application_number || ''
+          const productKey = `${appNumber}-${rldProduct.dosage_form}-${rldProduct.route}`
+          
+          if (seenApps.has(productKey)) continue
+          seenApps.add(productKey)
 
-        const approvalSubmission = result.submissions?.find(
-          s => s.submission_type === 'ORIG' && s.submission_status === 'AP'
-        )
+          const approvalSubmission = result.submissions?.find(
+            s => s.submission_type === 'ORIG' && s.submission_status === 'AP'
+          )
 
-        rldInfos.push({
-          application_number: result.application_number || '',
-          brand_name: rldProduct.brand_name || openfda.brand_name?.[0] || '',
-          generic_name: openfda.generic_name?.[0],
-          sponsor_name: result.sponsor_name,
-          is_rld: true,
-          te_code: rldProduct.te_code,
-          dosage_form: rldProduct.dosage_form,
-          route: rldProduct.route || openfda.route?.[0],
-          strength: rldProduct.active_ingredients?.[0]?.strength,
-          marketing_status: rldProduct.marketing_status,
-          approval_date: approvalSubmission?.submission_status_date,
-        })
+          rldInfos.push({
+            application_number: appNumber,
+            brand_name: rldProduct.brand_name || openfda.brand_name?.[0] || '',
+            generic_name: openfda.generic_name?.[0],
+            sponsor_name: result.sponsor_name,
+            is_rld: true,
+            te_code: rldProduct.te_code,
+            dosage_form: rldProduct.dosage_form,
+            route: rldProduct.route || openfda.route?.[0],
+            strength: rldProduct.active_ingredients?.[0]?.strength,
+            marketing_status: rldProduct.marketing_status,
+            approval_date: approvalSubmission?.submission_status_date,
+          })
+        }
       }
 
-      console.log(`✅ Orange Book: Found ${rldInfos.length} RLD(s) for ${brandName}`)
+      // Sort by brand name for consistency
+      rldInfos.sort((a, b) => a.brand_name.localeCompare(b.brand_name))
+
+      console.log(`✅ Orange Book: Found ${rldInfos.length} RLD(s) for ${searchTerm}`)
       return rldInfos
 
     } catch (error) {
-      console.error(`Orange Book searchRLDByBrandName error for ${brandName}:`, error)
+      console.error(`Orange Book searchRLDByBrandName error for ${searchTerm}:`, error)
       return []
     }
   }

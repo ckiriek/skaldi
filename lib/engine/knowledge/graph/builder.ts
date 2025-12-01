@@ -179,12 +179,20 @@ export class KnowledgeGraphBuilder {
    */
   private processFdaNdc(ndcRecords: any[]) {
     for (const ndc of ndcRecords) {
-      // Extract formulations
+      const routes = ndc.routes || []
+      const dosageForms = ndc.dosageForms || []
+      
+      // Skip records without route or dosage form (incomplete data)
+      if (routes.length === 0 && dosageForms.length === 0) {
+        continue
+      }
+      
+      // Extract formulations - create one entry per unique route+dosageForm combo
       this.snapshot.formulations.push({
         id: generateId(),
         inn: this.inn,
-        routes: ndc.routes || [],
-        dosageForms: ndc.dosageForms || [],
+        routes,
+        dosageForms,
         strengths: ndc.strengths || [],
         sources: ['fda_ndc'],
         confidence: 0.90
@@ -289,12 +297,22 @@ export class KnowledgeGraphBuilder {
   
   /**
    * Deduplicate formulations
+   * Groups by normalized route + dosage form combination
    */
   private deduplicateFormulations(formulations: KgFormulation[]): KgFormulation[] {
     const merged = new Map<string, KgFormulation>()
     
     for (const formulation of formulations) {
-      const key = `${formulation.inn}:${formulation.routes.join(',')}:${formulation.dosageForms.join(',')}`
+      // Normalize routes and dosage forms for deduplication
+      const normalizedRoutes = formulation.routes.map(r => r.toUpperCase().trim()).sort()
+      const normalizedForms = formulation.dosageForms.map(f => f.toUpperCase().trim()).sort()
+      
+      // Skip if both are empty
+      if (normalizedRoutes.length === 0 && normalizedForms.length === 0) {
+        continue
+      }
+      
+      const key = `${normalizedRoutes.join(',')}:${normalizedForms.join(',')}`
       
       if (!merged.has(key)) {
         merged.set(key, formulation)

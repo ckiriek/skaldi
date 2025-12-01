@@ -4,6 +4,17 @@ import { ClinicalTrialsClient } from '@/lib/integrations/clinicaltrials'
 import { PubMedClient } from '@/lib/integrations/pubmed'
 import { OpenFDAClient } from '@/lib/integrations/openfda'
 
+/**
+ * Unified Enrichment API v2.0
+ * 
+ * Fetches data from:
+ * - ClinicalTrials.gov (100 trials, 2015+, Phase 2-4, with outcomes)
+ * - PubMed (50 publications, 2015+, RCT/Meta/SR only)
+ * - openFDA FAERS (safety summary + 100 serious events)
+ * 
+ * Uses upsert to avoid duplicates
+ */
+
 export async function POST(request: Request) {
   try {
     const supabase = await createClient()
@@ -31,149 +42,173 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Project not found' }, { status: 404 })
     }
 
+    console.log(`\n🚀 Starting enrichment for project: ${project.title} (${project.compound_name})`)
+
     const results = {
       clinicalTrials: [] as any[],
       publications: [] as any[],
       safetyData: [] as any[],
+      safetySummary: null as any,
       errors: [] as string[]
     }
 
-    // 1. Fetch from ClinicalTrials.gov
+    // 1. Fetch from ClinicalTrials.gov (enhanced with filters)
     try {
       const ctClient = new ClinicalTrialsClient()
       
-      // Search by indication (increased from 10 to 50 for better coverage)
-      const trials = await ctClient.searchByCondition(project.indication, 50)
+      // Use enhanced search with drug name and indication
+      const trials = await ctClient.searchEnhanced(
+        project.compound_name,
+        project.indication,
+        100, // Increased limit
+        {
+          minYear: 2015,
+          phases: ['PHASE2', 'PHASE3', 'PHASE4'],
+          statuses: ['COMPLETED', 'ACTIVE_NOT_RECRUITING', 'RECRUITING']
+        }
+      )
       results.clinicalTrials = trials
 
-      // Save to evidence_sources
+      // Upsert to evidence_sources (avoid duplicates)
       for (const trial of trials) {
-        await supabase.from('evidence_sources').insert({
+        await supabase.from('evidence_sources').upsert({
           project_id: projectId,
           source: 'ClinicalTrials.gov',
           external_id: trial.nctId,
+          title: trial.title,
+          snippet: `${trial.phase?.join(', ') || 'N/A'} | ${trial.status} | N=${trial.enrollment || 'N/A'}`,
           payload_json: trial
+        }, {
+          onConflict: 'project_id,source,external_id'
         })
       }
+      
+      console.log(`✅ ClinicalTrials.gov: Saved ${trials.length} trials`)
     } catch (error: any) {
       console.error('ClinicalTrials.gov error:', error)
       results.errors.push(`ClinicalTrials.gov: ${error.message}`)
     }
 
-    // 2. Fetch from PubMed
+    // 2. Fetch from PubMed (enhanced with filters)
     try {
       const pubmedClient = new PubMedClient(process.env.NCBI_API_KEY)
       
-      // Search by INN (compound_name) + indication for better results
-      const searchTerm = `${project.compound_name || project.title} ${project.indication}`
-      const publications = await pubmedClient.search(searchTerm, 30)
+      // Use enhanced clinical evidence search
+      const publications = await pubmedClient.searchClinicalEvidence(
+        project.compound_name,
+        project.indication,
+        50 // Increased limit
+      )
       results.publications = publications
 
-      // Save to evidence_sources
+      // Upsert to evidence_sources (avoid duplicates)
       for (const pub of publications) {
-        await supabase.from('evidence_sources').insert({
+        await supabase.from('evidence_sources').upsert({
           project_id: projectId,
           source: 'PubMed',
           external_id: pub.pmid,
+          title: pub.title,
+          snippet: `${pub.journal} (${pub.year}) | ${pub.publicationType?.join(', ') || 'Article'}`,
           payload_json: pub
+        }, {
+          onConflict: 'project_id,source,external_id'
         })
       }
+      
+      console.log(`✅ PubMed: Saved ${publications.length} publications`)
     } catch (error: any) {
       console.error('PubMed error:', error)
       results.errors.push(`PubMed: ${error.message}`)
     }
 
-    // 3. Fetch from openFDA
+    // 3. Fetch from openFDA (enhanced with safety summary)
     try {
-      const fdaClient = new OpenFDAClient()
+      const fdaClient = new OpenFDAClient(process.env.OPENFDA_API_KEY)
       
-      // Try to find safety data for similar approved drugs
-      // Priority: drug_class > compound name > indication-based fallback
+      // Get comprehensive safety summary first
+      const safetySummary = await fdaClient.getSafetySummary(project.compound_name)
+      results.safetySummary = safetySummary
       
-      let adverseEvents: any[] = []
-      let searchStrategy = ''
-      
-      // Strategy 1: Use drug_class if provided (best option, increased from 10 to 100)
-      if (project.drug_class) {
-        adverseEvents = await fdaClient.searchAdverseEvents(project.drug_class, 100)
-        searchStrategy = `drug_class: ${project.drug_class}`
-      }
-      
-      // Strategy 2: Try exact compound name from title (for approved drugs)
-      if (adverseEvents.length === 0) {
-        adverseEvents = await fdaClient.searchAdverseEvents(project.title.split(' ')[0], 100)
-        searchStrategy = `compound: ${project.title.split(' ')[0]}`
-      }
-      
-      // Strategy 3: Fallback to indication-based drug class mapping
-      if (adverseEvents.length === 0 && project.indication) {
-        // Map indication to common drug classes
-        const drugClassMap: Record<string, string[]> = {
-          'diabetes': ['metformin', 'insulin', 'glipizide'],
-          'hypertension': ['lisinopril', 'amlodipine', 'losartan'],
-          'depression': ['sertraline', 'fluoxetine', 'escitalopram'],
-          'pain': ['ibuprofen', 'acetaminophen', 'naproxen'],
-        }
-        
-        // Find matching drug class
-        const indicationLower = project.indication.toLowerCase()
-        for (const [condition, drugs] of Object.entries(drugClassMap)) {
-          if (indicationLower.includes(condition)) {
-            // Try first drug in class
-            adverseEvents = await fdaClient.searchAdverseEvents(drugs[0], 100)
-            if (adverseEvents.length > 0) {
-              searchStrategy = `indication fallback: ${drugs[0]} (${condition})`
-              // Add note that this is class-based data
-              adverseEvents = adverseEvents.map(event => ({
-                ...event,
-                note: `Data from ${drugs[0]} (similar drug class for ${project.indication})`
-              }))
-              break
-            }
-          }
-        }
-      }
-      
-      // Add search strategy to results for transparency
-      if (adverseEvents.length > 0 && searchStrategy) {
-        console.log(`openFDA search strategy: ${searchStrategy}`)
-      }
-      
-      results.safetyData = adverseEvents
+      // Get serious adverse events
+      const seriousEvents = await fdaClient.getSeriousAdverseEvents(project.compound_name, 100)
+      results.safetyData = seriousEvents
 
-      // Save to evidence_sources
-      for (const event of adverseEvents) {
-        await supabase.from('evidence_sources').insert({
+      // Save safety summary as a special evidence source
+      if (safetySummary.totalReports > 0) {
+        await supabase.from('evidence_sources').upsert({
           project_id: projectId,
           source: 'openFDA',
-          external_id: `${event.drugName}-${event.receiptDate}`,
-          payload_json: event
+          external_id: `FAERS-SUMMARY-${project.compound_name}`,
+          title: `FAERS Safety Summary: ${project.compound_name}`,
+          snippet: `${safetySummary.totalReports} total reports | ${safetySummary.seriousReports} serious | ${safetySummary.deathReports} deaths`,
+          payload_json: safetySummary
+        }, {
+          onConflict: 'project_id,source,external_id'
         })
       }
+
+      // Save top reactions as individual evidence sources
+      for (const reaction of safetySummary.topReactions.slice(0, 20)) {
+        await supabase.from('evidence_sources').upsert({
+          project_id: projectId,
+          source: 'openFDA',
+          external_id: `FAERS-${reaction.term.replace(/\s+/g, '-').toLowerCase()}`,
+          title: reaction.term,
+          snippet: `${reaction.count} reports (${reaction.percentage}%)`,
+          payload_json: {
+            term: reaction.term,
+            count: reaction.count,
+            percentage: reaction.percentage,
+            drug: project.compound_name,
+            source: 'FAERS'
+          }
+        }, {
+          onConflict: 'project_id,source,external_id'
+        })
+      }
+      
+      console.log(`✅ openFDA: Saved safety summary + ${safetySummary.topReactions.length} reactions`)
     } catch (error: any) {
       console.error('openFDA error:', error)
       results.errors.push(`openFDA: ${error.message}`)
     }
 
+    // Update project enrichment status
+    await supabase.from('projects').update({
+      enrichment_status: 'completed',
+      updated_at: new Date().toISOString()
+    }).eq('id', projectId)
+
     // Log audit trail
     await supabase.from('audit_log').insert({
       project_id: projectId,
       actor_user_id: user.id,
-      action: 'external_data_fetched',
+      action: 'enrichment_completed',
       diff_json: {
         clinicalTrials: results.clinicalTrials.length,
         publications: results.publications.length,
-        safetyData: results.safetyData.length,
+        safetyReports: results.safetySummary?.topReactions?.length || 0,
+        safetySummary: results.safetySummary ? {
+          totalReports: results.safetySummary.totalReports,
+          seriousReports: results.safetySummary.seriousReports,
+          deathReports: results.safetySummary.deathReports
+        } : null,
         errors: results.errors
       }
     })
+
+    console.log(`\n✅ Enrichment completed for ${project.title}`)
+    console.log(`   - Clinical Trials: ${results.clinicalTrials.length}`)
+    console.log(`   - Publications: ${results.publications.length}`)
+    console.log(`   - Safety Reports: ${results.safetySummary?.topReactions?.length || 0}`)
 
     return NextResponse.json({
       success: true,
       data: {
         clinicalTrials: results.clinicalTrials.length,
         publications: results.publications.length,
-        safetyData: results.safetyData.length,
+        safetyData: results.safetySummary?.topReactions?.length || 0,
+        safetySummary: results.safetySummary,
         errors: results.errors
       }
     })

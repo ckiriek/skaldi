@@ -1,6 +1,12 @@
 /**
- * PubMed/NCBI Entrez API Client
+ * PubMed/NCBI Entrez API Client v2.0
  * API Documentation: https://www.ncbi.nlm.nih.gov/books/NBK25501/
+ * 
+ * Enhanced with:
+ * - Publication type filters (RCT, Meta-Analysis, Systematic Review)
+ * - Date filters (last 10 years)
+ * - MeSH terms extraction
+ * - Extended metadata
  */
 
 export interface Publication {
@@ -12,6 +18,19 @@ export interface Publication {
   abstract?: string
   doi?: string
   pubmedUrl: string
+  // Extended fields
+  publicationType?: string[]
+  meshTerms?: string[]
+  keywords?: string[]
+  citedBy?: number
+  isOpenAccess?: boolean
+}
+
+export interface PubMedSearchFilters {
+  minYear?: number                    // Filter by publication year (default: 2015)
+  publicationTypes?: string[]         // Filter by type: 'Clinical Trial', 'Randomized Controlled Trial', 'Meta-Analysis', 'Systematic Review'
+  excludeTypes?: string[]             // Exclude: 'Case Reports', 'Letter', 'Comment', 'Editorial'
+  sortBy?: 'relevance' | 'date'       // Sort order (default: relevance)
 }
 
 export class PubMedClient {
@@ -58,21 +77,52 @@ export class PubMedClient {
   }
 
   /**
-   * Search PubMed articles
+   * Search PubMed articles with filters
    */
-  async search(query: string, limit: number = 10): Promise<Publication[]> {
+  async search(query: string, limit: number = 50, filters: PubMedSearchFilters = {}): Promise<Publication[]> {
     try {
+      // Apply default filters
+      const defaultFilters: PubMedSearchFilters = {
+        minYear: 2015,
+        publicationTypes: ['Clinical Trial', 'Randomized Controlled Trial', 'Meta-Analysis', 'Systematic Review', 'Review'],
+        excludeTypes: ['Case Reports', 'Letter', 'Comment', 'Editorial', 'News'],
+        sortBy: 'relevance',
+        ...filters
+      }
+
+      // Build enhanced query with filters
+      let enhancedQuery = query
+
+      // Add date filter
+      if (defaultFilters.minYear) {
+        enhancedQuery += ` AND (${defaultFilters.minYear}:3000[pdat])`
+      }
+
+      // Add publication type filter
+      if (defaultFilters.publicationTypes && defaultFilters.publicationTypes.length > 0) {
+        const typeFilter = defaultFilters.publicationTypes.map(t => `"${t}"[pt]`).join(' OR ')
+        enhancedQuery += ` AND (${typeFilter})`
+      }
+
+      // Exclude unwanted types
+      if (defaultFilters.excludeTypes && defaultFilters.excludeTypes.length > 0) {
+        const excludeFilter = defaultFilters.excludeTypes.map(t => `NOT "${t}"[pt]`).join(' ')
+        enhancedQuery += ` ${excludeFilter}`
+      }
+
+      console.log(`📚 PubMed: Searching "${query}" with filters (limit: ${limit})`)
+
       // Step 1: Search for PMIDs
       const searchParams = new URLSearchParams({
         db: 'pubmed',
-        term: query,
+        term: enhancedQuery,
         retmax: limit.toString(),
         retmode: 'json',
+        sort: defaultFilters.sortBy === 'date' ? 'pub+date' : 'relevance',
         email: this.email,
         tool: this.tool,
       })
       
-      // Add API key if available
       if (this.apiKey) {
         searchParams.append('api_key', this.apiKey)
       }
@@ -87,15 +137,61 @@ export class PubMedClient {
       const pmids = searchData.esearchresult?.idlist || []
 
       if (pmids.length === 0) {
+        console.log(`📚 PubMed: No results found`)
         return []
       }
 
+      console.log(`📚 PubMed: Found ${pmids.length} articles, fetching details...`)
+
       // Step 2: Fetch article details
-      return await this.fetchArticles(pmids)
+      const articles = await this.fetchArticles(pmids)
+      
+      console.log(`✅ PubMed: Retrieved ${articles.length} articles`)
+      return articles
     } catch (error) {
       console.error('PubMed search error:', error)
       return []
     }
+  }
+
+  /**
+   * Enhanced search for clinical evidence
+   */
+  async searchClinicalEvidence(
+    drugName: string, 
+    indication?: string, 
+    limit: number = 50
+  ): Promise<Publication[]> {
+    // Build optimized query for clinical evidence
+    // Use simple terms without complex field tags for better matching
+    let query = drugName
+    if (indication) {
+      // Simplify indication: remove commas, extract key terms
+      const simplifiedIndication = indication
+        .replace(/,\s*/g, ' ')  // "Tuberculosis, Pulmonary" -> "Tuberculosis Pulmonary"
+        .replace(/\s+/g, ' ')
+        .trim()
+        .split(' ')[0]  // Take first word for broader matching (e.g., "Tuberculosis")
+      
+      query += ` ${simplifiedIndication}`
+    }
+    
+    // Prioritize high-quality evidence
+    const filters: PubMedSearchFilters = {
+      minYear: 2015,
+      publicationTypes: [
+        'Randomized Controlled Trial',
+        'Meta-Analysis', 
+        'Systematic Review',
+        'Clinical Trial, Phase III',
+        'Clinical Trial, Phase IV',
+        'Comparative Study'
+      ],
+      excludeTypes: ['Case Reports', 'Letter', 'Comment', 'Editorial'],
+      sortBy: 'relevance'
+    }
+
+    return this.search(query, limit, filters)
   }
 
   /**
@@ -144,12 +240,11 @@ export class PubMedClient {
   }
 
   /**
-   * Parse PubMed XML response
+   * Parse PubMed XML response with extended data
    */
   private parseXML(xmlText: string): Publication[] {
     const publications: Publication[] = []
     
-    // Simple XML parsing (in production, use a proper XML parser)
     const articleMatches = xmlText.matchAll(/<PubmedArticle>([\s\S]*?)<\/PubmedArticle>/g)
     
     for (const match of articleMatches) {
@@ -173,16 +268,41 @@ export class PubMedClient {
           authors.push(foreName ? `${lastName} ${foreName}` : lastName)
         }
       }
+
+      // Extract publication types
+      const publicationType: string[] = []
+      const pubTypeMatches = articleXml.matchAll(/<PublicationType[^>]*>([^<]+)<\/PublicationType>/g)
+      for (const ptMatch of pubTypeMatches) {
+        publicationType.push(ptMatch[1].trim())
+      }
+
+      // Extract MeSH terms
+      const meshTerms: string[] = []
+      const meshMatches = articleXml.matchAll(/<DescriptorName[^>]*>([^<]+)<\/DescriptorName>/g)
+      for (const meshMatch of meshMatches) {
+        meshTerms.push(meshMatch[1].trim())
+      }
+
+      // Extract keywords
+      const keywords: string[] = []
+      const keywordMatches = articleXml.matchAll(/<Keyword[^>]*>([^<]+)<\/Keyword>/g)
+      for (const kwMatch of keywordMatches) {
+        keywords.push(kwMatch[1].trim())
+      }
       
       publications.push({
         pmid,
         title,
-        authors: authors.slice(0, 10), // Limit to first 10 authors
+        authors: authors.slice(0, 10),
         journal,
         year,
         abstract,
         doi,
         pubmedUrl: `https://pubmed.ncbi.nlm.nih.gov/${pmid}/`,
+        // Extended fields
+        publicationType: publicationType.length > 0 ? publicationType : undefined,
+        meshTerms: meshTerms.length > 0 ? meshTerms.slice(0, 20) : undefined, // Limit to 20
+        keywords: keywords.length > 0 ? keywords.slice(0, 10) : undefined,
       })
     }
     

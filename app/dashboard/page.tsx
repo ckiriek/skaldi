@@ -1,10 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 import { Plus, FolderOpen } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { ProjectActionsMenu } from '@/components/project-actions-menu'
 
 export default async function DashboardPage() {
   const supabase = await createClient()
@@ -18,9 +18,22 @@ export default async function DashboardPage() {
       indication,
       countries,
       created_at,
-      documents (count)
+      documents (id, status)
     `)
     .order('created_at', { ascending: false })
+
+  // Calculate if all docs are complete for each project
+  const projectsWithStatus = projects?.map(project => {
+    const docs = project.documents || []
+    const allDocsComplete = docs.length > 0 && docs.every((doc: any) => 
+      doc.status === 'completed' || doc.status === 'in_review'
+    )
+    return {
+      ...project,
+      docCount: docs.length,
+      allDocsComplete
+    }
+  })
 
   return (
     <div className="space-y-4">
@@ -36,7 +49,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Compact Table - No Card Wrapper */}
-      {projects && projects.length > 0 ? (
+      {projectsWithStatus && projectsWithStatus.length > 0 ? (
         <div className="rounded-md border">
           <Table>
             <TableHeader>
@@ -46,10 +59,11 @@ export default async function DashboardPage() {
                 <TableHead className="h-9 text-xs">Countries</TableHead>
                 <TableHead className="h-9 text-xs">Docs</TableHead>
                 <TableHead className="h-9 text-xs">Created</TableHead>
+                <TableHead className="h-9 text-xs w-10"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {projects.map((project) => (
+              {projectsWithStatus.map((project) => (
                 <TableRow key={project.id} className="group">
                   <TableCell className="py-2">
                     <div className="flex flex-col gap-0.5">
@@ -85,9 +99,7 @@ export default async function DashboardPage() {
                   </TableCell>
                   <TableCell className="py-2">
                     <span className="text-xs text-muted-foreground">
-                      {Array.isArray(project.documents) && project.documents.length > 0
-                        ? (project.documents[0] as any).count 
-                        : 0}
+                      {project.docCount}
                     </span>
                   </TableCell>
                   <TableCell className="py-2">
@@ -98,6 +110,13 @@ export default async function DashboardPage() {
                         year: 'numeric' 
                       })}
                     </span>
+                  </TableCell>
+                  <TableCell className="py-2">
+                    <ProjectActionsMenu 
+                      projectId={project.id}
+                      projectTitle={project.title}
+                      allDocsComplete={project.allDocsComplete}
+                    />
                   </TableCell>
                 </TableRow>
               ))}

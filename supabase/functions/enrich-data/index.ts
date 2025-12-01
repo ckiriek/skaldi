@@ -1615,13 +1615,15 @@ Deno.serve(async (req) => {
       metrics.sources_used.push('openFDA FAERS')
       metrics.records_fetched.adverse_events = faersEvents.length
       
+      // Map FAERS data to adverse_events table schema
       const eventsToStore = faersEvents.map((evt: any) => ({
         inchikey,
-        project_id,
-        term: evt.term,
-        frequency: evt.count.toString(), // Store as string frequency/count
+        pt: evt.term, // Preferred Term (MedDRA)
+        incidence_n: evt.count, // Number of reports
         source: 'openFDA FAERS',
+        source_url: 'https://open.fda.gov/apis/drug/event/',
         retrieved_at: new Date().toISOString(),
+        confidence: 'medium', // FAERS is spontaneous reporting
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }))
@@ -1642,6 +1644,33 @@ Deno.serve(async (req) => {
         })
       } else {
         console.log(`✅ Stored ${faersEvents.length} adverse event terms`)
+      }
+      
+      // Also store in evidence_sources for UI display
+      const evidenceToStore = faersEvents.map((evt: any) => ({
+        project_id,
+        source: 'openFDA',
+        external_id: `FAERS-${evt.term.replace(/\s+/g, '-').toLowerCase()}`,
+        title: evt.term,
+        snippet: `${evt.count} reports in FDA Adverse Event Reporting System (FAERS)`,
+        payload_json: {
+          term: evt.term,
+          count: evt.count,
+          source: 'FAERS',
+          drug: project.compound_name
+        },
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      }))
+      
+      const { error: evidenceError } = await supabaseClient
+        .from('evidence_sources')
+        .insert(evidenceToStore)
+      
+      if (evidenceError) {
+        console.error('Error storing FAERS evidence:', evidenceError)
+      } else {
+        console.log(`✅ Stored ${faersEvents.length} FAERS evidence sources`)
       }
     }
 

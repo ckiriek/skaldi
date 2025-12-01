@@ -15,7 +15,8 @@ const TIMEOUT_MS = 10000
  */
 export async function fetchFdaNdcByInn(inn: string): Promise<FdaNdcRecord[]> {
   const query = `generic_name:"${inn}"`
-  const url = `${FDA_NDC_API_BASE}?search=${encodeURIComponent(query)}&limit=20`
+  // Increase limit to 100 to capture all formulations (IV, oral, ophthalmic, etc.)
+  const url = `${FDA_NDC_API_BASE}?search=${encodeURIComponent(query)}&limit=100`
   
   let lastError: Error | null = null
   
@@ -66,7 +67,14 @@ export async function fetchFdaNdcByInn(inn: string): Promise<FdaNdcRecord[]> {
  */
 function parseFdaNdcResult(result: any): FdaNdcRecord {
   const brandNames = result.brand_name ? [result.brand_name] : []
-  const routes = result.route ? (Array.isArray(result.route) ? result.route : [result.route]) : []
+  
+  // Normalize routes - handle null, string, and array
+  let routes: string[] = []
+  if (result.route) {
+    routes = Array.isArray(result.route) ? result.route : [result.route]
+  }
+  
+  // Normalize dosage forms
   const dosageForms = result.dosage_form ? [result.dosage_form] : []
   
   // Extract strengths from active_ingredients
