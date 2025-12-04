@@ -5,6 +5,7 @@
  */
 
 import { createClient } from '@/lib/supabase/server'
+import { enrichSynopsisParameters } from '@/lib/enrichment/synopsis-enricher'
 
 // Types will be imported from separate file
 export * from './data-aggregator.types'
@@ -204,6 +205,26 @@ export class DataAggregator {
       phase: enrichedStudyDesign.phase,
       sponsor: enrichedStudyDesign.sponsor
     });
+    
+    // Enrich Synopsis parameters for Synopsis documents
+    // This adds industry-standard values for screening, follow-up, power, etc.
+    if (documentType === 'Synopsis' && enrichedStudyDesign.indication && enrichedStudyDesign.phase) {
+      try {
+        const phaseNum = parseInt(String(enrichedStudyDesign.phase).replace(/\D/g, '')) || 2
+        const synopsisParams = await enrichSynopsisParameters(
+          projectId,
+          enrichedStudyDesign.compound,
+          enrichedStudyDesign.indication,
+          phaseNum,
+          project.design_json
+        )
+        // Attach to study design for context builder to use
+        ;(enrichedStudyDesign as any)._synopsisParams = synopsisParams
+        console.log(`📋 Synopsis parameters enriched. Sources: ${synopsisParams.sources.join(', ')}`)
+      } catch (error) {
+        console.warn(`[Data Aggregator] Synopsis enrichment failed:`, error)
+      }
+    }
     
     return {
       knowledgeGraph: kg,

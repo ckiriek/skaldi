@@ -14,6 +14,9 @@ export interface GenerationOptions {
   topP?: number
   frequencyPenalty?: number
   presencePenalty?: number
+  // GPT-5/5.1 specific options
+  verbosity?: 'low' | 'medium' | 'high'
+  reasoningEffort?: 'none' | 'minimal' | 'medium' | 'high'
 }
 
 export interface GenerationResponse {
@@ -57,20 +60,32 @@ export class AzureOpenAIClient {
     try {
       const url = `${this.endpoint}/openai/deployments/${this.deploymentName}/chat/completions?api-version=${this.apiVersion}`
 
+      // Check if using GPT-5.x model (doesn't support temperature, max_tokens)
+      const isGPT5 = this.deploymentName.includes('gpt-5')
+      
+      // Build request body based on model type
+      const requestBody: Record<string, unknown> = { messages }
+      
+      if (isGPT5) {
+        // GPT-5/5.1: Use verbosity and reasoning_effort instead of temperature/max_tokens
+        requestBody.verbosity = options.verbosity ?? 'medium'
+        requestBody.reasoning_effort = options.reasoningEffort ?? 'medium'
+      } else {
+        // Legacy models: Use traditional parameters
+        requestBody.temperature = options.temperature ?? 0.7
+        requestBody.max_completion_tokens = options.maxTokens ?? 4000
+        requestBody.top_p = options.topP ?? 0.95
+        requestBody.frequency_penalty = options.frequencyPenalty ?? 0
+        requestBody.presence_penalty = options.presencePenalty ?? 0
+      }
+
       const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'api-key': this.apiKey,
         },
-        body: JSON.stringify({
-          messages,
-          temperature: options.temperature ?? 0.7,
-          max_tokens: options.maxTokens ?? 4000,
-          top_p: options.topP ?? 0.95,
-          frequency_penalty: options.frequencyPenalty ?? 0,
-          presence_penalty: options.presencePenalty ?? 0,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) {

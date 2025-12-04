@@ -238,43 +238,59 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
     setLoadingPhraseIndex(0)
 
     try {
-      const response = await fetch('/api/generate', {
+      // Use v2 API for IB generation (Universal Project Model)
+      const apiUrl = type === 'IB' ? '/api/v2/ib/generate' : '/api/generate'
+      const body = type === 'IB' 
+        ? { projectId }
+        : { projectId, documentType: type }
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ projectId, documentType: type }),
+        body: JSON.stringify(body),
       })
 
       const data = await response.json()
       
-      console.log('[DEBUG] API Response:', { ok: response.ok, status: response.status, data })
+      console.log('[DEBUG] API Response:', { ok: response.ok, status: response.status, data, apiUrl })
 
       if (!response.ok || !data.success) {
         const errorDetails = data.details ? JSON.stringify(data.details) : ''
         const errorContext = data.context ? ` (${data.context})` : ''
-        const fullError = `${data.error || 'Generation failed'}${errorContext}${errorDetails ? ': ' + errorDetails : ''}`
+        const errorFromArray = data.errors?.[0]?.error || ''
+        const fullError = `${data.error || errorFromArray || 'Generation failed'}${errorContext}${errorDetails ? ': ' + errorDetails : ''}`
         throw new Error(fullError)
       }
 
-      // Store validation results if available
+      // Store validation results if available (handle both v1 and v2 responses)
       if (data.validation) {
         setValidationResults({ type, validation: data.validation })
+      }
+      
+      // For v2 API, show completeness info
+      if (data.completeness) {
+        const completenessPercent = Math.round((data.completeness.overall || 0) * 100)
+        console.log(`[INFO] IB generated with ${completenessPercent}% data completeness`)
       }
 
       // Success animation
       setAnimatingSuccess(type)
       setTimeout(() => setAnimatingSuccess(null), 2000)
       
+      // Show success toast with completeness for IB v2
+      const description = data.completeness 
+        ? `${type} created with ${Math.round((data.completeness.overall || 0) * 100)}% data completeness`
+        : `${type} has been successfully created.`
+      
       toast({
         title: "Document Generated",
-        description: `${type} has been successfully created.`,
+        description,
         variant: "success",
       })
       
       router.refresh()
     } catch (error) {
       console.error('[ERROR] Generation error:', error)
-      console.error('[ERROR] Error type:', typeof error)
-      console.error('[ERROR] Error keys:', error ? Object.keys(error) : 'null')
       
       let errorMessage = "Unknown error"
       if (error instanceof Error) {
@@ -284,8 +300,6 @@ export function GenerationPipeline({ projectId, documents }: GenerationPipelineP
       } else if (typeof error === 'string') {
         errorMessage = error
       }
-      
-      console.error('[ERROR] Final error message:', errorMessage)
       
       toast({
         title: "Generation Failed",

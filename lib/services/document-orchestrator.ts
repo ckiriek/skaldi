@@ -14,6 +14,8 @@ import { createClient } from '@/lib/supabase/server'
 import { buildKnowledgeGraph } from '@/lib/engine/knowledge'
 import { generateStudyFlowForProject } from './study-flow-generator'
 import { generateDocumentExports, generateProjectBundle } from './document-export-service'
+import { IBEnrichmentService, type IBEnrichmentData } from './ib-enrichment'
+import { IBValidator } from './ib-validator'
 
 export interface OrchestrationRequest {
   projectId: string
@@ -42,11 +44,16 @@ export interface OrchestrationResult {
 export class DocumentOrchestrator {
   private sectionGenerator: SectionGenerator
   private qcValidator: QCValidator
+  private ibEnrichment: IBEnrichmentService
+  private ibValidator: IBValidator
   private currentDocumentType: string = 'Protocol'
+  private ibEnrichmentData: IBEnrichmentData | null = null
 
   constructor() {
     this.sectionGenerator = new SectionGenerator()
     this.qcValidator = new QCValidator()
+    this.ibEnrichment = new IBEnrichmentService()
+    this.ibValidator = new IBValidator()
   }
 
   /**
@@ -121,10 +128,45 @@ export class DocumentOrchestrator {
         console.log(`⚠️ No compound_name in project, skipping Knowledge Graph`)
       }
 
-      // 1.6. Generate Study Flow for Protocol, ICF, CSR (if not exists)
+      // 1.6. IB-specific enrichment (for IB documents only)
+      if (request.documentType === 'IB' && project.compound_name) {
+        console.log(`🔬 Step 1.6: Running IB-specific enrichment for ${project.compound_name}...`)
+        try {
+          this.ibEnrichmentData = await this.ibEnrichment.enrichForIB(
+            request.projectId,
+            project.compound_name,
+            project.indication || 'Unknown',
+            project.phase || 'Unknown'
+          )
+          console.log(`✅ IB Enrichment complete:`)
+          console.log(`   - Label data: ${this.ibEnrichmentData.label_data.approved_indications.length} indications`)
+          console.log(`   - Trials: ${this.ibEnrichmentData.trials.length} relevant studies`)
+          console.log(`   - Tox source: ${this.ibEnrichmentData.tox.source}`)
+          console.log(`   - CMC source: ${this.ibEnrichmentData.cmc.source}`)
+          console.log(`   - PK/PD source: ${this.ibEnrichmentData.pkpd.source}`)
+          
+          // Store enrichment data in project for context builder
+          try {
+            await supabase
+              .from('projects')
+              .update({ 
+                ib_enrichment_data: this.ibEnrichmentData,
+                ib_enriched_at: new Date().toISOString()
+              })
+              .eq('id', request.projectId)
+            console.log(`✅ IB Enrichment data saved to project`)
+          } catch (saveError) {
+            console.warn(`⚠️ Could not save IB enrichment to project:`, saveError)
+          }
+        } catch (ibError) {
+          console.warn(`⚠️ IB Enrichment failed (continuing with standard enrichment):`, ibError)
+        }
+      }
+
+      // 1.7. Generate Study Flow for Protocol, ICF, CSR (if not exists)
       const studyFlowDocTypes = ['Protocol', 'ICF', 'CSR']
       if (studyFlowDocTypes.includes(request.documentType)) {
-        console.log(`📅 Step 1.6: Generating Study Flow for ${request.documentType}...`)
+        console.log(`📅 Step 1.7: Generating Study Flow for ${request.documentType}...`)
         try {
           const studyFlow = await generateStudyFlowForProject(request.projectId, supabase)
           if (studyFlow) {
@@ -233,7 +275,54 @@ export class DocumentOrchestrator {
         }
       }
 
-      // 5. Run QC validation
+      // 5. IB-specific validation and auto-fix
+      if (request.documentType === 'IB') {
+        console.log(`🔍 Running IB-specific validation and auto-fix...`)
+        
+        for (const [sectionId, content] of Object.entries(sections)) {
+          // Validate each section
+          const validation = this.ibValidator.validate(content, sectionId)
+          
+          if (!validation.isValid || validation.summary.placeholders > 0) {
+            console.log(`⚠️ Section ${sectionId}: ${validation.summary.errors} errors, ${validation.summary.placeholders} placeholders`)
+            
+            // Auto-fix the section
+            const fixResult = this.ibValidator.autoFix(content, {
+              compoundName: project.compound_name,
+              indication: project.indication,
+              phase: project.phase
+            })
+            
+            if (fixResult.fixesApplied.length > 0) {
+              console.log(`🔧 Auto-fixed ${sectionId}: ${fixResult.fixesApplied.join(', ')}`)
+              sections[sectionId] = fixResult.fixedContent
+            }
+            
+            // If still has critical issues, try GPT-based fix
+            if (fixResult.remainingIssues.filter(i => i.type === 'error').length > 0 && this.ibEnrichmentData) {
+              console.log(`🤖 Running GPT-based auto-fix for ${sectionId}...`)
+              try {
+                const gptFixedContent = await this.gptAutoFixIBSection(
+                  sectionId,
+                  fixResult.fixedContent,
+                  fixResult.remainingIssues,
+                  this.ibEnrichmentData
+                )
+                if (gptFixedContent) {
+                  sections[sectionId] = gptFixedContent
+                  console.log(`✅ GPT auto-fix applied to ${sectionId}`)
+                }
+              } catch (gptError) {
+                console.warn(`⚠️ GPT auto-fix failed for ${sectionId}:`, gptError)
+              }
+            }
+          } else {
+            console.log(`✅ Section ${sectionId}: Valid (score: ${validation.score})`)
+          }
+        }
+      }
+
+      // 6. Run QC validation
       console.log(`🔍 Running QC validation...`)
       const validationResult = await this.qcValidator.validate(request.documentType, sections)
       
@@ -542,6 +631,160 @@ export class DocumentOrchestrator {
     lines.push('*Table of Contents auto-generated from document structure*')
 
     return lines.join('\n')
+  }
+
+  /**
+   * GPT-based auto-fix for IB sections with remaining issues
+   * Uses enrichment data to fill in missing information
+   */
+  private async gptAutoFixIBSection(
+    sectionId: string,
+    content: string,
+    issues: Array<{ type: string; code: string; message: string; location?: any }>,
+    enrichmentData: IBEnrichmentData
+  ): Promise<string | null> {
+    const startTime = Date.now()
+    
+    // Build issue summary
+    const issuesSummary = issues
+      .map(i => `- ${i.code}: ${i.message}`)
+      .join('\n')
+    
+    // Build enrichment context
+    const enrichmentContext = this.buildEnrichmentContext(enrichmentData)
+    
+    const systemPrompt = `You are an expert medical writer specializing in Investigator's Brochures.
+Your task is to FIX the provided IB section by:
+1. Replacing ALL [DATA_NEEDED] placeholders with actual data from the enrichment context
+2. Removing any CSR-specific content (tables, listings, sample CRFs)
+3. Fixing any NCTNCT errors (should be NCT)
+4. Ensuring the section uses the actual compound name "${enrichmentData.drug_name}"
+5. Making the content complete and professional
+
+CRITICAL RULES:
+- Use ONLY data from the enrichment context provided
+- If specific data is not available, use class-based summaries (e.g., "SSRIs typically...")
+- NEVER leave [DATA_NEEDED] placeholders
+- NEVER use [INVESTIGATIONAL PRODUCT] - use "${enrichmentData.drug_name}"
+- Output ONLY the fixed section content, no explanations`
+
+    const userPrompt = `## SECTION TO FIX: ${sectionId}
+
+## ISSUES FOUND:
+${issuesSummary}
+
+## ENRICHMENT DATA:
+${enrichmentContext}
+
+## ORIGINAL CONTENT:
+${content}
+
+## INSTRUCTIONS:
+Fix all issues listed above using the enrichment data. Output the complete fixed section.`
+
+    try {
+      const fixedContent = await this.callAIWithFullConfig(
+        systemPrompt,
+        userPrompt,
+        `autofix_${sectionId}`,
+        {
+          max_completion_tokens: 16000,
+          reasoning_effort: 'medium' // Fast fix, not complex reasoning
+        }
+      )
+      
+      const latency = Date.now() - startTime
+      console.log(`✅ GPT auto-fix completed for ${sectionId} in ${latency}ms`)
+      
+      // Validate the fix
+      const validation = this.ibValidator.validate(fixedContent, sectionId)
+      if (validation.summary.placeholders === 0) {
+        return fixedContent
+      } else {
+        console.warn(`⚠️ GPT fix still has ${validation.summary.placeholders} placeholders`)
+        return fixedContent // Return anyway, it's likely better than before
+      }
+      
+    } catch (error) {
+      console.error(`❌ GPT auto-fix failed for ${sectionId}:`, error)
+      return null
+    }
+  }
+
+  /**
+   * Build enrichment context string for GPT auto-fix
+   */
+  private buildEnrichmentContext(data: IBEnrichmentData): string {
+    const parts: string[] = []
+    
+    parts.push(`**Drug Name:** ${data.drug_name}`)
+    parts.push(`**Indication:** ${data.indication}`)
+    parts.push(`**Phase:** ${data.phase}`)
+    parts.push('')
+    
+    // Label data
+    if (data.label_data) {
+      if (data.label_data.mechanism) {
+        parts.push(`**Mechanism of Action:** ${data.label_data.mechanism}`)
+      }
+      if (data.label_data.approved_indications?.length > 0) {
+        parts.push(`**Approved Indications:** ${data.label_data.approved_indications.join('; ')}`)
+      }
+      if (data.label_data.dose?.recommended) {
+        parts.push(`**Recommended Dose:** ${data.label_data.dose.recommended}`)
+      }
+      if (data.label_data.warnings?.length > 0) {
+        parts.push(`**Key Warnings:** ${data.label_data.warnings.slice(0, 5).join('; ')}`)
+      }
+      if (data.label_data.contraindications?.length > 0) {
+        parts.push(`**Contraindications:** ${data.label_data.contraindications.join('; ')}`)
+      }
+      if (data.label_data.adverse_events?.common?.length > 0) {
+        parts.push(`**Common AEs:** ${data.label_data.adverse_events.common.slice(0, 10).join(', ')}`)
+      }
+    }
+    
+    // PK/PD
+    if (data.pkpd) {
+      parts.push('')
+      parts.push('**Pharmacokinetics:**')
+      if (data.pkpd.tmax) parts.push(`- Tmax: ${data.pkpd.tmax}`)
+      if (data.pkpd.t_half) parts.push(`- Half-life: ${data.pkpd.t_half}`)
+      if (data.pkpd.bioavailability) parts.push(`- Bioavailability: ${data.pkpd.bioavailability}`)
+      if (data.pkpd.distribution?.protein_binding) parts.push(`- Protein Binding: ${data.pkpd.distribution.protein_binding}`)
+      if (data.pkpd.metabolism?.enzymes?.length > 0) parts.push(`- CYP Enzymes: ${data.pkpd.metabolism.enzymes.join(', ')}`)
+    }
+    
+    // CMC
+    if (data.cmc) {
+      parts.push('')
+      parts.push('**Chemistry:**')
+      if (data.cmc.molecular_formula) parts.push(`- Formula: ${data.cmc.molecular_formula}`)
+      if (data.cmc.molecular_weight) parts.push(`- MW: ${data.cmc.molecular_weight} g/mol`)
+      if (data.cmc.dosage_form) parts.push(`- Dosage Form: ${data.cmc.dosage_form}`)
+    }
+    
+    // Toxicology
+    if (data.tox) {
+      parts.push('')
+      parts.push('**Toxicology:**')
+      if (data.tox.target_organs?.length > 0) parts.push(`- Target Organs: ${data.tox.target_organs.join(', ')}`)
+      if (data.tox.genotoxicity) parts.push(`- Genotoxicity: ${data.tox.genotoxicity.substring(0, 200)}...`)
+      if (data.tox.carcinogenicity) parts.push(`- Carcinogenicity: ${data.tox.carcinogenicity.substring(0, 200)}...`)
+    }
+    
+    // Trials
+    if (data.trials?.length > 0) {
+      parts.push('')
+      parts.push(`**Relevant Clinical Trials:** ${data.trials.length} studies`)
+      data.trials.slice(0, 5).forEach((trial: any) => {
+        const nctId = trial.external_id || trial.nct_id || 'Unknown'
+        const title = trial.title || 'Unknown'
+        parts.push(`- ${nctId}: ${title.substring(0, 100)}...`)
+      })
+    }
+    
+    return parts.join('\n')
   }
 }
 

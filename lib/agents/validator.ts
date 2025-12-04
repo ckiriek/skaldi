@@ -400,27 +400,24 @@ export class ValidatorAgent {
     }
 
     // Check for placeholder text with exact quotes and location
-    const placeholders = [
-      { pattern: /\[([^\]]{1,100})\]/g, name: 'bracket placeholder' },
+    // Note: We need to distinguish real placeholders from legitimate bracket usage
+    const placeholderPatterns = [
       { pattern: /\bTODO:?\s*([^\n]{0,100})/gi, name: 'TODO marker' },
       { pattern: /\bTBD:?\s*([^\n]{0,100})/gi, name: 'TBD marker' },
       { pattern: /\bFIXME:?\s*([^\n]{0,100})/gi, name: 'FIXME marker' },
       { pattern: /\bXXX:?\s*([^\n]{0,100})/gi, name: 'XXX marker' },
+      // Only match brackets that contain placeholder-like text (not references, units, or IDs)
+      { pattern: /\[(?:To be (?:provided|determined|completed|added|specified)|DATA_NEEDED|INSERT|PLACEHOLDER|PENDING|TBD|N\/A)[^\]]*\]/gi, name: 'bracket placeholder' },
     ]
 
     const lines = request.content.split('\n')
     
-    for (const { pattern, name } of placeholders) {
+    for (const { pattern, name } of placeholderPatterns) {
       const matches = request.content.matchAll(pattern)
       for (const match of matches) {
         // Find line number
         const beforeMatch = request.content.substring(0, match.index)
         const lineNumber = beforeMatch.split('\n').length
-        
-        // Get surrounding context (up to 100 chars)
-        const startIdx = Math.max(0, (match.index || 0) - 50)
-        const endIdx = Math.min(request.content.length, (match.index || 0) + match[0].length + 50)
-        const quote = request.content.substring(startIdx, endIdx).trim()
         
         issues.push({
           type: 'error',
@@ -498,35 +495,48 @@ export class ValidatorAgent {
 
   /**
    * Calculate validation score
+   * Uses a more balanced approach that doesn't penalize too harshly
    */
   private calculateScore(issues: ValidationIssue[], content: string): number {
+    const errorCount = issues.filter(i => i.type === 'error').length
+    const warningCount = issues.filter(i => i.type === 'warning').length
+    const infoCount = issues.filter(i => i.type === 'info').length
+    
+    // Base score starts at 100
     let score = 100
-
-    // Deduct points for issues
-    for (const issue of issues) {
-      if (issue.type === 'error') {
-        score -= 10
-      } else if (issue.type === 'warning') {
-        score -= 5
-      } else if (issue.type === 'info') {
-        score -= 1
-      }
+    
+    // Deduct for errors (max 50 points total for errors)
+    // First 5 errors: -5 each = -25
+    // Next 10 errors: -2 each = -20  
+    // Beyond 15: -0.5 each (diminishing returns)
+    if (errorCount <= 5) {
+      score -= errorCount * 5
+    } else if (errorCount <= 15) {
+      score -= 25 + (errorCount - 5) * 2
+    } else {
+      score -= 45 + (errorCount - 15) * 0.5
     }
+    
+    // Deduct for warnings (max 20 points total)
+    score -= Math.min(20, warningCount * 2)
+    
+    // Info items don't affect score significantly
+    score -= Math.min(5, infoCount * 0.5)
 
-    // Bonus for completeness
+    // Bonus for completeness (up to +10)
     const wordCount = content.split(/\s+/).length
-    if (wordCount > 1000) {
-      score += 5
-    }
+    if (wordCount > 5000) score += 5
+    if (wordCount > 10000) score += 3
+    if (wordCount > 20000) score += 2
 
-    // Bonus for structure
+    // Bonus for structure (up to +5)
     const subsections = content.match(/^##\s+/gm)
-    if (subsections && subsections.length >= 5) {
-      score += 5
-    }
+    if (subsections && subsections.length >= 5) score += 2
+    if (subsections && subsections.length >= 10) score += 2
+    if (subsections && subsections.length >= 15) score += 1
 
     // Ensure score is between 0 and 100
-    return Math.max(0, Math.min(100, score))
+    return Math.max(0, Math.min(100, Math.round(score)))
   }
 
   /**

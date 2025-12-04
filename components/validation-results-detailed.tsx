@@ -139,10 +139,20 @@ export function ValidationResultsDetailed({ results, documentType }: ValidationR
             <CardTitle className="text-xs font-medium text-muted-foreground">Checks Passed</CardTitle>
           </CardHeader>
           <CardContent className="pb-2">
-            <div className="text-2xl font-bold">{results.passed}/{results.total_rules}</div>
-            <p className="text-xs text-muted-foreground">
-              {Math.round((results.passed / results.total_rules) * 100)}% success rate
-            </p>
+            {(() => {
+              // Ensure passed and total_rules are valid positive numbers
+              const passed = Math.max(0, results.passed || 0)
+              const total = Math.max(1, results.total_rules || 1)
+              const successRate = Math.min(100, Math.max(0, Math.round((passed / total) * 100)))
+              return (
+                <>
+                  <div className="text-2xl font-bold">{passed}/{total}</div>
+                  <p className="text-xs text-muted-foreground">
+                    {successRate}% success rate
+                  </p>
+                </>
+              )
+            })()}
           </CardContent>
         </Card>
 

@@ -68,11 +68,20 @@ export async function POST(request: Request) {
     // Determine status
     const status = validationResult.passed ? 'approved' : 'review'
 
-    // Calculate total checks performed (estimate based on validation categories)
-    const totalChecks = 13 // ICH (3) + FDA (3) + Terminology (2) + Quality (3) + Completeness (2)
-    const passedChecks = totalChecks - validationResult.summary.errors
+    // Calculate total checks and passed checks
+    // Total issues = errors + warnings + info
+    const totalIssues = validationResult.issues?.length || 0
+    const errorCount = validationResult.summary.errors || 0
+    const warningCount = validationResult.summary.warnings || 0
+    
+    // Total checks = base checks + issues found (each issue represents a check that found something)
+    const baseChecks = 13 // ICH (3) + FDA (3) + Terminology (2) + Quality (3) + Completeness (2)
+    const totalChecks = Math.max(baseChecks, totalIssues + baseChecks)
+    
+    // Passed checks = total checks minus errors (warnings don't fail checks)
+    const passedChecks = Math.max(0, totalChecks - errorCount)
 
-    console.log(`📊 Validation stats: ${passedChecks}/${totalChecks} checks passed`)
+    console.log(`📊 Validation stats: ${passedChecks}/${totalChecks} checks passed (${errorCount} errors, ${warningCount} warnings)`)
     console.log(`📊 Issues found: ${validationResult.summary.errors} errors, ${validationResult.summary.warnings} warnings`)
 
     // Save validation results to database

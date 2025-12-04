@@ -58,6 +58,29 @@ export interface DrugLabel {
   contraindications?: string
   drugInteractions?: string
   useInPregnancy?: string
+  // Extended sections for enrichment
+  clinicalPharmacology?: string
+  mechanismOfAction?: string
+  pharmacodynamics?: string
+  pharmacokinetics?: string
+  nonclinicalToxicology?: string
+  clinicalStudies?: string
+  howSupplied?: string
+  description?: string
+  // Structured PK data extracted from label
+  pkData?: {
+    tmax?: string
+    tHalf?: string
+    bioavailability?: string
+    proteinBinding?: string
+    volumeOfDistribution?: string
+    clearance?: string
+    metabolism?: string
+    elimination?: string
+    foodEffect?: string
+    renalImpairment?: string
+    hepaticImpairment?: string
+  }
 }
 
 export class OpenFDAClient {
@@ -349,6 +372,13 @@ export class OpenFDAClient {
   private parseDrugLabel(label: any): DrugLabel {
     const openfda = label.openfda || {}
     
+    // Get clinical pharmacology text
+    const clinicalPharmacology = label.clinical_pharmacology?.[0] || ''
+    const pharmacokinetics = label.pharmacokinetics?.[0] || ''
+    
+    // Extract structured PK data from text
+    const pkData = this.extractPKData(clinicalPharmacology + '\n' + pharmacokinetics)
+    
     return {
       brandName: openfda.brand_name?.[0] || 'Unknown',
       genericName: openfda.generic_name?.[0] || 'Unknown',
@@ -361,6 +391,240 @@ export class OpenFDAClient {
       contraindications: label.contraindications?.[0],
       drugInteractions: label.drug_interactions?.[0],
       useInPregnancy: label.pregnancy?.[0] || label.use_in_specific_populations?.[0],
+      // Extended sections
+      clinicalPharmacology,
+      mechanismOfAction: label.mechanism_of_action?.[0],
+      pharmacodynamics: label.pharmacodynamics?.[0],
+      pharmacokinetics,
+      nonclinicalToxicology: label.nonclinical_toxicology?.[0] || label.carcinogenesis_and_mutagenesis_and_impairment_of_fertility?.[0],
+      clinicalStudies: label.clinical_studies?.[0],
+      howSupplied: label.how_supplied?.[0],
+      description: label.description?.[0],
+      pkData,
+    }
+  }
+
+  /**
+   * Extract structured PK parameters from clinical pharmacology text
+   */
+  private extractPKData(text: string): DrugLabel['pkData'] {
+    if (!text) return undefined
+    
+    const lowerText = text.toLowerCase()
+    const pkData: DrugLabel['pkData'] = {}
+    
+    // Tmax extraction - multiple patterns for different label formats
+    const tmaxPatterns = [
+      // "T max ) occurring 1 to 4 hours" (FDA label format with parentheses)
+      /T\s*max\s*\)?[^0-9]*?(\d+(?:\.\d+)?(?:\s*(?:to|-|–)\s*\d+(?:\.\d+)?)?)\s*(hours?|h|minutes?|min)/i,
+      // "Tmax of 1-4 hours"
+      /(?:tmax|time to (?:peak|maximum)(?: concentration)?)[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(hours?|h|minutes?|min)/i,
+      // "peak plasma concentrations ... 1 to 4 hours postdose"
+      /(?:peak|maximum)\s+(?:plasma\s+)?concentrations?[^0-9]*?(\d+(?:\.\d+)?(?:\s*(?:to|-|–)\s*\d+(?:\.\d+)?)?)\s*(hours?|h)[^.]*(?:postdose|post-dose|after)/i,
+      // "occurring 1 to 4 hours postdose"
+      /occurring\s+(\d+(?:\.\d+)?(?:\s*(?:to|-|–)\s*\d+(?:\.\d+)?)?)\s*(hours?|h)[^.]*(?:postdose|post-dose|after)/i,
+      // Fallback: any "X hours postdose" near peak/maximum
+      /(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(hours?|h)\s*(?:after|following|post)[^.]*(?:peak|maximum|tmax)/i,
+    ]
+    for (const pattern of tmaxPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.tmax = `${match[1]} ${match[2]}`.replace(/\s+/g, ' ').trim()
+        break
+      }
+    }
+    
+    // Half-life extraction
+    const halfLifePatterns = [
+      /(?:terminal |elimination )?half[- ]?life[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(hours?|h|days?|d)/i,
+      /(?:t½|t1\/2)[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(hours?|h|days?|d)/i,
+    ]
+    for (const pattern of halfLifePatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.tHalf = `${match[1]} ${match[2]}`.replace(/\s+/g, ' ').trim()
+        break
+      }
+    }
+    
+    // Bioavailability extraction
+    const bioavailPatterns = [
+      /(?:absolute )?bioavailability[^\d]*(?:is |of |approximately |about )?(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*%/i,
+      /(\d+(?:\.\d+)?)\s*%\s*(?:absolute )?bioavailability/i,
+    ]
+    for (const pattern of bioavailPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.bioavailability = `${match[1]}%`
+        break
+      }
+    }
+    
+    // Protein binding extraction
+    const proteinBindPatterns = [
+      /(?:protein bind(?:ing)?|bound to (?:plasma )?proteins?)[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*%/i,
+      /(\d+(?:\.\d+)?)\s*%\s*(?:bound|protein binding)/i,
+    ]
+    for (const pattern of proteinBindPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.proteinBinding = `${match[1]}%`
+        break
+      }
+    }
+    
+    // Volume of distribution extraction
+    const vdPatterns = [
+      /(?:volume of distribution|vd|vss)[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(l(?:\/kg)?|liters?)/i,
+      /(\d+(?:\.\d+)?)\s*(l(?:\/kg)?|liters?)\s*(?:volume of distribution|vd)/i,
+    ]
+    for (const pattern of vdPatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.volumeOfDistribution = `${match[1]} ${match[2]}`.replace(/\s+/g, ' ').trim()
+        break
+      }
+    }
+    
+    // Clearance extraction
+    const clearancePatterns = [
+      /(?:renal |total |oral )?clearance[^\d]*(\d+(?:\.\d+)?(?:\s*[-–to]\s*\d+(?:\.\d+)?)?)\s*(ml\/min|l\/h|ml\/min\/kg)/i,
+    ]
+    for (const pattern of clearancePatterns) {
+      const match = text.match(pattern)
+      if (match) {
+        pkData.clearance = `${match[1]} ${match[2]}`.replace(/\s+/g, ' ').trim()
+        break
+      }
+    }
+    
+    // Metabolism - look for CYP enzymes
+    const cypMatch = text.match(/cyp\s*(\d[a-z]\d+)/gi)
+    if (cypMatch) {
+      const enzymes = [...new Set(cypMatch.map(m => m.toUpperCase().replace(/\s/g, '')))]
+      pkData.metabolism = `Metabolized by ${enzymes.join(', ')}`
+    }
+    
+    // Elimination route
+    if (lowerText.includes('renal') && lowerText.includes('excret')) {
+      const renalMatch = text.match(/(\d+(?:\.\d+)?)\s*%[^.]*(?:renal|urine|urinary)/i)
+      pkData.elimination = renalMatch 
+        ? `${renalMatch[1]}% excreted renally`
+        : 'Primarily renal excretion'
+    } else if (lowerText.includes('feces') || lowerText.includes('fecal') || lowerText.includes('biliary')) {
+      pkData.elimination = 'Primarily fecal/biliary excretion'
+    }
+    
+    // Food effect
+    if (lowerText.includes('food')) {
+      if (lowerText.includes('no clinically significant') || (lowerText.includes('no') && lowerText.includes('effect'))) {
+        pkData.foodEffect = 'No clinically significant food effect'
+      } else if (lowerText.includes('increase') || lowerText.includes('enhance')) {
+        pkData.foodEffect = 'Food increases absorption'
+      } else if (lowerText.includes('decrease') || lowerText.includes('reduce')) {
+        pkData.foodEffect = 'Food decreases absorption'
+      }
+    }
+    
+    // Renal impairment
+    if (lowerText.includes('renal impairment')) {
+      if (lowerText.includes('no dose adjustment') || lowerText.includes('no dosage adjustment')) {
+        pkData.renalImpairment = 'No dose adjustment required'
+      } else if (lowerText.includes('dose adjustment') || lowerText.includes('dosage adjustment')) {
+        pkData.renalImpairment = 'Dose adjustment required in renal impairment'
+      }
+    }
+    
+    // Hepatic impairment
+    if (lowerText.includes('hepatic impairment')) {
+      if (lowerText.includes('no dose adjustment') || lowerText.includes('no dosage adjustment')) {
+        pkData.hepaticImpairment = 'No dose adjustment required'
+      } else if (lowerText.includes('dose adjustment') || lowerText.includes('dosage adjustment')) {
+        pkData.hepaticImpairment = 'Dose adjustment required in hepatic impairment'
+      }
+    }
+    
+    return Object.keys(pkData).length > 0 ? pkData : undefined
+  }
+
+  /**
+   * Get full drug label with all sections for enrichment
+   * This is the primary method for enrichers to use
+   */
+  async getFullDrugLabel(drugName: string): Promise<DrugLabel | null> {
+    console.log(`📋 openFDA: Fetching full label for "${drugName}"`)
+    
+    try {
+      // Fetch multiple results to find monotherapy product (not combination)
+      const params = new URLSearchParams({
+        search: `openfda.brand_name:"${drugName}" OR openfda.generic_name:"${drugName}"`,
+        limit: '10',
+      })
+
+      if (this.apiKey) {
+        params.append('api_key', this.apiKey)
+      }
+
+      const response = await this.fetchWithRateLimit(`${this.baseUrl}/drug/label.json?${params}`)
+      
+      if (!response.ok) {
+        if (response.status === 404) {
+          console.log(`⚠️ openFDA: No label found for "${drugName}"`)
+          return null
+        }
+        throw new Error(`openFDA API error: ${response.statusText}`)
+      }
+
+      const data = await response.json()
+      const results = data.results || []
+      
+      if (results.length === 0) {
+        console.log(`⚠️ openFDA: No label found for "${drugName}"`)
+        return null
+      }
+
+      // Prefer monotherapy product over combination products
+      // Combination products often have multiple generic names or contain "and", "/"
+      const lowerDrugName = drugName.toLowerCase()
+      let selectedResult = results[0]
+      
+      for (const result of results) {
+        const genericNames = result.openfda?.generic_name || []
+        const brandName = (result.openfda?.brand_name?.[0] || '').toLowerCase()
+        
+        // Check if this is a monotherapy (single active ingredient matching our drug)
+        if (genericNames.length === 1) {
+          const genericName = genericNames[0].toLowerCase()
+          // Prefer exact match or single-ingredient product
+          if (genericName === lowerDrugName || 
+              genericName.includes(lowerDrugName) && !genericName.includes(' and ')) {
+            selectedResult = result
+            console.log(`   Preferring monotherapy: ${brandName || genericName}`)
+            break
+          }
+        }
+        
+        // Also check if brand name matches exactly (e.g., "Januvia" for sitagliptin)
+        if (brandName === lowerDrugName) {
+          selectedResult = result
+          console.log(`   Preferring exact brand match: ${brandName}`)
+          break
+        }
+      }
+
+      const label = this.parseDrugLabel(selectedResult)
+      console.log(`✅ openFDA: Found label for "${drugName}" (${label.brandName})`)
+      
+      // Log what PK data was extracted
+      if (label.pkData) {
+        const pkFields = Object.keys(label.pkData).filter(k => (label.pkData as any)[k])
+        console.log(`   PK data extracted: ${pkFields.join(', ')}`)
+      }
+      
+      return label
+    } catch (error) {
+      console.error(`openFDA getFullDrugLabel error for "${drugName}":`, error)
+      return null
     }
   }
 }

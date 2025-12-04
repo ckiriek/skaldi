@@ -13,6 +13,7 @@
 
 import type { AggregatedData } from './data-aggregator.types'
 import { generateSampleSizeContext, generateVisitWindowsTable } from '../data/clinical-benchmarks'
+import { enrichSynopsisParameters, type SynopsisParameters } from '../enrichment/synopsis-enricher'
 
 // ============================================================================
 // TYPES
@@ -679,6 +680,57 @@ export class ContextBuilder {
       }
     }
     
+    // Add enriched Synopsis parameters for Synopsis documents
+    // These are industry-standard values based on therapeutic area and phase
+    if (config.documentType === 'Synopsis' && design.indication && design.phase) {
+      parts.push('\n---\n')
+      parts.push('## ENRICHED STUDY PARAMETERS (Industry Standards)')
+      parts.push('*These values are derived from industry standards for the therapeutic area and phase.*')
+      parts.push('*Use these as defaults unless sponsor provides specific values.*\n')
+      
+      // We'll add the enriched parameters synchronously from cached data
+      // The actual enrichment happens in the data aggregator
+      if (design._synopsisParams) {
+        const params = design._synopsisParams as SynopsisParameters
+        
+        parts.push('### Timing Parameters')
+        parts.push(`**Screening Period:** ${params.screening_duration_text}`)
+        parts.push(`**Treatment Duration:** ${params.treatment_duration_text}`)
+        parts.push(`**Follow-up Period:** ${params.followup_duration_text}`)
+        parts.push(`**Total Study Duration:** ${params.total_duration_text}`)
+        if (params.washout_duration_weeks) {
+          parts.push(`**Washout Period (if applicable):** ${params.washout_duration_text}`)
+        }
+        
+        parts.push('\n### Visit Schedule')
+        parts.push(`**Visit Frequency:** ${params.visit_frequency}`)
+        parts.push(`**Visit Windows:** ${params.visit_windows}`)
+        
+        parts.push('\n### Statistical Parameters')
+        parts.push(`**Target Power:** ${params.power_percent}%`)
+        parts.push(`**Alpha Level:** ${params.alpha_level} (two-sided)`)
+        parts.push(`**Anticipated Dropout Rate:** ${params.dropout_rate_percent}%`)
+        parts.push(`**Effect Size Rationale:** ${params.effect_size_description}`)
+        
+        parts.push('\n### Population Parameters')
+        if (params.age_min && params.age_max) {
+          parts.push(`**Age Range:** ${params.age_min} to ${params.age_max} years`)
+        }
+        if (params.bmi_min && params.bmi_max) {
+          parts.push(`**BMI Range:** ${params.bmi_min} to ${params.bmi_max} kg/m²`)
+        }
+        
+        parts.push('\n### Dosing')
+        parts.push(`**Dosing Frequency:** ${params.dosing_frequency}`)
+        
+        parts.push('\n### Regulatory Requirements')
+        parts.push(`**Contraception Duration Post-Treatment:** ${params.contraception_duration_days} days`)
+        parts.push(`**Prior Study Washout:** ${params.prior_study_washout_days} days`)
+        
+        parts.push(`\n*Data sources: ${params.sources.join(', ')}. Confidence: ${params.confidence}.*`)
+      }
+    }
+    
     const text = parts.join('\n')
     return this.truncateToTokens(text, maxTokens)
   }
@@ -1136,5 +1188,270 @@ export class ContextBuilder {
     }
 
     return null
+  }
+
+  /**
+   * Format IB Enrichment data for prompts
+   * This provides structured data specifically for IB generation
+   */
+  formatIBEnrichmentData(ibData: {
+    drug_name: string
+    indication: string
+    phase: string
+    label_data: any
+    trials: any[]
+    tox: any
+    cmc: any
+    pkpd: any
+  }): string {
+    const parts: string[] = []
+    
+    // Header
+    parts.push('# IB ENRICHMENT DATA')
+    parts.push(`**Drug:** ${ibData.drug_name}`)
+    parts.push(`**Indication:** ${ibData.indication}`)
+    parts.push(`**Phase:** ${ibData.phase}`)
+    parts.push('')
+    
+    // Label Data
+    if (ibData.label_data) {
+      parts.push('## FDA LABEL DATA')
+      
+      if (ibData.label_data.mechanism) {
+        parts.push(`### Mechanism of Action`)
+        parts.push(ibData.label_data.mechanism)
+        parts.push('')
+      }
+      
+      if (ibData.label_data.approved_indications?.length > 0) {
+        parts.push('### Approved Indications')
+        ibData.label_data.approved_indications.forEach((ind: string) => {
+          parts.push(`- ${ind}`)
+        })
+        parts.push('')
+      }
+      
+      if (ibData.label_data.dose?.recommended) {
+        parts.push('### Dosing')
+        parts.push(`**Recommended:** ${ibData.label_data.dose.recommended}`)
+        if (ibData.label_data.dose.range) parts.push(`**Range:** ${ibData.label_data.dose.range}`)
+        if (ibData.label_data.dose.adjustments) parts.push(`**Adjustments:** ${ibData.label_data.dose.adjustments}`)
+        parts.push('')
+      }
+      
+      if (ibData.label_data.warnings?.length > 0) {
+        parts.push('### Warnings')
+        ibData.label_data.warnings.slice(0, 10).forEach((w: string) => {
+          parts.push(`- ${w}`)
+        })
+        parts.push('')
+      }
+      
+      if (ibData.label_data.contraindications?.length > 0) {
+        parts.push('### Contraindications')
+        ibData.label_data.contraindications.forEach((c: string) => {
+          parts.push(`- ${c}`)
+        })
+        parts.push('')
+      }
+      
+      if (ibData.label_data.drug_interactions?.length > 0) {
+        parts.push('### Drug Interactions')
+        ibData.label_data.drug_interactions.slice(0, 10).forEach((i: string) => {
+          parts.push(`- ${i}`)
+        })
+        parts.push('')
+      }
+      
+      if (ibData.label_data.adverse_events?.common?.length > 0) {
+        parts.push('### Common Adverse Events')
+        parts.push('| Adverse Event | Frequency |')
+        parts.push('|---------------|-----------|')
+        Object.entries(ibData.label_data.adverse_events.frequencies || {})
+          .sort(([,a], [,b]) => (b as number) - (a as number))
+          .slice(0, 15)
+          .forEach(([term, freq]) => {
+            parts.push(`| ${term} | ${freq}% |`)
+          })
+        parts.push('')
+      }
+      
+      if (ibData.label_data.boxed_warning) {
+        parts.push('### BOXED WARNING')
+        parts.push(ibData.label_data.boxed_warning)
+        parts.push('')
+      }
+      
+      if (ibData.label_data.overdose) {
+        parts.push('### Overdose')
+        parts.push(ibData.label_data.overdose.substring(0, 1000))
+        parts.push('')
+      }
+    }
+    
+    // PK/PD Data
+    if (ibData.pkpd) {
+      parts.push('## PHARMACOKINETICS AND PHARMACODYNAMICS')
+      parts.push(`**Source:** ${ibData.pkpd.source}`)
+      parts.push('')
+      
+      if (ibData.pkpd.tmax) parts.push(`- **Tmax:** ${ibData.pkpd.tmax}`)
+      if (ibData.pkpd.cmax) parts.push(`- **Cmax:** ${ibData.pkpd.cmax}`)
+      if (ibData.pkpd.t_half) parts.push(`- **Half-life (t½):** ${ibData.pkpd.t_half}`)
+      if (ibData.pkpd.bioavailability) parts.push(`- **Bioavailability:** ${ibData.pkpd.bioavailability}`)
+      if (ibData.pkpd.absorption) parts.push(`- **Absorption:** ${ibData.pkpd.absorption}`)
+      
+      if (ibData.pkpd.distribution) {
+        if (ibData.pkpd.distribution.vd) parts.push(`- **Volume of Distribution:** ${ibData.pkpd.distribution.vd}`)
+        if (ibData.pkpd.distribution.protein_binding) parts.push(`- **Protein Binding:** ${ibData.pkpd.distribution.protein_binding}`)
+      }
+      
+      if (ibData.pkpd.metabolism) {
+        if (ibData.pkpd.metabolism.primary_pathway) parts.push(`- **Metabolism:** ${ibData.pkpd.metabolism.primary_pathway}`)
+        if (ibData.pkpd.metabolism.enzymes?.length > 0) parts.push(`- **CYP Enzymes:** ${ibData.pkpd.metabolism.enzymes.join(', ')}`)
+      }
+      
+      if (ibData.pkpd.elimination?.route) parts.push(`- **Elimination:** ${ibData.pkpd.elimination.route}`)
+      if (ibData.pkpd.elimination?.clearance) parts.push(`- **Clearance:** ${ibData.pkpd.elimination.clearance}`)
+      if (ibData.pkpd.steady_state) parts.push(`- **Steady State:** ${ibData.pkpd.steady_state}`)
+      if (ibData.pkpd.food_effect) parts.push(`- **Food Effect:** ${ibData.pkpd.food_effect}`)
+      
+      if (ibData.pkpd.special_populations) {
+        parts.push('')
+        parts.push('### Special Populations')
+        if (ibData.pkpd.special_populations.renal_impairment) parts.push(`- **Renal Impairment:** ${ibData.pkpd.special_populations.renal_impairment}`)
+        if (ibData.pkpd.special_populations.hepatic_impairment) parts.push(`- **Hepatic Impairment:** ${ibData.pkpd.special_populations.hepatic_impairment}`)
+        if (ibData.pkpd.special_populations.elderly) parts.push(`- **Elderly:** ${ibData.pkpd.special_populations.elderly}`)
+        if (ibData.pkpd.special_populations.pediatric) parts.push(`- **Pediatric:** ${ibData.pkpd.special_populations.pediatric}`)
+      }
+      parts.push('')
+    }
+    
+    // CMC Data
+    if (ibData.cmc) {
+      parts.push('## CHEMISTRY, MANUFACTURING, AND CONTROLS')
+      parts.push(`**Source:** ${ibData.cmc.source}`)
+      parts.push('')
+      
+      if (ibData.cmc.chemical_name) parts.push(`- **Chemical Name:** ${ibData.cmc.chemical_name}`)
+      if (ibData.cmc.iupac_name) parts.push(`- **IUPAC Name:** ${ibData.cmc.iupac_name}`)
+      if (ibData.cmc.molecular_formula) parts.push(`- **Molecular Formula:** ${ibData.cmc.molecular_formula}`)
+      if (ibData.cmc.molecular_weight) parts.push(`- **Molecular Weight:** ${ibData.cmc.molecular_weight} g/mol`)
+      if (ibData.cmc.cas_number) parts.push(`- **CAS Number:** ${ibData.cmc.cas_number}`)
+      if (ibData.cmc.physical_state) parts.push(`- **Physical State:** ${ibData.cmc.physical_state}`)
+      if (ibData.cmc.appearance) parts.push(`- **Appearance:** ${ibData.cmc.appearance}`)
+      if (ibData.cmc.pKa) parts.push(`- **pKa:** ${ibData.cmc.pKa}`)
+      if (ibData.cmc.logP) parts.push(`- **Log P:** ${ibData.cmc.logP}`)
+      
+      if (ibData.cmc.solubility) {
+        if (ibData.cmc.solubility.water) parts.push(`- **Aqueous Solubility:** ${ibData.cmc.solubility.water}`)
+        if (ibData.cmc.solubility.organic) parts.push(`- **Organic Solubility:** ${ibData.cmc.solubility.organic}`)
+      }
+      
+      if (ibData.cmc.dosage_form) parts.push(`- **Dosage Form:** ${ibData.cmc.dosage_form}`)
+      if (ibData.cmc.strength) parts.push(`- **Strength:** ${ibData.cmc.strength}`)
+      if (ibData.cmc.storage) parts.push(`- **Storage:** ${ibData.cmc.storage}`)
+      if (ibData.cmc.shelf_life) parts.push(`- **Shelf Life:** ${ibData.cmc.shelf_life}`)
+      parts.push('')
+    }
+    
+    // Toxicology Data
+    if (ibData.tox) {
+      parts.push('## NONCLINICAL TOXICOLOGY')
+      parts.push(`**Source:** ${ibData.tox.source}`)
+      parts.push('')
+      
+      if (ibData.tox.target_organs?.length > 0) {
+        parts.push(`- **Target Organs:** ${ibData.tox.target_organs.join(', ')}`)
+      }
+      
+      if (ibData.tox.species?.length > 0) {
+        parts.push(`- **Species Tested:** ${ibData.tox.species.join(', ')}`)
+      }
+      
+      if (ibData.tox.noael?.value) {
+        parts.push(`- **NOAEL:** ${ibData.tox.noael.value}${ibData.tox.noael.species ? ` (${ibData.tox.noael.species})` : ''}`)
+      }
+      
+      if (ibData.tox.genotoxicity) {
+        parts.push('')
+        parts.push('### Genotoxicity')
+        parts.push(ibData.tox.genotoxicity)
+      }
+      
+      if (ibData.tox.carcinogenicity) {
+        parts.push('')
+        parts.push('### Carcinogenicity')
+        parts.push(ibData.tox.carcinogenicity)
+      }
+      
+      if (ibData.tox.reproductive_toxicity) {
+        parts.push('')
+        parts.push('### Reproductive Toxicity')
+        parts.push(ibData.tox.reproductive_toxicity)
+      }
+      
+      if (ibData.tox.developmental_toxicity) {
+        parts.push('')
+        parts.push('### Developmental Toxicity')
+        parts.push(ibData.tox.developmental_toxicity)
+      }
+      
+      if (ibData.tox.safety_pharmacology) {
+        parts.push('')
+        parts.push('### Safety Pharmacology')
+        parts.push(ibData.tox.safety_pharmacology)
+      }
+      parts.push('')
+    }
+    
+    // Clinical Trials (filtered by indication)
+    if (ibData.trials?.length > 0) {
+      parts.push('## CLINICAL TRIALS (Relevant to Indication)')
+      parts.push(`**Total Relevant Studies:** ${ibData.trials.length}`)
+      parts.push('')
+      
+      // Group by phase
+      const byPhase: Record<string, any[]> = {}
+      ibData.trials.forEach((trial: any) => {
+        const phase = trial.payload_json?.phase || trial.phase || 'Unknown'
+        if (!byPhase[phase]) byPhase[phase] = []
+        byPhase[phase].push(trial)
+      })
+      
+      // Sort phases
+      const phaseOrder = ['Phase 4', 'Phase 3', 'Phase 2/3', 'Phase 2', 'Phase 1/2', 'Phase 1', 'Unknown']
+      
+      for (const phase of phaseOrder) {
+        if (byPhase[phase]?.length > 0) {
+          parts.push(`### ${phase} Studies (${byPhase[phase].length})`)
+          
+          byPhase[phase].slice(0, 5).forEach((trial: any) => {
+            const nctId = trial.external_id || trial.nct_id || 'Unknown'
+            const title = trial.title || 'Unknown'
+            const payload = trial.payload_json || {}
+            
+            parts.push(``)
+            parts.push(`**${nctId}:** ${title}`)
+            if (payload.enrollment) parts.push(`- Enrollment: ${payload.enrollment}`)
+            if (payload.status) parts.push(`- Status: ${payload.status}`)
+            if (payload.primaryOutcomes?.length > 0) {
+              parts.push(`- Primary Endpoint: ${payload.primaryOutcomes[0].measure || payload.primaryOutcomes[0]}`)
+            }
+            if (payload.hasResults) parts.push(`- Results: Available`)
+          })
+          
+          if (byPhase[phase].length > 5) {
+            parts.push(`... and ${byPhase[phase].length - 5} more ${phase} studies`)
+          }
+          parts.push('')
+        }
+      }
+    }
+    
+    parts.push('---')
+    parts.push('**END OF IB ENRICHMENT DATA**')
+    
+    return parts.join('\n')
   }
 }

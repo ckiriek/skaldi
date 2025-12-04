@@ -6,7 +6,9 @@ import { DataAggregator } from './data-aggregator'
 import { ContextBuilder } from './context-builder'
 import { TokenBudgetCalculator } from './token-budget'
 import { GOVERNING_SYSTEM_PROMPT_V3 } from '@/lib/prompts/governing-prompt-v3'
-import { IB_SECTION_PROMPTS } from '@/lib/prompts/ib-prompts'
+import { IB_SECTION_PROMPTS_V4 } from '@/lib/prompts/ib-prompts-v4'
+import { IBEnrichmentService } from './ib-enrichment'
+import { IBValidator } from './ib-validator'
 import { PROTOCOL_SECTION_PROMPTS } from '@/lib/prompts/protocol-prompts'
 import { CSR_SECTION_PROMPTS } from '@/lib/prompts/csr-prompts'
 import { ICF_SECTION_PROMPTS } from '@/lib/prompts/icf-prompts'
@@ -47,6 +49,8 @@ export class SectionGenerator {
   private dataAggregator: DataAggregator
   private contextBuilder: ContextBuilder
   private tokenCalculator: TokenBudgetCalculator
+  private ibEnrichment: IBEnrichmentService
+  private ibValidator: IBValidator
 
   constructor() {
     // In production, we might fetch from DB only. 
@@ -57,6 +61,8 @@ export class SectionGenerator {
     this.dataAggregator = new DataAggregator()
     this.contextBuilder = new ContextBuilder()
     this.tokenCalculator = new TokenBudgetCalculator()
+    this.ibEnrichment = new IBEnrichmentService()
+    this.ibValidator = new IBValidator()
   }
 
   /**
@@ -405,10 +411,11 @@ Write about the ACTUAL compound ${context.compoundName || '[compound]'}.
 
   /**
    * Get section-specific prompt from new prompt library
+   * IB uses v4 prompts with strict structure and no placeholders
    */
   private getSectionPrompt(documentType: string, sectionId: string): string {
     const prompts: Record<string, Record<string, string>> = {
-      'IB': IB_SECTION_PROMPTS,
+      'IB': IB_SECTION_PROMPTS_V4,  // Use v4 prompts for IB
       'Protocol': PROTOCOL_SECTION_PROMPTS,
       'CSR': CSR_SECTION_PROMPTS,
       'ICF': ICF_SECTION_PROMPTS,
@@ -431,5 +438,55 @@ Write about the ACTUAL compound ${context.compoundName || '[compound]'}.
     }
 
     return prompt
+  }
+
+  /**
+   * Validate and auto-fix IB content
+   */
+  validateIBContent(content: string, context?: {
+    compoundName?: string
+    indication?: string
+    phase?: string
+  }): { isValid: boolean; fixedContent: string; issues: any[] } {
+    // First validate
+    const validation = this.ibValidator.validate(content)
+    
+    if (!validation.isValid || validation.summary.placeholders > 0) {
+      // Auto-fix if there are issues
+      const fixResult = this.ibValidator.autoFix(content, {
+        ...context,
+        drugClass: 'DEFAULT' // Will be detected from compound name
+      })
+      
+      return {
+        isValid: fixResult.remainingIssues.filter(i => i.type === 'error').length === 0,
+        fixedContent: fixResult.fixedContent,
+        issues: fixResult.remainingIssues
+      }
+    }
+    
+    return {
+      isValid: true,
+      fixedContent: content,
+      issues: validation.issues
+    }
+  }
+
+  /**
+   * Get IB-specific enrichment data
+   * This provides structured data for IB generation including:
+   * - Label data (PK, PD, warnings, AE)
+   * - Toxicology profile
+   * - CMC data
+   * - PK/PD data
+   * - Relevant trials (filtered by indication)
+   */
+  async getIBEnrichment(
+    projectId: string,
+    drugName: string,
+    indication: string,
+    phase: string
+  ) {
+    return this.ibEnrichment.enrichForIB(projectId, drugName, indication, phase)
   }
 }

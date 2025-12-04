@@ -6,7 +6,8 @@
 
 import type { DailyMedRecord } from '../types'
 
-const DAILYMED_SEARCH_API = 'https://dailymed.nlm.nih.gov/dailymed/services/v2/search.json'
+// Correct DailyMed API endpoints
+// Docs: https://dailymed.nlm.nih.gov/dailymed/app-support-web-services.cfm
 const DAILYMED_SPL_API = 'https://dailymed.nlm.nih.gov/dailymed/services/v2/spls'
 const MAX_RETRIES = 3
 const TIMEOUT_MS = 15000
@@ -40,10 +41,12 @@ export async function fetchDailyMedByInn(inn: string): Promise<DailyMedRecord[]>
 }
 
 /**
- * Search DailyMed for set IDs
+ * Search DailyMed for set IDs by drug name
+ * Uses the correct endpoint: /spls.json?drug_name=X
  */
 async function searchDailyMed(inn: string): Promise<string[]> {
-  const url = `${DAILYMED_SEARCH_API}?ingredient=${encodeURIComponent(inn)}`
+  // DailyMed API: search by drug_name parameter
+  const url = `${DAILYMED_SPL_API}.json?drug_name=${encodeURIComponent(inn)}`
   
   let lastError: Error | null = null
   
@@ -68,15 +71,24 @@ async function searchDailyMed(inn: string): Promise<string[]> {
         throw new Error(`DailyMed search returned ${response.status}`)
       }
       
+      // Check content-type to avoid parsing HTML as JSON
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        throw new Error(`DailyMed returned non-JSON response: ${contentType}`)
+      }
+      
       const data = await response.json()
       
       if (!data.data || !Array.isArray(data.data)) {
         return []
       }
       
-      return data.data
+      const setIds = data.data
         .map((item: any) => item.setid)
         .filter((setid: any) => setid)
+      
+      console.log(`✅ DailyMed: Found ${setIds.length} labels for "${inn}"`)
+      return setIds
       
     } catch (error) {
       lastError = error as Error

@@ -260,6 +260,126 @@ export class PubChemAdapter {
     const pattern = /^[A-Z]{14}-[A-Z]{10}-[A-Z]$/
     return pattern.test(inchikey)
   }
+
+  /**
+   * Fetch extended compound properties for CMC enrichment
+   * Includes: MW, formula, CAS, InChIKey, SMILES, XLogP, TPSA, etc.
+   * 
+   * @param name - Compound name (INN)
+   * @returns Extended compound properties or null
+   */
+  async fetchCompoundProperties(name: string): Promise<{
+    cid?: number
+    inchikey?: string
+    cas?: string
+    iupacName?: string
+    molecularFormula?: string
+    molecularWeight?: number
+    canonicalSmiles?: string
+    isomericSmiles?: string
+    xlogp?: number
+    tpsa?: number
+    hbondDonor?: number
+    hbondAcceptor?: number
+    rotatableBonds?: number
+    complexity?: number
+    structureUrl?: string
+  } | null> {
+    try {
+      await this.rateLimit()
+
+      // Step 1: Search by name to get CID
+      const searchUrl = `${this.baseUrl}/compound/name/${encodeURIComponent(name)}/cids/JSON`
+      const searchResponse = await fetch(searchUrl)
+
+      if (!searchResponse.ok) {
+        if (searchResponse.status === 404) {
+          console.log(`⚠️ PubChem: Compound "${name}" not found`)
+          return null
+        }
+        throw new Error(`PubChem search failed: ${searchResponse.status}`)
+      }
+
+      const searchData = await searchResponse.json()
+      const cid = searchData.IdentifierList?.CID?.[0]
+
+      if (!cid) {
+        return null
+      }
+
+      // Step 2: Fetch multiple properties in one call
+      await this.rateLimit()
+      const properties = [
+        'InChIKey',
+        'IUPACName', 
+        'MolecularFormula',
+        'MolecularWeight',
+        'CanonicalSMILES',
+        'IsomericSMILES',
+        'XLogP',
+        'TPSA',
+        'HBondDonorCount',
+        'HBondAcceptorCount',
+        'RotatableBondCount',
+        'Complexity'
+      ].join(',')
+      
+      const propsUrl = `${this.baseUrl}/compound/cid/${cid}/property/${properties}/JSON`
+      const propsResponse = await fetch(propsUrl)
+
+      if (!propsResponse.ok) {
+        throw new Error(`PubChem properties fetch failed: ${propsResponse.status}`)
+      }
+
+      const propsData = await propsResponse.json()
+      const props = propsData.PropertyTable?.Properties?.[0]
+
+      if (!props) {
+        return null
+      }
+
+      // Step 3: Try to get CAS number from synonyms
+      await this.rateLimit()
+      let cas: string | undefined
+      try {
+        const synonymsUrl = `${this.baseUrl}/compound/cid/${cid}/synonyms/JSON`
+        const synonymsResponse = await fetch(synonymsUrl)
+        if (synonymsResponse.ok) {
+          const synonymsData = await synonymsResponse.json()
+          const synonyms = synonymsData.InformationList?.Information?.[0]?.Synonym || []
+          // CAS format: digits-digits-digit (e.g., 486460-32-6)
+          cas = synonyms.find((s: string) => /^\d{2,7}-\d{2}-\d$/.test(s))
+        }
+      } catch {
+        // CAS lookup failed, continue without it
+      }
+
+      const result = {
+        cid,
+        inchikey: props.InChIKey,
+        cas,
+        iupacName: props.IUPACName,
+        molecularFormula: props.MolecularFormula,
+        molecularWeight: props.MolecularWeight,
+        canonicalSmiles: props.CanonicalSMILES,
+        isomericSmiles: props.IsomericSMILES,
+        xlogp: props.XLogP,
+        tpsa: props.TPSA,
+        hbondDonor: props.HBondDonorCount,
+        hbondAcceptor: props.HBondAcceptorCount,
+        rotatableBonds: props.RotatableBondCount,
+        complexity: props.Complexity,
+        structureUrl: `https://pubchem.ncbi.nlm.nih.gov/image/imgsrv.fcgi?cid=${cid}&t=l`
+      }
+
+      console.log(`✅ PubChem: Fetched properties for "${name}" (CID: ${cid}, MW: ${props.MolecularWeight}, XLogP: ${props.XLogP})`)
+      return result
+
+    } catch (error) {
+      console.error(`PubChem fetchCompoundProperties error for "${name}":`, error)
+      return null
+    }
+  }
 }
 
 // Export singleton instance

@@ -281,13 +281,16 @@ export function GenerateDocumentButton({
     setLoadingType(type)
 
     try {
-      const response = await fetch('/api/generate', {
+      // Use v2 API for IB generation (Universal Project Model)
+      const apiUrl = type === 'IB' ? '/api/v2/ib/generate' : '/api/generate'
+      const body = type === 'IB' 
+        ? { projectId }
+        : { projectId, documentType: type }
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId,
-          documentType: type,
-        }),
+        body: JSON.stringify(body),
       })
 
       if (!response.ok) {
@@ -303,9 +306,24 @@ export function GenerateDocumentButton({
 
       const data = await response.json()
       
-      if (data.success && data.document) {
-        // Show success toast with validation info if available
-        if (data.validation) {
+      // Handle both v1 and v2 API responses
+      const documentId = data.document?.id || data.documentId
+      const isSuccess = data.success && documentId
+      
+      if (isSuccess) {
+        // Show success toast with validation/completeness info
+        if (data.completeness) {
+          // v2 API response with completeness scores
+          const completenessPercent = Math.round((data.completeness.overall || 0) * 100)
+          const validationPassed = data.validation?.passed !== false
+          
+          toast({
+            variant: validationPassed ? 'success' : 'warning',
+            title: 'Document generated successfully',
+            description: `Data completeness: ${completenessPercent}%${data.enrichment_warnings?.length ? ` (${data.enrichment_warnings.length} warnings)` : ''}`,
+          })
+        } else if (data.validation) {
+          // v1 API response with validation
           const validationMsg = data.validation.passed 
             ? `✓ Validation passed (${data.validation.score}%)`
             : `⚠ ${data.validation.errors} errors, ${data.validation.warnings} warnings (${data.validation.score}%)`
@@ -323,13 +341,13 @@ export function GenerateDocumentButton({
           })
         }
         
-        router.push(`/dashboard/documents/${data.document.id}`)
+        router.push(`/dashboard/documents/${documentId}`)
         router.refresh()
       } else {
         toast({
           variant: 'error',
           title: 'Document generation failed',
-          description: data.error || 'The document could not be generated. Please try again.',
+          description: data.error || data.errors?.[0]?.error || 'The document could not be generated. Please try again.',
         })
       }
     } catch (error) {
