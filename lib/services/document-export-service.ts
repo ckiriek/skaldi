@@ -6,12 +6,37 @@
  */
 
 import { createClient, createServiceClient } from '@/lib/supabase/server'
-import { jsPDF } from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { marked } from 'marked'
-import { Document, Packer, Paragraph, HeadingLevel, AlignmentType } from 'docx'
+import { generateProfessionalPDF, generateProfessionalDOCX } from './professional-export-service'
 
 const BUCKET_NAME = 'document-exports'
+
+// Retry helper for upload operations
+async function uploadWithRetry(
+  client: any,
+  bucket: string,
+  path: string,
+  buffer: Buffer,
+  contentType: string,
+  maxRetries = 3
+): Promise<{ error: any }> {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const { error } = await client.storage
+      .from(bucket)
+      .upload(path, buffer, { contentType, upsert: true })
+    
+    if (!error) {
+      return { error: null }
+    }
+    
+    if (attempt < maxRetries) {
+      console.log(`[ExportService] Upload attempt ${attempt} failed, retrying in ${attempt * 2}s...`)
+      await new Promise(r => setTimeout(r, attempt * 2000))
+    } else {
+      return { error }
+    }
+  }
+  return { error: new Error('Max retries exceeded') }
+}
 
 interface ExportResult {
   pdfPath: string | null
@@ -86,17 +111,27 @@ export async function generateDocumentExports(documentId: string): Promise<Expor
   let pdfPath: string | null = null
   let docxPath: string | null = null
 
+  // Get sponsor from project
+  const { data: project } = await supabase
+    .from('projects')
+    .select('sponsor')
+    .eq('id', doc.project_id)
+    .single()
+  const sponsor = project?.sponsor || undefined
+
   try {
-    // Generate PDF
-    const pdfBuffer = generatePDF(content, docType, projectTitle)
+    // Generate PDF using professional exporter
+    console.log(`[ExportService] Generating professional PDF for ${docType}...`)
+    const pdfBuffer = await generateProfessionalPDF(content, docType, projectTitle, sponsor)
     const pdfFileName = `${documentId}/${docType}_v${version_num}.pdf`
     
-    const { error: pdfUploadError } = await uploadClient.storage
-      .from(BUCKET_NAME)
-      .upload(pdfFileName, pdfBuffer, {
-        contentType: 'application/pdf',
-        upsert: true
-      })
+    const { error: pdfUploadError } = await uploadWithRetry(
+      uploadClient,
+      BUCKET_NAME,
+      pdfFileName,
+      pdfBuffer,
+      'application/pdf'
+    )
     
     if (pdfUploadError) {
       console.error('[ExportService] PDF upload error:', pdfUploadError)
@@ -109,16 +144,18 @@ export async function generateDocumentExports(documentId: string): Promise<Expor
   }
 
   try {
-    // Generate DOCX
-    const docxBuffer = await generateDOCX(content, docType, projectTitle)
+    // Generate DOCX using professional exporter
+    console.log(`[ExportService] Generating professional DOCX for ${docType}...`)
+    const docxBuffer = await generateProfessionalDOCX(content, docType, projectTitle, sponsor)
     const docxFileName = `${documentId}/${docType}_v${version_num}.docx`
     
-    const { error: docxUploadError } = await uploadClient.storage
-      .from(BUCKET_NAME)
-      .upload(docxFileName, docxBuffer, {
-        contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        upsert: true
-      })
+    const { error: docxUploadError } = await uploadWithRetry(
+      uploadClient,
+      BUCKET_NAME,
+      docxFileName,
+      docxBuffer,
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    )
     
     if (docxUploadError) {
       console.error('[ExportService] DOCX upload error:', docxUploadError)
@@ -344,13 +381,23 @@ export async function generateProjectBundle(projectId: string): Promise<string |
     }
   })
 
-  // Check if all docs have exports
+  // Generate missing exports for all documents
+  for (const doc of Object.values(latestDocs)) {
+    if (!doc.pdf_path || !doc.docx_path) {
+      console.log(`[ExportService] Generating missing exports for ${doc.type} v${doc.version}`)
+      const result = await generateDocumentExports(doc.id)
+      if (result.pdfPath) doc.pdf_path = result.pdfPath
+      if (result.docxPath) doc.docx_path = result.docxPath
+    }
+  }
+
+  // Check if all docs now have exports
   const allHaveExports = Object.values(latestDocs).every(
     doc => doc.pdf_path && doc.docx_path
   )
 
   if (!allHaveExports) {
-    console.log('[ExportService] Not all documents have exports yet')
+    console.log('[ExportService] Failed to generate exports for some documents')
     return null
   }
 
@@ -478,207 +525,4 @@ function convertJsonToMarkdown(obj: Record<string, any>): string {
     .join('\n\n---\n\n')
 }
 
-function generatePDF(content: string, docType: string, projectTitle: string): Buffer {
-  const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
-  
-  pdf.setFont('helvetica', 'normal')
-  
-  let yPosition = 20
-  const pageWidth = pdf.internal.pageSize.getWidth()
-  const pageHeight = pdf.internal.pageSize.getHeight()
-  const margin = 20
-  const maxWidth = pageWidth - 2 * margin
-  const lineHeight = 4.5
-
-  // Title page
-  pdf.setFontSize(14)
-  pdf.setFont('helvetica', 'bold')
-  pdf.text(docType.toUpperCase(), pageWidth / 2, 70, { align: 'center' })
-  
-  pdf.setFontSize(12)
-  pdf.text(projectTitle, pageWidth / 2, 82, { align: 'center' })
-  
-  pdf.setFontSize(10)
-  pdf.setFont('helvetica', 'normal')
-  const date = new Date().toLocaleDateString('en-US', { 
-    year: 'numeric', month: 'long', day: 'numeric' 
-  })
-  pdf.text(`Generated: ${date}`, pageWidth / 2, 95, { align: 'center' })
-
-  // Content pages
-  pdf.addPage()
-  yPosition = 20
-
-  const tokens = marked.lexer(content)
-  
-  tokens.forEach((token: any) => {
-    if (yPosition > pageHeight - 30) {
-      pdf.addPage()
-      yPosition = 20
-    }
-
-    switch (token.type) {
-      case 'heading':
-        if (yPosition > 25) yPosition += 6
-        if (yPosition > pageHeight - 35) {
-          pdf.addPage()
-          yPosition = 20
-        }
-        
-        const fontSize = token.depth === 1 ? 12 : token.depth === 2 ? 11 : 10
-        pdf.setFontSize(fontSize)
-        pdf.setFont('helvetica', 'bold')
-        
-        const headingLines = pdf.splitTextToSize(token.text || '', maxWidth)
-        headingLines.forEach((line: string, i: number) => {
-          pdf.text(line, margin, yPosition + i * (fontSize * 0.42))
-        })
-        yPosition += headingLines.length * (fontSize * 0.42) + 4
-        
-        pdf.setFont('helvetica', 'normal')
-        pdf.setFontSize(10)
-        break
-
-      case 'paragraph':
-        const cleanText = (token.text || '')
-          .replace(/\*\*(.*?)\*\*/g, '$1')
-          .replace(/\*(.*?)\*/g, '$1')
-          .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-        
-        pdf.setFontSize(10)
-        const paraLines = pdf.splitTextToSize(cleanText, maxWidth)
-        const paraHeight = paraLines.length * lineHeight + 2
-        
-        if (yPosition + paraHeight > pageHeight - 20) {
-          pdf.addPage()
-          yPosition = 20
-        }
-        
-        paraLines.forEach((line: string, i: number) => {
-          pdf.text(line, margin, yPosition + i * lineHeight)
-        })
-        yPosition += paraHeight
-        break
-
-      case 'list':
-        pdf.setFontSize(10)
-        const items = token.items || []
-        items.forEach((item: any, idx: number) => {
-          if (yPosition > pageHeight - 25) {
-            pdf.addPage()
-            yPosition = 20
-          }
-          
-          const bullet = token.ordered ? `${idx + 1}. ` : '- '
-          const itemText = bullet + (item.text || '')
-          const itemLines = pdf.splitTextToSize(itemText, maxWidth - 8)
-          
-          itemLines.forEach((line: string, i: number) => {
-            pdf.text(line, margin + 4, yPosition + i * lineHeight)
-          })
-          yPosition += itemLines.length * lineHeight + 1
-        })
-        yPosition += 2
-        break
-
-      case 'table':
-        if (token.header && token.rows) {
-          if (yPosition > pageHeight - 50) {
-            pdf.addPage()
-            yPosition = 20
-          }
-          const headers = token.header.map((cell: any) => cell.text || '')
-          const tableData = token.rows.map((row: any) => 
-            row.map((cell: any) => cell.text || '')
-          )
-          autoTable(pdf, {
-            head: [headers],
-            body: tableData,
-            startY: yPosition,
-            margin: { left: margin, right: margin },
-            styles: { fontSize: 9 },
-            headStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0] },
-            theme: 'grid',
-          })
-          yPosition = (pdf as any).lastAutoTable.finalY + 6
-        }
-        break
-    }
-  })
-
-  // Page numbers
-  const totalPages = pdf.getNumberOfPages()
-  for (let i = 2; i <= totalPages; i++) {
-    pdf.setPage(i)
-    pdf.setFontSize(9)
-    pdf.setFont('helvetica', 'normal')
-    pdf.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' })
-  }
-
-  return Buffer.from(pdf.output('arraybuffer'))
-}
-
-async function generateDOCX(content: string, docType: string, projectTitle: string): Promise<Buffer> {
-  const tokens = marked.lexer(content)
-  const children: any[] = []
-
-  // Title
-  children.push(
-    new Paragraph({
-      text: docType.toUpperCase(),
-      heading: HeadingLevel.TITLE,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 200 },
-    }),
-    new Paragraph({
-      text: projectTitle,
-      heading: HeadingLevel.HEADING_1,
-      alignment: AlignmentType.CENTER,
-      spacing: { after: 400 },
-    })
-  )
-
-  tokens.forEach((token: any) => {
-    switch (token.type) {
-      case 'heading':
-        const level = token.depth === 1 ? HeadingLevel.HEADING_1 
-          : token.depth === 2 ? HeadingLevel.HEADING_2 
-          : HeadingLevel.HEADING_3
-        children.push(new Paragraph({ 
-          text: token.text || '', 
-          heading: level, 
-          spacing: { before: 240, after: 120 } 
-        }))
-        break
-
-      case 'paragraph':
-        const cleanText = (token.text || '')
-          .replace(/\*\*(.*?)\*\*/g, '$1')
-          .replace(/\*(.*?)\*/g, '$1')
-          .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-        children.push(new Paragraph({ 
-          text: cleanText, 
-          spacing: { after: 120 } 
-        }))
-        break
-
-      case 'list':
-        const items = token.items || []
-        items.forEach((item: any, idx: number) => {
-          const bullet = token.ordered ? `${idx + 1}. ` : '• '
-          children.push(new Paragraph({ 
-            text: bullet + (item.text || ''),
-            indent: { left: 720 },
-            spacing: { after: 60 }
-          }))
-        })
-        break
-    }
-  })
-
-  const doc = new Document({
-    sections: [{ properties: {}, children }]
-  })
-
-  return await Packer.toBuffer(doc)
-}
+// Old generatePDF and generateDOCX functions removed - now using professional-export-service.ts
