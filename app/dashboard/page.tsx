@@ -82,7 +82,7 @@ export default async function DashboardPage() {
                   </TableCell>
                   <TableCell className="py-2">
                     {project.phase ? (
-                      <Badge size="sm" className="text-xs">{project.phase}</Badge>
+                      <Badge variant="phase" size="sm" className="text-xs">{project.phase}</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">—</span>
                     )}

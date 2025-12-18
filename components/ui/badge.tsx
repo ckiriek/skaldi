@@ -15,6 +15,7 @@ const badgeVariants = cva(
         warning: 'border-transparent bg-warning-bg text-warning-foreground',
         error: 'border-transparent bg-error-bg text-error-foreground',
         info: 'border-transparent bg-info-bg text-info-foreground',
+        phase: 'border-transparent bg-[hsl(var(--phase))] text-[hsl(var(--phase-foreground))]',
       },
       size: {
         sm: 'px-1.5 py-0.5 text-xs',

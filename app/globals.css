@@ -5,17 +5,17 @@
 @layer base {
   :root {
     /* ===== Base Colors ===== */
-    --background: 0 0% 100%;              /* #FFFFFF - Pure white */
+    --background: 30 25% 95%;              /* #F0EDE5 - Light beige */
     --foreground: 220 13% 13%;            /* #1F2937 - Almost black */
     
-    /* ===== Primary (Medical Trust Blue) ===== */
-    --primary: 199 89% 48%;               /* #0EA5E9 - Sky blue (medical trust) */
-    --primary-hover: 199 89% 42%;         /* #0284C7 - Darker on hover */
+    /* ===== Primary (Pantone Almost Aqua) ===== */
+    --primary: 168 50% 58%;               /* #6BCABA - Pantone Almost Aqua */
+    --primary-hover: 168 50% 48%;         /* #4DB8A6 - Darker on hover */
     --primary-foreground: 0 0% 100%;      /* #FFFFFF - White text */
     
     /* ===== Secondary (Neutral) ===== */
-    --secondary: 210 40% 96%;             /* #F2F4F7 - Very light gray */
-    --secondary-hover: 210 40% 92%;       /* #E4E7EC - Darker on hover */
+    --secondary: 30 25% 90%;             /* #F0EDE5 - Light beige */
+    --secondary-hover: 30 25% 85%;       /* #E6E2DA - Darker beige on hover */
     --secondary-foreground: 220 13% 20%;  /* #344054 - Dark gray */
     
     /* ===== Status Colors ===== */
@@ -31,13 +31,17 @@
     --error-bg: 0 86% 97%;                /* #FEF3F2 - Light red bg */
     --error-foreground: 0 72% 41%;        /* #B91C1C - Dark red text */
     
-    --info: 199 89% 48%;                  /* #2D9CDB - Blue (same as primary) */
-    --info-bg: 199 95% 97%;               /* #F0F9FF - Light blue bg */
-    --info-foreground: 199 89% 38%;       /* #0369A1 - Dark blue text */
+    --info: 168 50% 58%;                  /* #6BCABA - Aqua (same as primary) */
+    --info-bg: 168 40% 95%;               /* #E8F6F4 - Light aqua bg */
+    --info-foreground: 168 50% 35%;       /* #3D8A7D - Dark aqua text */
+    
+    /* ===== Phase Badge (Pantone Ice Melt) ===== */
+    --phase: 168 30% 85%;                 /* #D0E8E4 - Pantone Ice Melt */
+    --phase-foreground: 168 50% 30%;      /* #267A6D - Dark teal text */
     
     /* ===== Neutral Grays (8-step scale) ===== */
-    --gray-50: 210 40% 98%;               /* #FCFCFD */
-    --gray-100: 210 40% 96%;              /* #F9FAFB */
+    --gray-50: 30 25% 97%;               /* #FAF9F8 - Light beige tint */
+    --gray-100: 30 25% 94%;              /* #F7F5F2 - Light beige */
     --gray-200: 214 32% 91%;              /* #EAECF0 */
     --gray-300: 213 27% 84%;              /* #D0D5DD */
     --gray-400: 215 20% 65%;              /* #98A2B3 */
@@ -52,7 +56,7 @@
     --card-foreground: 220 13% 13%;       /* #101828 - Dark text */
     --popover: 0 0% 100%;                 /* #FFFFFF - White */
     --popover-foreground: 220 13% 13%;    /* #101828 - Dark text */
-    --muted: 210 40% 96%;                 /* #F9FAFB - Light gray */
+    --muted: 30 25% 90%;                  /* #F0EDE5 - Light beige (darker) */
     --muted-foreground: 215 16% 47%;      /* #667085 - Medium gray */
     --accent: 199 95% 97%;                /* #F0F9FF - Very light blue */
     --accent-foreground: 199 89% 38%;     /* #0369A1 - Dark blue */
@@ -60,7 +64,7 @@
     /* ===== Borders & Inputs ===== */
     --border: 214 32% 91%;                /* #EAECF0 - Light gray border */
     --input: 214 32% 91%;                 /* #EAECF0 - Light gray border */
-    --ring: 199 89% 48%;                  /* #0EA5E9 - Focus ring (primary) */
+    --ring: 168 50% 58%;                  /* #6BCABA - Focus ring (primary aqua) */
     
     /* ===== Destructive (Danger) ===== */
     --destructive: 0 72% 51%;             /* #EB5757 - Red */

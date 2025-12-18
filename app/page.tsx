@@ -3,7 +3,7 @@ import { FileText, Shield, Zap } from 'lucide-react'
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+    <main className="min-h-screen bg-gradient-to-b from-[#F0EDE5] to-[#F0EDE5]">
       <div className="container mx-auto px-4 py-16">
         {/* Header */}
         <header className="text-center mb-16">
