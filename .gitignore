@@ -70,3 +70,8 @@ secrets/
 next-env.d.ts
 AZURE_SETUP.md
 scripts/setup-edge-function-secrets.sh
+
+# Local drafts / workspace artifacts
+/.windsurf/tasks/
+/IB_draft/
+/examples/
