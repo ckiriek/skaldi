@@ -76,13 +76,14 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
           {/* Logo */}
           <Link href="/dashboard" className="flex items-center">
             <Image 
-              src="/logo.png" 
+              src="/Skaldi_logo.png" 
               alt="Skaldi" 
-              width={140} 
-              height={46}
-              className="object-contain h-9 w-auto"
+              width={28} 
+              height={28}
+              className="object-contain h-7 w-7"
               priority
             />
+            <span className="ml-2 text-sm font-semibold tracking-tight text-foreground">Skaldi</span>
           </Link>
 
           {/* Right Side: Navigation & User */}

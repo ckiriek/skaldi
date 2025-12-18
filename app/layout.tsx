@@ -14,6 +14,11 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Skaldi - Clinical Trial Documentation Platform',
   description: 'AI-powered platform for automating clinical trial documentation',
+  icons: {
+    icon: '/Skaldi_logo.png',
+    shortcut: '/Skaldi_logo.png',
+    apple: '/Skaldi_logo.png',
+  },
 }
 
 export default function RootLayout({
