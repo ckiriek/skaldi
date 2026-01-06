@@ -36,6 +36,7 @@ interface SmartPrefillData {
 interface SmartPrefillProps {
   compoundName: string
   productType: 'generic' | 'innovator' | 'hybrid'
+  phase: string
   selectedIndication?: string
   selectedPrimaryEndpoint?: string
   selectedSecondaryEndpoints?: string[]
@@ -50,9 +51,21 @@ interface SmartPrefillProps {
   selectedFormulation?: { dosageForm?: string; route?: string; strength?: string }
 }
 
+// Map phase names to ClinicalTrials.gov phase codes
+function mapPhaseToCTGov(phase: string): string {
+  const phaseMap: Record<string, string> = {
+    'Phase 1': 'PHASE1',
+    'Phase 2': 'PHASE2', 
+    'Phase 3': 'PHASE3',
+    'Phase 4': 'PHASE4'
+  }
+  return phaseMap[phase] || 'PHASE2'
+}
+
 export function SmartPrefill({
   compoundName,
   productType,
+  phase,
   selectedIndication,
   selectedPrimaryEndpoint,
   selectedSecondaryEndpoints = [],
@@ -77,8 +90,8 @@ export function SmartPrefill({
     error: null
   })
 
-  // Fetch all data when compound changes
-  const fetchSmartData = useCallback(async (compound: string) => {
+  // Fetch all data when compound or phase changes
+  const fetchSmartData = useCallback(async (compound: string, currentPhase: string) => {
     if (!compound || compound.length < 3) {
       setData(prev => ({ 
         ...prev, 
@@ -96,17 +109,20 @@ export function SmartPrefill({
     setData(prev => ({ ...prev, isLoading: true, error: null }))
 
     try {
-      // Fetch in parallel
+      // Map phase to ClinicalTrials.gov format
+      const ctPhase = mapPhaseToCTGov(currentPhase)
+      
+      // Fetch in parallel - pass phase to APIs
       const [indicationsRes, rldRes, kgRes] = await Promise.all([
-        fetch(`/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}`),
+        fetch(`/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}&phase=${ctPhase}`),
         productType === 'generic' 
           ? fetch(`/api/v1/autocomplete/rld?type=brand&q=${encodeURIComponent(compound)}`)
           : Promise.resolve(null),
-        // Knowledge Graph for formulations and safety
+        // Knowledge Graph for formulations, safety, and phase-specific data
         fetch('/api/knowledge/build', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ inn: compound })
+          body: JSON.stringify({ inn: compound, phase: currentPhase })
         })
       ])
 
@@ -190,14 +206,17 @@ export function SmartPrefill({
     }
   }, [productType])
 
-  // Fetch endpoints when indication changes
-  const fetchEndpoints = useCallback(async (indication: string) => {
+  // Fetch endpoints when indication changes - filter by phase
+  const fetchEndpoints = useCallback(async (indication: string, currentPhase: string) => {
     if (!indication || indication.length < 3 || !compoundName) return
 
     try {
-      // Search ClinicalTrials.gov for common endpoints for this indication
+      // Map phase to ClinicalTrials.gov format
+      const ctPhase = mapPhaseToCTGov(currentPhase)
+      
+      // Search ClinicalTrials.gov for common endpoints for this indication and phase
       const response = await fetch(
-        `https://clinicaltrials.gov/api/v2/studies?query.cond=${encodeURIComponent(indication)}&query.intr=${encodeURIComponent(compoundName)}&pageSize=15`
+        `https://clinicaltrials.gov/api/v2/studies?query.cond=${encodeURIComponent(indication)}&query.intr=${encodeURIComponent(compoundName)}&filter.phase=${ctPhase}&pageSize=20`
       )
       
       if (response.ok) {
@@ -241,20 +260,20 @@ export function SmartPrefill({
     } catch (error) {
       console.error('Failed to fetch endpoints:', error)
     }
-  }, [compoundName])
+  }, [compoundName, phase])
 
-  // Effect: fetch data when compound changes
+  // Effect: fetch data when compound or phase changes
   useEffect(() => {
-    const timer = setTimeout(() => fetchSmartData(compoundName), 600)
+    const timer = setTimeout(() => fetchSmartData(compoundName, phase), 600)
     return () => clearTimeout(timer)
-  }, [compoundName, fetchSmartData])
+  }, [compoundName, phase, fetchSmartData])
 
-  // Effect: fetch endpoints when indication changes
+  // Effect: fetch endpoints when indication or phase changes
   useEffect(() => {
     if (selectedIndication) {
-      fetchEndpoints(selectedIndication)
+      fetchEndpoints(selectedIndication, phase)
     }
-  }, [selectedIndication, fetchEndpoints])
+  }, [selectedIndication, phase, fetchEndpoints])
 
   // Don't render if no compound or loading initial
   if (!compoundName || compoundName.length < 3) return null

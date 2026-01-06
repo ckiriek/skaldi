@@ -130,6 +130,7 @@ export function createEmptySnapshot(inn: string): KnowledgeGraphSnapshot {
     endpoints: [],
     procedures: [],
     eligibilityPatterns: [],
+    safetySignals: [],
     sourcesUsed: [],
     createdAt: new Date()
   }

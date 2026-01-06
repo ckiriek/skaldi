@@ -166,6 +166,13 @@ export interface KgEligibilityPattern {
   sources: string[]
 }
 
+export interface KgSafetySignal {
+  term: string
+  count: number
+  serious?: boolean
+  source: string
+}
+
 export interface KnowledgeGraphSnapshot {
   inn: string
   formulations: KgFormulation[]
@@ -173,6 +180,7 @@ export interface KnowledgeGraphSnapshot {
   endpoints: KgEndpoint[]
   procedures: KgProcedure[]
   eligibilityPatterns: KgEligibilityPattern[]
+  safetySignals: KgSafetySignal[]
   sourcesUsed: string[]
   createdAt: Date
 }

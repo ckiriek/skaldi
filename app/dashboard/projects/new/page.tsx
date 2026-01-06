@@ -272,6 +272,76 @@ export default function NewProjectPage() {
               </RadioGroup>
             </div>
 
+            {/* Phase - MOVED UP, required for phase-aware suggestions */}
+            <div className="space-y-1.5">
+              <div>
+                <Label className="text-sm font-medium">Clinical Phase *</Label>
+                <p className="text-xs text-muted-foreground mt-0.5">Determines relevant endpoints and study design suggestions</p>
+              </div>
+              <RadioGroup
+                value={formData.phase}
+                onValueChange={(value) => setFormData({ ...formData, phase: value })}
+                className="grid grid-cols-4 gap-2"
+              >
+                <div
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-md border px-3 py-2 cursor-pointer transition-all text-center',
+                    formData.phase === 'Phase 1'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
+                  )}
+                >
+                  <RadioGroupItem value="Phase 1" id="phase1" className="sr-only" />
+                  <Label htmlFor="phase1" className="cursor-pointer text-center">
+                    <div className="font-medium text-sm">Phase 1</div>
+                    <p className="text-[10px] text-muted-foreground">Safety, PK</p>
+                  </Label>
+                </div>
+                <div
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-md border px-3 py-2 cursor-pointer transition-all text-center',
+                    formData.phase === 'Phase 2'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
+                  )}
+                >
+                  <RadioGroupItem value="Phase 2" id="phase2" className="sr-only" />
+                  <Label htmlFor="phase2" className="cursor-pointer text-center">
+                    <div className="font-medium text-sm">Phase 2</div>
+                    <p className="text-[10px] text-muted-foreground">Efficacy signal</p>
+                  </Label>
+                </div>
+                <div
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-md border px-3 py-2 cursor-pointer transition-all text-center',
+                    formData.phase === 'Phase 3'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
+                  )}
+                >
+                  <RadioGroupItem value="Phase 3" id="phase3" className="sr-only" />
+                  <Label htmlFor="phase3" className="cursor-pointer text-center">
+                    <div className="font-medium text-sm">Phase 3</div>
+                    <p className="text-[10px] text-muted-foreground">Confirmatory</p>
+                  </Label>
+                </div>
+                <div
+                  className={cn(
+                    'flex flex-col items-center gap-1 rounded-md border px-3 py-2 cursor-pointer transition-all text-center',
+                    formData.phase === 'Phase 4'
+                      ? 'border-primary bg-primary/5 shadow-sm'
+                      : 'border-border hover:bg-muted/50 hover:border-muted-foreground/20'
+                  )}
+                >
+                  <RadioGroupItem value="Phase 4" id="phase4" className="sr-only" />
+                  <Label htmlFor="phase4" className="cursor-pointer text-center">
+                    <div className="font-medium text-sm">Phase 4</div>
+                    <p className="text-[10px] text-muted-foreground">Post-market</p>
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
             {/* Title */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1">
@@ -310,10 +380,11 @@ export default function NewProjectPage() {
                 </div>
               )}
               
-              {/* Smart Prefill - Auto-suggestions based on compound */}
+              {/* Smart Prefill - Auto-suggestions based on compound and phase */}
               <SmartPrefill
                 compoundName={parsedFormulation?.apiName || formData.compound_name}
                 productType={formData.product_type}
+                phase={formData.phase}
                 selectedIndication={formData.indication}
                 selectedPrimaryEndpoint={formData.primary_endpoint}
                 selectedSecondaryEndpoints={formData.secondary_endpoints}
@@ -389,24 +460,6 @@ export default function NewProjectPage() {
                 </Button>
               </div>
             )}
-
-            {/* Phase */}
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1">
-                Phase *
-              </label>
-              <select
-                required
-                value={formData.phase}
-                onChange={(e) => setFormData({ ...formData, phase: e.target.value })}
-                className="flex h-8 w-full rounded-md border border-input bg-background px-2.5 py-1 text-sm"
-              >
-                <option value="Phase 1">Phase 1</option>
-                <option value="Phase 2">Phase 2</option>
-                <option value="Phase 3">Phase 3</option>
-                <option value="Phase 4">Phase 4</option>
-              </select>
-            </div>
 
             {/* Indication - Smart Field */}
             <SmartField

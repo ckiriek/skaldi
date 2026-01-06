@@ -17,6 +17,7 @@ import { fetchFdaLabelsByInn } from '../ingestion/fda_label'
 import { fetchFdaNdcByInn } from '../ingestion/fda_ndc'
 import { fetchDailyMedByInn } from '../ingestion/dailymed'
 import { fetchCtGovStudies } from '../ingestion/ctgov'
+import { fetchFaersSafetySignals } from '../ingestion/faers'
 import { normalizeIndication } from '../normalizers/indication_normalizer'
 import { normalizeEndpoint } from '../normalizers/endpoint_normalizer'
 import { normalizeEligibility } from '../normalizers/eligibility_normalizer'
@@ -48,11 +49,12 @@ export class KnowledgeGraphBuilder {
     
     try {
       // Fetch data from all sources in parallel
-      const [fdaLabels, fdaNdc, dailyMed, ctGov] = await Promise.allSettled([
+      const [fdaLabels, fdaNdc, dailyMed, ctGov, faers] = await Promise.allSettled([
         this.fetchFdaData(),
         this.fetchFdaNdcData(),
         this.fetchDailyMedData(),
-        this.fetchCtGovData()
+        this.fetchCtGovData(),
+        this.fetchFaersData()
       ])
       
       // Process results
@@ -70,6 +72,10 @@ export class KnowledgeGraphBuilder {
       
       if (ctGov.status === 'fulfilled') {
         this.processCtGov(ctGov.value)
+      }
+      
+      if (faers.status === 'fulfilled') {
+        this.processFaers(faers.value)
       }
       
       // Deduplicate and calculate final confidence scores
@@ -137,6 +143,20 @@ export class KnowledgeGraphBuilder {
       return studies
     } catch (error) {
       console.error('ClinicalTrials.gov fetch failed:', error)
+      return []
+    }
+  }
+  
+  /**
+   * Fetch FDA FAERS safety signals
+   */
+  private async fetchFaersData() {
+    try {
+      const signals = await fetchFaersSafetySignals(this.inn, 15)
+      this.snapshot.sourcesUsed.push(`faers:${signals.length}`)
+      return signals
+    } catch (error) {
+      console.error('FAERS fetch failed:', error)
       return []
     }
   }
@@ -274,6 +294,19 @@ export class KnowledgeGraphBuilder {
         })
       }
     }
+  }
+  
+  /**
+   * Process FDA FAERS safety signals
+   */
+  private processFaers(signals: any[]) {
+    // Add safety signals to snapshot
+    this.snapshot.safetySignals = signals.map(signal => ({
+      term: signal.term,
+      count: signal.count,
+      serious: signal.serious || false,
+      source: 'faers'
+    }))
   }
   
   /**

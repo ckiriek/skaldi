@@ -18,8 +18,9 @@ export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams
     const drug = searchParams.get('drug')
+    const phase = searchParams.get('phase') // Optional phase filter (PHASE1, PHASE2, PHASE3, PHASE4)
 
-    console.log('💊 Get indications for drug:', drug)
+    console.log('💊 Get indications for drug:', drug, 'phase:', phase)
 
     validateRequiredFields(
       { drug },
@@ -40,10 +41,14 @@ export async function GET(request: NextRequest) {
 
     // Search ClinicalTrials.gov for common conditions
     try {
-      console.log('🔬 Searching ClinicalTrials.gov for:', drug)
-      const ctResponse = await fetch(
-        `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=50`
-      )
+      // Build URL with optional phase filter
+      let ctUrl = `https://clinicaltrials.gov/api/v2/studies?query.intr=${encodeURIComponent(drug!)}&pageSize=50`
+      if (phase) {
+        ctUrl += `&filter.phase=${phase}`
+      }
+      
+      console.log('🔬 Searching ClinicalTrials.gov for:', drug, 'phase:', phase)
+      const ctResponse = await fetch(ctUrl)
 
       if (ctResponse.ok) {
         const ctData = await ctResponse.json()
