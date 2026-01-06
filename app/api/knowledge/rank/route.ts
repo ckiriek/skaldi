@@ -10,6 +10,9 @@ import { buildKnowledgeGraph } from '@/lib/engine/knowledge'
 import { rankCandidates, type Candidate } from '@/lib/engine/knowledge-ui/ranking/ml_ranker'
 import { getUserMemory, getSessionMemory } from '@/lib/engine/knowledge-ui/memory/memory_store'
 
+export const runtime = 'nodejs'
+export const maxDuration = 60 // Knowledge Graph can take time with external APIs
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

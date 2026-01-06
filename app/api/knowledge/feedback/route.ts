@@ -9,6 +9,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { recordFeedback, type FeedbackSignal } from '@/lib/engine/knowledge-ui/feedback/feedback_collector'
 import { recordSelection, recordRejection, addToRecent } from '@/lib/engine/knowledge-ui/memory/memory_store'
 
+export const runtime = 'nodejs'
+export const maxDuration = 10 // Feedback is quick
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()

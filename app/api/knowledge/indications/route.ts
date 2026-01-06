@@ -8,6 +8,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { buildKnowledgeGraph } from '@/lib/engine/knowledge'
 
+export const runtime = 'nodejs'
+export const maxDuration = 60 // Knowledge Graph can take time with external APIs
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
