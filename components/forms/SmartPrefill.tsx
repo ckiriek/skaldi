@@ -62,6 +62,59 @@ function mapPhaseToCTGov(phase: string): string {
   return phaseMap[phase] || 'PHASE2'
 }
 
+// Standard BE (Bioequivalence) endpoints for generic drugs
+const BE_PRIMARY_ENDPOINTS = [
+  { endpoint: 'Cmax (Maximum Plasma Concentration)', type: 'pk', count: 100 },
+  { endpoint: 'AUC0-t (Area Under Curve to Last Measurable Concentration)', type: 'pk', count: 100 },
+  { endpoint: 'AUC0-∞ (Area Under Curve Extrapolated to Infinity)', type: 'pk', count: 95 },
+]
+
+const BE_SECONDARY_ENDPOINTS = [
+  { endpoint: 'Tmax (Time to Maximum Concentration)', count: 90 },
+  { endpoint: 't½ (Elimination Half-life)', count: 85 },
+  { endpoint: 'Kel (Elimination Rate Constant)', count: 70 },
+  { endpoint: 'MRT (Mean Residence Time)', count: 60 },
+]
+
+// Standard endpoints for biosimilar/hybrid products
+const BIOSIMILAR_PRIMARY_ENDPOINTS = [
+  { endpoint: 'Comparative PK: AUC Ratio (90% CI within 80-125%)', type: 'pk', count: 100 },
+  { endpoint: 'Comparative PK: Cmax Ratio (90% CI within 80-125%)', type: 'pk', count: 100 },
+  { endpoint: 'Clinical Efficacy Equivalence Margin', type: 'efficacy', count: 90 },
+]
+
+const BIOSIMILAR_SECONDARY_ENDPOINTS = [
+  { endpoint: 'Immunogenicity: Anti-Drug Antibodies (ADA) Incidence', count: 95 },
+  { endpoint: 'Immunogenicity: Neutralizing Antibodies', count: 85 },
+  { endpoint: 'Comparative Safety Profile', count: 90 },
+  { endpoint: 'PD Biomarker Response (if applicable)', count: 70 },
+]
+
+// Get default endpoints based on product type
+function getDefaultEndpoints(productType: string, phase: string): {
+  primary: Array<{ endpoint: string; type?: string; count?: number }>,
+  secondary: Array<{ endpoint: string; count?: number }>
+} {
+  // Generic drugs: BE endpoints (typically Phase 1)
+  if (productType === 'generic') {
+    return {
+      primary: BE_PRIMARY_ENDPOINTS,
+      secondary: BE_SECONDARY_ENDPOINTS
+    }
+  }
+  
+  // Biosimilar/Hybrid: Comparative endpoints
+  if (productType === 'hybrid') {
+    return {
+      primary: BIOSIMILAR_PRIMARY_ENDPOINTS,
+      secondary: BIOSIMILAR_SECONDARY_ENDPOINTS
+    }
+  }
+  
+  // Innovator: No default endpoints, will be fetched from ClinicalTrials.gov
+  return { primary: [], secondary: [] }
+}
+
 export function SmartPrefill({
   compoundName,
   productType,
@@ -113,9 +166,12 @@ export function SmartPrefill({
       const ctPhase = mapPhaseToCTGov(currentPhase)
       
       // Fetch in parallel - pass phase to APIs
+      // Generic and Hybrid/Biosimilar need RLD, Innovator does not
+      const needsRld = productType === 'generic' || productType === 'hybrid'
+      
       const [indicationsRes, rldRes, kgRes] = await Promise.all([
         fetch(`/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}&phase=${ctPhase}`),
-        productType === 'generic' 
+        needsRld
           ? fetch(`/api/v1/autocomplete/rld?type=brand&q=${encodeURIComponent(compound)}`)
           : Promise.resolve(null),
         // Knowledge Graph for formulations, safety, and phase-specific data
@@ -182,12 +238,15 @@ export function SmartPrefill({
         }
       }
 
+      // Get default endpoints based on product type (BE for generic, biosimilar for hybrid)
+      const defaultEndpoints = getDefaultEndpoints(productType, currentPhase)
+
       setData({
         formulations,
         rldBrands: rldData.success ? rldData.data || [] : [], // Show all RLDs from Orange Book
         indications: indicationsData.success ? indicationsData.data?.slice(0, 12) || [] : [], // Show up to 12 indications
-        primaryEndpoints: [], // Will be fetched when indication is selected
-        secondaryEndpoints: [],
+        primaryEndpoints: defaultEndpoints.primary, // Pre-populate with BE/biosimilar endpoints
+        secondaryEndpoints: defaultEndpoints.secondary,
         safetySignals,
         isLoading: false,
         error: null
@@ -197,7 +256,9 @@ export function SmartPrefill({
         formulations: formulations.length,
         rldBrands: rldData.success ? rldData.data?.length : 0,
         indications: indicationsData.success ? indicationsData.data?.length : 0,
-        safetySignals: safetySignals.length
+        safetySignals: safetySignals.length,
+        productType,
+        defaultEndpoints: defaultEndpoints.primary.length
       })
 
     } catch (error) {
@@ -207,12 +268,23 @@ export function SmartPrefill({
   }, [productType])
 
   // Fetch endpoints when indication changes - filter by phase
+  // For generic/hybrid: keep default BE/biosimilar endpoints
+  // For innovator: fetch clinical endpoints from ClinicalTrials.gov
   const fetchEndpoints = useCallback(async (indication: string, currentPhase: string) => {
     if (!indication || indication.length < 3 || !compoundName) return
+
+    // Generic and Hybrid already have default endpoints (BE/biosimilar)
+    // Only fetch from ClinicalTrials.gov for innovator products
+    if (productType !== 'innovator') {
+      console.log(`📊 Using default ${productType} endpoints (BE/biosimilar)`)
+      return
+    }
 
     try {
       // Map phase to ClinicalTrials.gov format
       const ctPhase = mapPhaseToCTGov(currentPhase)
+      
+      console.log(`📊 Fetching innovator endpoints for ${indication} (${ctPhase})`)
       
       // Search ClinicalTrials.gov for common endpoints for this indication and phase
       const response = await fetch(
@@ -260,7 +332,7 @@ export function SmartPrefill({
     } catch (error) {
       console.error('Failed to fetch endpoints:', error)
     }
-  }, [compoundName, phase])
+  }, [compoundName, phase, productType])
 
   // Effect: fetch data when compound or phase changes
   useEffect(() => {
@@ -360,10 +432,12 @@ export function SmartPrefill({
         </div>
       )}
 
-      {/* RLD Brands (for Generic) */}
-      {productType === 'generic' && data.rldBrands.length > 0 && (
+      {/* RLD Brands (for Generic and Hybrid/Biosimilar) */}
+      {(productType === 'generic' || productType === 'hybrid') && data.rldBrands.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-muted-foreground">Reference Listed Drug (RLD)</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {productType === 'hybrid' ? 'Reference Product' : 'Reference Listed Drug (RLD)'}
+          </div>
           <div className="flex flex-wrap gap-1.5">
             {data.rldBrands.map((rld, i) => (
               <button
@@ -421,9 +495,16 @@ export function SmartPrefill({
       )}
 
       {/* Primary Endpoints - VERTICAL LIST, full text */}
-      {selectedIndication && data.primaryEndpoints.length > 0 && (
+      {data.primaryEndpoints.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-muted-foreground">Primary Endpoints for {selectedIndication}</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {productType === 'generic' 
+              ? 'Bioequivalence (BE) Primary Endpoints'
+              : productType === 'hybrid'
+                ? 'Biosimilarity Primary Endpoints'
+                : `Primary Endpoints${selectedIndication ? ` for ${selectedIndication}` : ''}`
+            }
+          </div>
           <div className="flex flex-col gap-1">
             {data.primaryEndpoints.map((ep, i) => (
               <button
@@ -451,9 +532,16 @@ export function SmartPrefill({
       )}
 
       {/* Secondary Endpoints - VERTICAL LIST, multi-select */}
-      {selectedIndication && data.secondaryEndpoints.length > 0 && (
+      {data.secondaryEndpoints.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-xs font-medium text-muted-foreground">Secondary Endpoints (select multiple)</div>
+          <div className="text-xs font-medium text-muted-foreground">
+            {productType === 'generic' 
+              ? 'PK Secondary Parameters'
+              : productType === 'hybrid'
+                ? 'Biosimilarity Secondary Endpoints'
+                : 'Secondary Endpoints (select multiple)'
+            }
+          </div>
           <div className="flex flex-col gap-1">
             {data.secondaryEndpoints.map((ep, i) => {
               const isSelected = selectedSecondaryEndpoints.includes(ep.endpoint)
