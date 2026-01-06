@@ -75,6 +75,67 @@ export interface RLDInfo {
   approval_date?: string
 }
 
+// Common salt/form synonyms for drug substances
+const SALT_SYNONYMS: Record<string, string[]> = {
+  'valproic acid': ['divalproex sodium', 'sodium valproate', 'valproate'],
+  'metformin': ['metformin hydrochloride'],
+  'omeprazole': ['omeprazole magnesium'],
+  'esomeprazole': ['esomeprazole magnesium', 'esomeprazole sodium'],
+  'amlodipine': ['amlodipine besylate', 'amlodipine maleate'],
+  'atorvastatin': ['atorvastatin calcium'],
+  'lisinopril': ['lisinopril dihydrate'],
+  'losartan': ['losartan potassium'],
+  'sertraline': ['sertraline hydrochloride'],
+  'fluoxetine': ['fluoxetine hydrochloride'],
+  'gabapentin': ['gabapentin enacarbil'],
+  'pregabalin': [],
+  'duloxetine': ['duloxetine hydrochloride'],
+  'venlafaxine': ['venlafaxine hydrochloride'],
+  'bupropion': ['bupropion hydrochloride', 'bupropion hydrobromide'],
+  'tramadol': ['tramadol hydrochloride'],
+  'oxycodone': ['oxycodone hydrochloride'],
+  'hydrocodone': ['hydrocodone bitartrate'],
+  'morphine': ['morphine sulfate'],
+  'fentanyl': ['fentanyl citrate'],
+  'amphetamine': ['amphetamine aspartate', 'amphetamine sulfate', 'dextroamphetamine'],
+  'methylphenidate': ['methylphenidate hydrochloride'],
+  'clonazepam': [],
+  'alprazolam': [],
+  'lorazepam': [],
+  'diazepam': [],
+  'zolpidem': ['zolpidem tartrate'],
+  'sumatriptan': ['sumatriptan succinate'],
+  'montelukast': ['montelukast sodium'],
+  'cetirizine': ['cetirizine hydrochloride'],
+  'loratadine': [],
+  'fexofenadine': ['fexofenadine hydrochloride'],
+  'ranitidine': ['ranitidine hydrochloride'],
+  'famotidine': [],
+  'pantoprazole': ['pantoprazole sodium'],
+  'lansoprazole': [],
+  'clopidogrel': ['clopidogrel bisulfate'],
+  'warfarin': ['warfarin sodium'],
+  'enoxaparin': ['enoxaparin sodium'],
+  'metoprolol': ['metoprolol tartrate', 'metoprolol succinate'],
+  'carvedilol': [],
+  'propranolol': ['propranolol hydrochloride'],
+  'diltiazem': ['diltiazem hydrochloride'],
+  'verapamil': ['verapamil hydrochloride'],
+  'hydrochlorothiazide': [],
+  'furosemide': [],
+  'spironolactone': [],
+  'levothyroxine': ['levothyroxine sodium'],
+  'prednisone': [],
+  'prednisolone': ['prednisolone sodium phosphate'],
+  'dexamethasone': ['dexamethasone sodium phosphate'],
+  'insulin': ['insulin glargine', 'insulin lispro', 'insulin aspart'],
+  'sitagliptin': ['sitagliptin phosphate'],
+  'pioglitazone': ['pioglitazone hydrochloride'],
+  'glimepiride': [],
+  'glyburide': [],
+  'glipizide': [],
+}
+
 export class OrangeBookAdapter {
   private baseUrl = ORANGE_BOOK_BASE_URL
   private apiKey?: string
@@ -86,6 +147,29 @@ export class OrangeBookAdapter {
     if (!apiKey) {
       console.warn('⚠️ Orange Book: No API key provided. Limited to 240 requests/minute.')
     }
+  }
+
+  /**
+   * Get synonyms for a drug substance (salts, forms)
+   */
+  private getSynonyms(searchTerm: string): string[] {
+    const normalized = searchTerm.toLowerCase().trim()
+    const synonyms: string[] = [normalized]
+    
+    // Check if this term is a key
+    if (SALT_SYNONYMS[normalized]) {
+      synonyms.push(...SALT_SYNONYMS[normalized])
+    }
+    
+    // Check if this term is a value (reverse lookup)
+    for (const [base, salts] of Object.entries(SALT_SYNONYMS)) {
+      if (salts.some(s => s.toLowerCase() === normalized)) {
+        synonyms.push(base)
+        synonyms.push(...salts.filter(s => s.toLowerCase() !== normalized))
+      }
+    }
+    
+    return [...new Set(synonyms)]
   }
 
   /**
@@ -196,6 +280,7 @@ export class OrangeBookAdapter {
 
   /**
    * Search for RLD by brand name or generic name (INN)
+   * Also searches for salt/form synonyms (e.g., valproic acid -> divalproex sodium)
    * 
    * @param searchTerm - e.g., "GLUCOPHAGE" or "metformin"
    * @returns Array of RLD information
@@ -204,10 +289,19 @@ export class OrangeBookAdapter {
     try {
       await this.rateLimit()
 
-      // Search by brand name, generic name, and products.brand_name
-      // Use wildcard for partial matching
+      // Get synonyms (salts, forms) for the search term
+      const synonyms = this.getSynonyms(searchTerm)
+      console.log('🔶 Orange Book searching with synonyms:', synonyms)
+
+      // Build search query with all synonyms
+      const searchClauses = synonyms.flatMap(term => [
+        `openfda.brand_name:${term}*`,
+        `openfda.generic_name:${term}*`,
+        `products.brand_name:${term}*`
+      ])
+      
       const url = this.buildUrl({
-        search: `openfda.brand_name:${searchTerm}* OR openfda.generic_name:${searchTerm}* OR products.brand_name:${searchTerm}*`,
+        search: searchClauses.join(' OR '),
         limit: '50', // Increased to find all RLDs
       })
 
