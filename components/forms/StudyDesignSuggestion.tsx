@@ -290,15 +290,19 @@ export function StudyDesignSuggestion({
   const [isExpanded, setIsExpanded] = useState(true)
   const [copied, setCopied] = useState(false)
   
-  // Only show for generic products with formulation selected
-  if (productType !== 'generic' || !formulation?.dosageForm) {
+  // Check if we should show the component
+  const shouldShow = productType === 'generic' && !!formulation?.dosageForm
+  
+  // Generate design - always call useMemo (React hooks rule)
+  const design = useMemo(() => {
+    if (!shouldShow) return null
+    return generateBEDesign(compoundName, formulation!, drugCharacteristics)
+  }, [compoundName, formulation, drugCharacteristics, shouldShow])
+  
+  // Early return AFTER all hooks
+  if (!shouldShow || !design) {
     return null
   }
-  
-  // Generate design
-  const design = useMemo(() => {
-    return generateBEDesign(compoundName, formulation, drugCharacteristics)
-  }, [compoundName, formulation, drugCharacteristics])
   
   const handleCopy = async () => {
     const text = `
