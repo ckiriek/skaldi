@@ -15,6 +15,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { Badge } from '@/components/ui/badge'
 import { Loader2, Sparkles, Check, Plus, Pill, Syringe } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { StudyDesignSuggestion } from './StudyDesignSuggestion'
 
 interface FormulationOption {
   dosageForm: string
@@ -622,6 +623,15 @@ export function SmartPrefill({
           </div>
         </div>
       )}
+
+      {/* Study Design Suggestion - for Generic products with formulation selected */}
+      <StudyDesignSuggestion
+        productType={productType}
+        compoundName={compoundName}
+        indication={selectedIndication}
+        formulation={selectedFormulation}
+        phase={phase}
+      />
     </div>
   )
 }
