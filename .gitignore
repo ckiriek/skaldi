@@ -10,7 +10,7 @@ coverage/
 # Next.js
 .next/
 out/
-build/
+/build/
 dist/
 
 # Environment variables
