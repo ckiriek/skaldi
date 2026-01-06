@@ -169,8 +169,14 @@ export function SmartPrefill({
       // Generic and Hybrid/Biosimilar need RLD, Innovator does not
       const needsRld = productType === 'generic' || productType === 'hybrid'
       
+      // For generic/hybrid: don't filter indications by phase (BE studies are usually Phase 1)
+      // For innovator: filter by selected phase
+      const indicationsUrl = productType === 'innovator'
+        ? `/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}&phase=${ctPhase}`
+        : `/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}`
+      
       const [indicationsRes, rldRes, kgRes] = await Promise.all([
-        fetch(`/api/v1/drugs/indications?drug=${encodeURIComponent(compound)}&phase=${ctPhase}`),
+        fetch(indicationsUrl),
         needsRld
           ? fetch(`/api/v1/autocomplete/rld?type=brand&q=${encodeURIComponent(compound)}`)
           : Promise.resolve(null),
@@ -197,19 +203,23 @@ export function SmartPrefill({
           const uniqueFormulations: FormulationOption[] = []
           
           for (const f of kgData.data.formulations) {
-            const route = f.routes?.[0]?.toUpperCase() || ''
-            const dosageForm = f.dosageForms?.[0] || ''
+            const route = f.routes?.[0]?.toUpperCase()?.trim() || ''
+            const dosageForm = f.dosageForms?.[0]?.trim() || ''
             
-            // Skip if no route or dosage form
+            // Skip if no route AND no dosage form, or if either is "Unknown" or empty
             if (!route && !dosageForm) continue
+            if (route === 'UNKNOWN' || dosageForm.toUpperCase() === 'UNKNOWN') continue
+            
+            // Skip generic "POWDER" without route context (likely incomplete data)
+            if (dosageForm.toUpperCase() === 'POWDER' && !route) continue
             
             // Create unique key based on route + dosageForm
             const key = `${route}:${dosageForm}`
             if (!seenRoutes.has(key)) {
               seenRoutes.add(key)
               uniqueFormulations.push({
-                dosageForm: dosageForm || 'Unknown',
-                route: route || 'Unknown',
+                dosageForm: dosageForm || route, // Use route as fallback
+                route: route || 'ORAL', // Default to ORAL if missing
                 strengths: f.strengths || []
               })
             }
