@@ -294,11 +294,15 @@ export class OrangeBookAdapter {
       console.log('🔶 Orange Book searching with synonyms:', synonyms)
 
       // Build search query with all synonyms
-      const searchClauses = synonyms.flatMap(term => [
-        `openfda.brand_name:${term}*`,
-        `openfda.generic_name:${term}*`,
-        `products.brand_name:${term}*`
-      ])
+      // Quote terms with spaces for exact phrase matching
+      const searchClauses = synonyms.flatMap(term => {
+        const quotedTerm = term.includes(' ') ? `"${term}"` : `${term}*`
+        return [
+          `openfda.brand_name:${quotedTerm}`,
+          `openfda.generic_name:${quotedTerm}`,
+          `products.brand_name:${quotedTerm}`
+        ]
+      })
       
       const url = this.buildUrl({
         search: searchClauses.join(' OR '),
