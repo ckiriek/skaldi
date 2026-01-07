@@ -100,12 +100,32 @@ interface DrugCharacteristics {
   dosageForm?: string
 }
 
-// Engine output structure
+// Decision trace entry for audit trail
+interface DecisionTraceEntry {
+  step: string
+  action: string
+  result: string
+  timestamp?: string
+}
+
+// Design summary for quick reference
+interface DesignSummary {
+  structure: string      // "crossover" | "parallel" | "sequential" | "observational"
+  randomization: string  // "required" | "optional" | "none"
+  blinding: string       // "open-label" | "single-blind" | "double-blind"
+  comparator: string     // "placebo" | "active" | "reference" | "none"
+  typicalN: string       // e.g., "24-48 (recommended: 36)"
+}
+
+// Engine output structure - per VP CRO spec v2.1
 interface StudyDesignOutput {
   // Core classification
   regulatoryPathway: RegulatoryPathway
   primaryObjective: PrimaryObjective
   designPattern: DesignPatternType
+  
+  // Design summary (per VP spec - quick reference)
+  designSummary: DesignSummary
   
   // Derived phase (OUTPUT, not input)
   phaseLabel: string  // "Phase 1", "Phase 2", "Phase 3", "Phase 4", "BE Study"
@@ -174,11 +194,14 @@ interface StudyDesignOutput {
   
   // Regulatory
   regulatoryBasis: string[]
-  regulatoryRationale: string  // Short explanation of why this design
+  regulatoryRationale: string  // 3-layer: What + Why + Regulatory alignment
   
   // Warnings and confidence
   warnings: string[]
   confidence: number
+  
+  // Decision trace for audit (per VP CRO spec)
+  decisionTrace: DecisionTraceEntry[]
 }
 
 // Legacy interface for backward compatibility
@@ -1676,13 +1699,42 @@ function selectDesignPatternV2(
 }
 
 // ============================================================================
-// STEP 3.5: APPLY GUARDRAILS AND FALLBACK (per VP CRO spec)
+// STEP 3.5: APPLY GUARDRAILS AND FALLBACK (per VP CRO spec v2.1)
+// Guardrails split into: HARD_STOP (blocked) vs SOFT_WARNING (allowed with warning)
 // ============================================================================
+
+type GuardrailType = 'hard_stop' | 'soft_warning'
 
 interface GuardrailResult {
   passed: boolean
+  type?: GuardrailType
   violation?: string
   fallbackPatternId?: string
+}
+
+// Fallback order per pathway+objective (deterministic, not random)
+const FALLBACK_ORDER: Record<string, string[]> = {
+  // Innovator fallbacks
+  'innovator:pk_safety': ['SAD', 'MAD'],
+  'innovator:dose_selection': ['ADAPTIVE_DOSE_FINDING', 'DOSE_RANGING_PARALLEL', 'SEAMLESS_PHASE_2_3'],
+  'innovator:confirmatory_efficacy': ['CONFIRMATORY_RCT_SUPERIORITY', 'EVENT_DRIVEN_CONFIRMATORY', 'SEAMLESS_PHASE_2_3'],
+  'innovator:long_term_safety': ['OBSERVATIONAL_REGISTRY'],
+  
+  // Generic fallbacks
+  'generic:pk_equivalence': ['PK_CROSSOVER_BE', 'PK_CROSSOVER_BE_REPLICATE'],
+  
+  // Biosimilar fallbacks
+  'biosimilar:pk_similarity': ['PK_PARALLEL_SIMILARITY'],
+  'biosimilar:clinical_equivalence': ['CONFIRMATORY_RCT_EQUIVALENCE'],
+  
+  // Hybrid fallbacks
+  'hybrid:pk_equivalence': ['PK_CROSSOVER_BE'],
+  'hybrid:confirmatory_efficacy': ['CONFIRMATORY_RCT_SUPERIORITY'],
+  
+  // Post-marketing fallbacks
+  'post_marketing:long_term_safety': ['OBSERVATIONAL_REGISTRY'],
+  'post_marketing:safety_surveillance': ['OBSERVATIONAL_REGISTRY'],
+  'post_marketing:effectiveness_rwe': ['OBSERVATIONAL_REGISTRY']
 }
 
 function applyGuardrailsAndFallback(
@@ -1691,57 +1743,99 @@ function applyGuardrailsAndFallback(
   pathway: RegulatoryPathway,
   objective: PrimaryObjective
 ): GuardrailResult {
-  // GUARDRAIL 1: Crossover not allowed for confirmatory efficacy
+  // ============================================================================
+  // HARD STOP GUARDRAILS (blocked, must fallback)
+  // ============================================================================
+  
+  // HARD 1: Crossover not allowed for confirmatory efficacy
   if (pattern.structure === 'crossover' && objective === 'confirmatory_efficacy') {
     return {
       passed: false,
+      type: 'hard_stop',
       violation: 'Crossover design not permitted for confirmatory efficacy studies',
       fallbackPatternId: 'CONFIRMATORY_RCT_SUPERIORITY'
     }
   }
   
-  // GUARDRAIL 2: Superiority claims not allowed for biosimilars
+  // HARD 2: Superiority claims not allowed for biosimilars
   if (pathway === 'biosimilar' && pattern.acceptanceCriterion === 'Superiority') {
     return {
       passed: false,
+      type: 'hard_stop',
       violation: 'Superiority claims not permitted for biosimilar pathway',
       fallbackPatternId: 'CONFIRMATORY_RCT_EQUIVALENCE'
     }
   }
   
-  // GUARDRAIL 3: Adaptive design requires interim analysis
-  if (pattern.designType === 'adaptive' && !pattern.requires_interim && pattern.id !== 'SAD' && pattern.id !== 'MAD') {
-    return {
-      passed: false,
-      violation: 'Adaptive design requires pre-specified interim analysis',
-      fallbackPatternId: pathway === 'innovator' ? 'CONFIRMATORY_RCT_SUPERIORITY' : undefined
-    }
-  }
-  
-  // GUARDRAIL 4: Generic cannot have confirmatory efficacy objective
+  // HARD 3: Generic cannot have confirmatory efficacy objective
   if (pathway === 'generic' && objective === 'confirmatory_efficacy') {
     return {
       passed: false,
+      type: 'hard_stop',
       violation: 'Generic pathway cannot have confirmatory efficacy objective',
       fallbackPatternId: 'PK_CROSSOVER_BE'
     }
   }
   
-  // GUARDRAIL 5: Biosimilar cannot have dose_selection objective
+  // HARD 4: Biosimilar cannot have dose_selection objective
   if (pathway === 'biosimilar' && objective === 'dose_selection') {
     return {
       passed: false,
+      type: 'hard_stop',
       violation: 'Biosimilar pathway does not require dose selection studies',
       fallbackPatternId: 'PK_PARALLEL_SIMILARITY'
     }
   }
   
-  // GUARDRAIL 6: Post-marketing must use observational design
+  // HARD 5: Post-marketing must use observational design
   if (pathway === 'post_marketing' && pattern.structure !== 'observational') {
     return {
       passed: false,
+      type: 'hard_stop',
       violation: 'Post-marketing studies should use observational design',
       fallbackPatternId: 'OBSERVATIONAL_REGISTRY'
+    }
+  }
+  
+  // HARD 6: BE study for innovator is not allowed
+  if (pathway === 'innovator' && (patternId === 'PK_CROSSOVER_BE' || patternId === 'PK_CROSSOVER_BE_REPLICATE')) {
+    return {
+      passed: false,
+      type: 'hard_stop',
+      violation: 'BE crossover design not appropriate for innovator pathway',
+      fallbackPatternId: 'SAD'
+    }
+  }
+  
+  // ============================================================================
+  // SOFT WARNING GUARDRAILS (allowed, but flagged)
+  // ============================================================================
+  
+  // SOFT 1: Adaptive design without interim (except SAD/MAD which are sequential)
+  if (pattern.designType === 'adaptive' && !pattern.requires_interim && pattern.id !== 'SAD' && pattern.id !== 'MAD') {
+    return {
+      passed: true, // Allowed but warned
+      type: 'soft_warning',
+      violation: 'Adaptive design typically requires pre-specified interim analysis'
+    }
+  }
+  
+  // SOFT 2: Open-label when double-blind is standard
+  if (pattern.blinding === 'open-label' && objective === 'confirmatory_efficacy') {
+    return {
+      passed: true,
+      type: 'soft_warning',
+      violation: 'Open-label design for confirmatory efficacy may introduce bias'
+    }
+  }
+  
+  // SOFT 3: Wide N range (>3x spread)
+  const nRange = pattern.typical_n_range
+  if (nRange.max > nRange.min * 3) {
+    return {
+      passed: true,
+      type: 'soft_warning',
+      violation: `Wide sample size range (${nRange.min}-${nRange.max}); consider narrowing based on specific indication`
     }
   }
   
@@ -1749,20 +1843,58 @@ function applyGuardrailsAndFallback(
   return { passed: true }
 }
 
-// Fallback policy: fail-soft → fail-hard
+// Fallback policy: fail-soft → fail-hard (using FALLBACK_ORDER)
 function applyFallback(
   guardrailResult: GuardrailResult,
-  pathway: RegulatoryPathway
-): { pattern: CanonicalDesignPattern; patternId: string; warning: string } {
+  pathway: RegulatoryPathway,
+  objective: PrimaryObjective
+): { pattern: CanonicalDesignPattern; patternId: string; warning: string; triedFallbacks: string[] } {
+  const triedFallbacks: string[] = []
+  
+  // First try the specific fallback if provided
   if (guardrailResult.fallbackPatternId && CANONICAL_PATTERNS[guardrailResult.fallbackPatternId]) {
-    return {
-      pattern: CANONICAL_PATTERNS[guardrailResult.fallbackPatternId],
-      patternId: guardrailResult.fallbackPatternId,
-      warning: `Guardrail: ${guardrailResult.violation}. Fallback to ${guardrailResult.fallbackPatternId}.`
+    const fallbackPattern = CANONICAL_PATTERNS[guardrailResult.fallbackPatternId]
+    // Verify fallback passes guardrails
+    const fallbackCheck = applyGuardrailsAndFallback(
+      guardrailResult.fallbackPatternId,
+      fallbackPattern,
+      pathway,
+      objective
+    )
+    if (fallbackCheck.passed || fallbackCheck.type === 'soft_warning') {
+      return {
+        pattern: fallbackPattern,
+        patternId: guardrailResult.fallbackPatternId,
+        warning: `[HARD_STOP] ${guardrailResult.violation}. Fallback to ${guardrailResult.fallbackPatternId}.`,
+        triedFallbacks: [guardrailResult.fallbackPatternId]
+      }
     }
+    triedFallbacks.push(guardrailResult.fallbackPatternId)
   }
   
-  // Fail-hard: no valid fallback, use safest default per pathway
+  // Try fallback order for this pathway+objective
+  const fallbackKey = `${pathway}:${objective}`
+  const fallbackOrder = FALLBACK_ORDER[fallbackKey] || []
+  
+  for (const candidateId of fallbackOrder) {
+    if (triedFallbacks.includes(candidateId)) continue
+    if (!CANONICAL_PATTERNS[candidateId]) continue
+    
+    const candidate = CANONICAL_PATTERNS[candidateId]
+    const check = applyGuardrailsAndFallback(candidateId, candidate, pathway, objective)
+    
+    if (check.passed || check.type === 'soft_warning') {
+      return {
+        pattern: candidate,
+        patternId: candidateId,
+        warning: `[HARD_STOP] ${guardrailResult.violation}. Fallback to ${candidateId} (after trying: ${triedFallbacks.join(', ') || 'none'}).`,
+        triedFallbacks: [...triedFallbacks, candidateId]
+      }
+    }
+    triedFallbacks.push(candidateId)
+  }
+  
+  // Fail-hard: no valid fallback found, use safest default per pathway
   const safeDefaults: Record<RegulatoryPathway, string> = {
     'innovator': 'CONFIRMATORY_RCT_SUPERIORITY',
     'generic': 'PK_CROSSOVER_BE',
@@ -1775,12 +1907,16 @@ function applyFallback(
   return {
     pattern: CANONICAL_PATTERNS[fallbackId],
     patternId: fallbackId,
-    warning: `Guardrail: ${guardrailResult.violation}. Human decision required - using safe default ${fallbackId}.`
+    warning: `[HUMAN_DECISION_REQUIRED] ${guardrailResult.violation}. No valid fallback found (tried: ${triedFallbacks.join(', ')}). Using safe default ${fallbackId}.`,
+    triedFallbacks: [...triedFallbacks, fallbackId]
   }
 }
 
 // ============================================================================
-// STEP 4: BUILD REGULATORY RATIONALE (from pattern.notes_for_rationale + context)
+// STEP 4: BUILD REGULATORY RATIONALE (3-layer format per VP CRO spec)
+// Layer 1: WHAT (what was selected)
+// Layer 2: WHY (why it fits the objective)
+// Layer 3: REGULATORY (pathway alignment)
 // ============================================================================
 
 function buildRegulatoryRationaleV2(
@@ -1789,44 +1925,50 @@ function buildRegulatoryRationaleV2(
   objective: PrimaryObjective,
   isHVD: boolean,
   isNTI: boolean,
-  indication?: string
+  indication?: string,
+  fallbackInfo?: string  // If fallback occurred
 ): string {
-  const parts: string[] = []
+  const layers: string[] = []
   
-  // Start with pattern's template rationale
-  parts.push(pattern.notes_for_rationale)
+  // LAYER 1: WHAT (what was selected) - 1 sentence
+  layers.push(`Selected design: ${pattern.name}.`)
   
-  // Add pathway-specific context
-  switch (pathway) {
-    case 'generic':
-      parts.push('This design meets FDA ANDA requirements under 505(j).')
-      if (isHVD) parts.push('Reference-scaled approach applied for highly variable drug.')
-      if (isNTI) parts.push('Tightened bioequivalence limits (90-111%) applied for narrow therapeutic index.')
-      break
-    case 'biosimilar':
-      parts.push('This design supports the totality of evidence approach required under 351(k).')
-      break
-    case 'innovator':
-      parts.push('This design aligns with FDA/EMA expectations for NDA/MAA submission.')
-      break
-    case 'hybrid':
-      parts.push('This design leverages FDA findings for the reference product under 505(b)(2).')
-      break
-    case 'post_marketing':
-      parts.push('This design fulfills post-marketing commitment (PMC/PMR) requirements.')
-      break
+  // LAYER 2: WHY (why it fits the objective) - from pattern template
+  layers.push(pattern.notes_for_rationale)
+  
+  // LAYER 3: REGULATORY (pathway alignment) - 1 sentence
+  const pathwayAlignment: Record<RegulatoryPathway, string> = {
+    'generic': 'This design meets FDA ANDA requirements under 505(j).',
+    'biosimilar': 'This design supports the totality of evidence approach required under 351(k).',
+    'innovator': 'This design aligns with FDA/EMA expectations for NDA/MAA submission.',
+    'hybrid': 'This design leverages FDA findings for the reference product under 505(b)(2).',
+    'post_marketing': 'This design fulfills post-marketing commitment (PMC/PMR) requirements.'
+  }
+  layers.push(pathwayAlignment[pathway])
+  
+  // Additional context for drug characteristics
+  if (isHVD && pathway === 'generic') {
+    layers.push('Reference-scaled approach applied for highly variable drug (CV >30%).')
+  }
+  if (isNTI && pathway === 'generic') {
+    layers.push('Tightened bioequivalence limits (90.00-111.11%) applied for narrow therapeutic index.')
   }
   
-  // Add indication context if available
+  // Indication context for efficacy studies
   if (indication && (objective === 'confirmatory_efficacy' || objective === 'clinical_equivalence')) {
-    parts.push(`Endpoints selected are appropriate for ${indication}.`)
+    layers.push(`Endpoints selected are appropriate for ${indication}.`)
   }
   
-  return parts.join(' ')
+  // Fallback trace (if pattern was adjusted due to guardrail)
+  if (fallbackInfo) {
+    layers.push(`Note: ${fallbackInfo}`)
+  }
+  
+  return layers.join(' ')
 }
 
 // ============================================================================
-// MAIN ENGINE FUNCTION v2.0 - Per VP CRO spec
+// MAIN ENGINE FUNCTION v2.1 - Per VP CRO spec (with decision_trace)
 // Flow: Pathway → Objective → Pattern → Guardrails → Phase → Rationale
 // ============================================================================
 
@@ -1838,20 +1980,42 @@ function generateStudyDesign(
   indication?: string,
   drugChars?: DrugCharacteristics
 ): StudyDesignOutput {
+  // Initialize decision trace for audit trail
+  const decisionTrace: DecisionTraceEntry[] = []
+  
   // Step 1: Infer regulatory pathway
   const pathway = inferRegulatoryPathway(productType, compoundName, stageHint)
+  decisionTrace.push({
+    step: '1. inferRegulatoryPathway',
+    action: `Input: productType=${productType}, compound=${compoundName}, stageHint=${stageHint || 'none'}`,
+    result: `pathway=${pathway}`
+  })
   
   // Step 2: Infer primary objective
   const objective = inferPrimaryObjective(pathway, stageHint)
+  decisionTrace.push({
+    step: '2. inferPrimaryObjective',
+    action: `Input: pathway=${pathway}, stageHint=${stageHint || 'none'}`,
+    result: `objective=${objective}`
+  })
   
   // Step 2.5: Get drug characteristics
   const isHVD = drugChars?.isHVD || isKnownHVD(compoundName)
   const isNTI = drugChars?.isNTI || isKnownNTI(compoundName)
   const halfLife = drugChars?.halfLife || getKnownHalfLife(compoundName)
+  decisionTrace.push({
+    step: '2.5. getDrugCharacteristics',
+    action: `Compound: ${compoundName}`,
+    result: `isHVD=${isHVD}, isNTI=${isNTI}, halfLife=${halfLife}h`
+  })
   
   // Step 3: Select design pattern (using metadata filtering)
   let patternResult = selectDesignPatternV2(pathway, objective, { isHVD, isNTI })
   let guardrailWarning: string | undefined
+  let fallbackInfo: string | undefined
+  let candidatesCount = Object.values(CANONICAL_PATTERNS).filter(p => 
+    p.allowed_pathways.includes(pathway) && p.allowed_objectives.includes(objective)
+  ).length
   
   if (!patternResult) {
     // No matching pattern - use safe default
@@ -1865,6 +2029,17 @@ function generateStudyDesign(
     const fallbackId = safeDefaults[pathway]
     patternResult = { pattern: CANONICAL_PATTERNS[fallbackId], patternId: fallbackId }
     guardrailWarning = `No matching pattern for ${pathway}/${objective}. Using safe default.`
+    decisionTrace.push({
+      step: '3. selectDesignPattern',
+      action: `Filter by pathway=${pathway}, objective=${objective}`,
+      result: `NO MATCH (0 candidates). Fallback to ${fallbackId}`
+    })
+  } else {
+    decisionTrace.push({
+      step: '3. selectDesignPattern',
+      action: `Filter by pathway=${pathway}, objective=${objective}`,
+      result: `Selected ${patternResult.patternId} (from ${candidatesCount} candidates)`
+    })
   }
   
   // Step 3.5: Apply guardrails and fallback (per VP CRO spec)
@@ -1879,11 +2054,30 @@ function generateStudyDesign(
   let patternId = patternResult.patternId
   
   if (!guardrailResult.passed) {
-    // Guardrail triggered - apply fallback
-    const fallback = applyFallback(guardrailResult, pathway)
+    // HARD_STOP guardrail triggered - apply fallback
+    const fallback = applyFallback(guardrailResult, pathway, objective)
     pattern = fallback.pattern
     patternId = fallback.patternId
     guardrailWarning = fallback.warning
+    fallbackInfo = `Initial pattern ${patternResult.patternId} was adjusted due to guardrail: ${guardrailResult.violation}`
+    decisionTrace.push({
+      step: '3.5. applyGuardrails',
+      action: `Check ${patternResult.patternId} against guardrails`,
+      result: `[HARD_STOP] ${guardrailResult.violation}. Fallback to ${patternId} (tried: ${fallback.triedFallbacks.join(', ')})`
+    })
+  } else if (guardrailResult.type === 'soft_warning') {
+    // SOFT_WARNING - pattern allowed but flagged
+    decisionTrace.push({
+      step: '3.5. applyGuardrails',
+      action: `Check ${patternResult.patternId} against guardrails`,
+      result: `[SOFT_WARNING] ${guardrailResult.violation}. Pattern allowed.`
+    })
+  } else {
+    decisionTrace.push({
+      step: '3.5. applyGuardrails',
+      action: `Check ${patternResult.patternId} against guardrails`,
+      result: `PASSED - no violations`
+    })
   }
   
   // Step 4: Derive phase label (OUTPUT, not input)
@@ -1952,20 +2146,51 @@ function generateStudyDesign(
     warnings.push('Adaptive design: Requires pre-specified adaptation rules and independent DMC')
   }
   
-  // Step 11: Build regulatory rationale (from pattern.notes_for_rationale + context)
-  const regulatoryRationale = buildRegulatoryRationaleV2(pattern, pathway, objective, isHVD, isNTI, indication)
+  // Step 11: Build regulatory rationale (3-layer format + fallback info)
+  const regulatoryRationale = buildRegulatoryRationaleV2(pattern, pathway, objective, isHVD, isNTI, indication, fallbackInfo)
+  decisionTrace.push({
+    step: '4. buildRegulatoryRationale',
+    action: `Build 3-layer rationale (What/Why/Regulatory)`,
+    result: `Generated ${regulatoryRationale.length} chars rationale`
+  })
   
-  // Step 14: Determine conditions (fasting/fed)
+  // Step 12: Determine conditions (fasting/fed)
   const conditions = {
     fasting: pathway === 'generic' || objective === 'pk_similarity',
     fed: pathway === 'generic' && (drugChars?.hasFoodEffect ?? false),
     fedDescription: 'High-fat, high-calorie meal per FDA guidance'
   }
   
+  // Step 13: Build design summary (per VP spec - quick reference)
+  const comparatorLabel: Record<ComparatorLogic, string> = {
+    'placebo': 'placebo',
+    'active': 'active control',
+    'reference_drug': 'reference drug (RLD)',
+    'reference_biologic': 'reference biologic',
+    'placebo_or_active': 'placebo or active',
+    'placebo_or_low_dose': 'placebo or low-dose',
+    'none': 'none'
+  }
+  const designSummary: DesignSummary = {
+    structure: pattern.structure,
+    randomization: pattern.randomization,
+    blinding: pattern.blinding === 'optional' ? 'double-blind' : pattern.blinding,
+    comparator: comparatorLabel[pattern.comparator_logic],
+    typicalN: `${sampleSize.min}-${sampleSize.max} (recommended: ${sampleSize.recommended})`
+  }
+  
+  // Final trace entry
+  decisionTrace.push({
+    step: '5. OUTPUT',
+    action: `Final design selection`,
+    result: `pattern=${patternId}, phase=${phaseLabel}, N=${sampleSize.recommended}, confidence=${calculateConfidence(pathway, objective, isHVD, isNTI)}%`
+  })
+  
   return {
     regulatoryPathway: pathway,
     primaryObjective: objective,
     designPattern: patternId as DesignPatternType,
+    designSummary,
     phaseLabel,
     designName: pattern.name,
     designType: pattern.designType as StudyDesignOutput['designType'],
@@ -2006,7 +2231,8 @@ function generateStudyDesign(
     regulatoryBasis: pattern.regulatoryBasis,
     regulatoryRationale,
     warnings,
-    confidence: calculateConfidence(pathway, objective, isHVD, isNTI)
+    confidence: calculateConfidence(pathway, objective, isHVD, isNTI),
+    decisionTrace
   }
 }
 
