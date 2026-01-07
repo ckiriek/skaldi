@@ -406,6 +406,25 @@ export default function NewProjectPage() {
                   route: form.route,
                   strength: form.strength
                 })}
+                onAcceptStudyDesign={(design) => {
+                  // Fill form fields with suggested study design
+                  setFormData(prev => ({
+                    ...prev,
+                    // Design parameters
+                    design_type: design.designType.includes('crossover') ? 'crossover' : 'randomized',
+                    blinding: design.blinding === 'open-label' ? 'open-label' : design.blinding,
+                    arms: String(design.arms),
+                    number_of_arms: String(design.arms),
+                    target_sample_size: String(design.sampleSize),
+                    // Endpoints
+                    primary_endpoint: design.primaryEndpoints[0] || prev.primary_endpoint,
+                    secondary_endpoints: design.secondaryEndpoints.length > 0 
+                      ? design.secondaryEndpoints 
+                      : prev.secondary_endpoints,
+                  }))
+                  // Show success feedback
+                  console.log('✅ Study design applied:', design.designName)
+                }}
               />
             </div>
 

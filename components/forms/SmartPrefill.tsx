@@ -34,6 +34,28 @@ interface SmartPrefillData {
   error: string | null
 }
 
+// Study Design type for callback
+interface StudyDesignData {
+  designName: string
+  designType: string
+  arms: number
+  periods: number
+  sequences: number
+  blinding: string
+  sampleSize: number
+  sampleSizeRange: { min: number; max: number }
+  washoutDays: number
+  dosingRegimen: string
+  conditions: { fasting: boolean; fed: boolean }
+  samplingSchedule: string[]
+  primaryEndpoints: string[]
+  secondaryEndpoints: string[]
+  acceptanceCriteria: string
+  acceptanceMargin: string
+  regulatoryBasis: string[]
+  warnings: string[]
+}
+
 interface SmartPrefillProps {
   compoundName: string
   productType: 'generic' | 'innovator' | 'hybrid'
@@ -47,6 +69,7 @@ interface SmartPrefillProps {
   onSelectSecondaryEndpoint?: (endpoints: string[]) => void
   onSelectSafety?: (terms: string[]) => void
   onSelectFormulation?: (form: { dosageForm: string; route: string; strength: string }) => void
+  onAcceptStudyDesign?: (design: StudyDesignData) => void
   selectedRld?: string
   selectedSafetyTerms?: string[]
   selectedFormulation?: { dosageForm?: string; route?: string; strength?: string }
@@ -129,6 +152,7 @@ export function SmartPrefill({
   onSelectSecondaryEndpoint,
   onSelectSafety,
   onSelectFormulation,
+  onAcceptStudyDesign,
   selectedRld,
   selectedSafetyTerms = [],
   selectedFormulation
@@ -631,6 +655,29 @@ export function SmartPrefill({
         indication={selectedIndication}
         formulation={selectedFormulation}
         phase={phase}
+        onAcceptDesign={onAcceptStudyDesign ? (design) => {
+          // Transform internal design format to callback format
+          onAcceptStudyDesign({
+            designName: design.designName,
+            designType: design.designType,
+            arms: design.arms,
+            periods: design.periods,
+            sequences: design.sequences,
+            blinding: design.blinding,
+            sampleSize: design.population.sampleSizeRange.recommended,
+            sampleSizeRange: design.population.sampleSizeRange,
+            washoutDays: design.duration.washoutDays,
+            dosingRegimen: design.dosing.regimen,
+            conditions: design.conditions,
+            samplingSchedule: design.sampling.schedule,
+            primaryEndpoints: design.endpoints.primary,
+            secondaryEndpoints: design.endpoints.secondary,
+            acceptanceCriteria: design.acceptanceCriteria.criterion,
+            acceptanceMargin: design.acceptanceCriteria.margin,
+            regulatoryBasis: design.regulatoryBasis,
+            warnings: design.warnings
+          })
+        } : undefined}
       />
     </div>
   )

@@ -108,6 +108,102 @@ interface StudyDesignSuggestionProps {
 }
 
 // ============================================================================
+// Known Drug Characteristics Database
+// ============================================================================
+
+// Highly Variable Drugs (CV > 30%) - require replicate design or reference-scaled approach
+const KNOWN_HVD_DRUGS = new Set([
+  'metformin',
+  'verapamil',
+  'propranolol',
+  'carbamazepine',
+  'cyclosporine',
+  'tacrolimus',
+  'sirolimus',
+  'ondansetron',
+  'naproxen',
+  'ibuprofen',
+  'diclofenac',
+  'piroxicam',
+  'nifedipine',
+  'felodipine',
+  'amlodipine',
+  'simvastatin',
+  'atorvastatin',
+  'lovastatin',
+  'pravastatin',
+  'rosuvastatin',
+  'omeprazole',
+  'esomeprazole',
+  'lansoprazole',
+  'pantoprazole',
+  'rabeprazole',
+])
+
+// Narrow Therapeutic Index Drugs - require tighter BE limits (90-111%)
+const KNOWN_NTI_DRUGS = new Set([
+  'warfarin',
+  'digoxin',
+  'lithium',
+  'phenytoin',
+  'carbamazepine',
+  'valproic acid',
+  'theophylline',
+  'aminophylline',
+  'cyclosporine',
+  'tacrolimus',
+  'sirolimus',
+  'levothyroxine',
+  'liothyronine',
+])
+
+// Drug-specific half-lives (hours)
+const KNOWN_HALF_LIVES: Record<string, number> = {
+  'metformin': 6.2,
+  'allopurinol': 2, // parent; oxypurinol ~18-30h
+  'warfarin': 40,
+  'digoxin': 36,
+  'atorvastatin': 14,
+  'simvastatin': 3,
+  'omeprazole': 1,
+  'amlodipine': 35,
+  'lisinopril': 12,
+  'losartan': 2,
+  'metoprolol': 3.5,
+  'carvedilol': 7,
+  'furosemide': 2,
+  'hydrochlorothiazide': 10,
+  'gabapentin': 6,
+  'pregabalin': 6,
+  'sertraline': 26,
+  'fluoxetine': 72,
+  'escitalopram': 27,
+  'duloxetine': 12,
+  'tramadol': 6,
+  'oxycodone': 4.5,
+  'morphine': 3,
+  'fentanyl': 4,
+}
+
+// Check if drug is HVD
+function isKnownHVD(compoundName: string): boolean {
+  const normalized = compoundName.toLowerCase().trim()
+  return KNOWN_HVD_DRUGS.has(normalized)
+}
+
+// Check if drug is NTI
+function isKnownNTI(compoundName: string): boolean {
+  const normalized = compoundName.toLowerCase().trim()
+  return KNOWN_NTI_DRUGS.has(normalized)
+}
+
+// Get known half-life
+function getKnownHalfLife(compoundName: string): number | undefined {
+  const normalized = compoundName.toLowerCase().trim()
+  return KNOWN_HALF_LIVES[normalized]
+}
+
+// ============================================================================
 // BE Design Rules Engine
 // ============================================================================
 
@@ -125,10 +221,11 @@ function generateBEDesign(
                !formulation.dosageForm?.toLowerCase().includes('modified') &&
                !formulation.dosageForm?.toLowerCase().includes('sustained')
   
-  const isNTI = characteristics.isNTI || false
-  const isHVD = characteristics.isHVD || false
+  // Use known drug database OR provided characteristics
+  const isNTI = characteristics.isNTI || isKnownNTI(compoundName)
+  const isHVD = characteristics.isHVD || isKnownHVD(compoundName)
   const hasFoodEffect = characteristics.hasFoodEffect ?? true // Default to requiring fed study
-  const halfLife = characteristics.halfLife || 8 // Default 8 hours
+  const halfLife = characteristics.halfLife || getKnownHalfLife(compoundName) || 8 // Use known or default 8h
   
   // Calculate washout period (≥5 half-lives, minimum 7 days)
   const washoutDays = Math.max(Math.ceil(halfLife * 5 / 24), 7)
@@ -517,9 +614,9 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
           </div>
           
           {/* Actions */}
-          <div className="flex items-center justify-between pt-2">
+          <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
             <div className="text-[10px] text-muted-foreground">
-              Generated based on FDA BE guidance and drug characteristics
+              Generated based on FDA BE guidance • {isKnownHVD(compoundName) ? 'HVD detected' : ''} {isKnownNTI(compoundName) ? 'NTI detected' : ''}
             </div>
             <div className="flex gap-2">
               <Button
@@ -527,17 +624,17 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
                 variant="outline"
                 size="sm"
                 onClick={handleCopy}
-                className="text-xs"
+                className="text-xs h-8"
               >
                 {copied ? (
                   <>
-                    <Check className="h-3 w-3 mr-1" />
-                    Copied
+                    <Check className="h-3 w-3 mr-1.5" />
+                    Copied to Clipboard
                   </>
                 ) : (
                   <>
-                    <Copy className="h-3 w-3 mr-1" />
-                    Copy Design
+                    <Copy className="h-3 w-3 mr-1.5" />
+                    Copy Summary
                   </>
                 )}
               </Button>
@@ -546,9 +643,9 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
                   type="button"
                   size="sm"
                   onClick={() => onAcceptDesign(design)}
-                  className="text-xs"
+                  className="text-xs h-8 bg-primary hover:bg-primary/90"
                 >
-                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                  <Sparkles className="h-3 w-3 mr-1.5" />
                   Use This Design
                 </Button>
               )}
