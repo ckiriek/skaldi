@@ -142,10 +142,18 @@ Generate a comprehensive Study Design section for a clinical trial synopsis.
 
 <critical_rules>
 - Use ACTUAL study parameters from the data (phase, arms, duration, blinding)
+- Use the REGULATORY CLASSIFICATION section if available - it contains:
+  - Regulatory Pathway (innovator/generic/biosimilar/hybrid)
+  - Primary Objective (pk_equivalence/confirmatory_efficacy/etc.)
+  - Design Pattern (canonical design from FDA/EMA guidance)
+  - Regulatory Rationale (WHAT/WHY/REGULATORY ALIGNMENT)
+- Use the ACCEPTANCE CRITERIA section for statistical endpoints
+- For BE studies: include PK sampling schedule and acceptance criteria (80-125% or 90-111% for NTI)
 - Include specific randomization scheme and ratio
 - Reference comparator/placebo as specified in study design
 - Be precise about all design elements - no ambiguity
 - Include study schema description
+- Reference the REGULATORY BASIS citations
 </critical_rules>
 
 <required_content>

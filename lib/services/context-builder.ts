@@ -661,6 +661,101 @@ export class ContextBuilder {
       })
     }
     
+    // =========================================================================
+    // STUDY DESIGN ENGINE v2.4 OUTPUT
+    // Provides regulatory classification, rationale, and acceptance criteria
+    // This ensures consistency between UI and generated documents
+    // =========================================================================
+    if (design._engine) {
+      parts.push('\n---\n')
+      parts.push('## REGULATORY CLASSIFICATION (Study Design Engine v2.4)')
+      parts.push(`**Regulatory Pathway:** ${design._engine.regulatoryPathway}`)
+      parts.push(`**Primary Objective:** ${design._engine.primaryObjective}`)
+      if (design._engine.designPattern) {
+        parts.push(`**Design Pattern:** ${design._engine.designPattern}`)
+      }
+      if (design._engine.phaseLabel) {
+        parts.push(`**Phase Label:** ${design._engine.phaseLabel}`)
+      }
+      parts.push(`**Engine Confidence:** ${design._engine.confidence}%`)
+      
+      if (design._engine.isHumanDecisionRequired) {
+        parts.push('\n⚠️ **HUMAN DECISION REQUIRED:** This scenario is outside the canonical pattern library. Manual review needed.')
+      }
+    }
+    
+    // Regulatory Rationale (3-layer format)
+    if (design._rationale) {
+      parts.push('\n### Regulatory Rationale')
+      if (design._rationale.what) {
+        parts.push(`**WHAT:** ${design._rationale.what}`)
+      }
+      if (design._rationale.why) {
+        parts.push(`**WHY:** ${design._rationale.why}`)
+      }
+      if (design._rationale.regulatory) {
+        parts.push(`**REGULATORY ALIGNMENT:** ${design._rationale.regulatory}`)
+      }
+      
+      if (design._rationale.assumptions && design._rationale.assumptions.length > 0) {
+        parts.push('\n**Assumptions:**')
+        design._rationale.assumptions.forEach((assumption: string) => {
+          parts.push(`- ${assumption}`)
+        })
+      }
+      
+      if (design._rationale.notes && design._rationale.notes.length > 0) {
+        parts.push('\n**Drug Characteristic Notes:**')
+        design._rationale.notes.forEach((note: string) => {
+          parts.push(`- ${note}`)
+        })
+      }
+      
+      if (design._rationale.fallbackNote) {
+        parts.push(`\n*Note: ${design._rationale.fallbackNote}*`)
+      }
+    }
+    
+    // Acceptance Criteria (critical for Protocol Section 5.1 and SAP)
+    if (design._acceptanceCriteria) {
+      parts.push('\n### Acceptance Criteria')
+      parts.push(`**Criterion:** ${design._acceptanceCriteria.criterion}`)
+      parts.push(`**Margin:** ${design._acceptanceCriteria.margin}`)
+      if (design._acceptanceCriteria.description) {
+        parts.push(`**Description:** ${design._acceptanceCriteria.description}`)
+      }
+    }
+    
+    // PK Sampling Schedule (for BE/PK studies)
+    if (design._sampling && design._sampling.schedule && design._sampling.schedule.length > 0) {
+      parts.push('\n### PK Sampling Schedule')
+      parts.push(`**Timepoints:** ${design._sampling.schedule.join(', ')}`)
+      parts.push(`**Total Samples:** ${design._sampling.totalSamples} per subject`)
+      if (design._sampling.rationale) {
+        parts.push(`**Rationale:** ${design._sampling.rationale}`)
+      }
+    }
+    
+    // Regulatory Basis References
+    if (design._regulatoryBasis && design._regulatoryBasis.length > 0) {
+      parts.push('\n### Regulatory Basis')
+      design._regulatoryBasis.forEach((ref: string) => {
+        parts.push(`- ${ref}`)
+      })
+    }
+    
+    // Warnings and Constraints
+    if (design._warnings && design._warnings.length > 0) {
+      parts.push('\n### Design Warnings and Constraints')
+      design._warnings.forEach((warning: { severity: string; message: string; implication?: string }) => {
+        const severityIcon = warning.severity === 'HARD' ? '🔴' : '🟡'
+        parts.push(`${severityIcon} **[${warning.severity}]** ${warning.message}`)
+        if (warning.implication) {
+          parts.push(`   *Implication: ${warning.implication}*`)
+        }
+      })
+    }
+    
     // Add Sample Size Context for SAP documents
     // Uses clinical benchmarks based on indication and phase
     if (config.documentType === 'SAP' && design.indication && design.phase) {

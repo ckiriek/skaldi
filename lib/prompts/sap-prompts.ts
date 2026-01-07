@@ -280,12 +280,20 @@ Generate the SAP Study Design Overview section with statistical design parameter
 
 <critical_rules>
 - Use ACTUAL study design from Protocol/Synopsis
+- Use the REGULATORY CLASSIFICATION section if available - it contains:
+  - Regulatory Pathway (innovator/generic/biosimilar/hybrid)
+  - Primary Objective (pk_equivalence/confirmatory_efficacy/etc.)
+  - Design Pattern (canonical design from FDA/EMA guidance)
+- Use the ACCEPTANCE CRITERIA section for statistical endpoints and margins
+- For BE studies: use the specific acceptance criteria (80-125% or tightened 90-111% for NTI)
+- Use the PK SAMPLING SCHEDULE for bioequivalence/PK studies
 - Include randomization ratio, stratification factors
 - Document sample size calculation with SPECIFIC NUMBERS from the Sample Size Assumptions section
 - The data context includes industry benchmarks for this indication - USE THEM
 - Calculate and show the actual sample size formula with numbers
 - DO NOT write "[DATA_NEEDED]" - use provided data and benchmarks
 - Cite the reference source for assumptions (e.g., "Based on DEFINE trial, NCT00420212")
+- Reference the REGULATORY BASIS citations for statistical methods
 </critical_rules>
 
 <required_content>

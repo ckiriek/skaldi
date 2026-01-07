@@ -173,15 +173,23 @@ Using the data above, write a detailed Study Design section.
 
 **CRITICAL RULES:**
 1. Use the ACTUAL phase, design type, and duration from data
-2. Reference similar trial designs from clinical trials data
-3. Provide specific rationale for design choices
-4. DO NOT write "[DATA_NEEDED]" - make clinically appropriate decisions
-5. Design should be appropriate for the phase and indication
+2. Use the REGULATORY CLASSIFICATION section if available - it contains:
+   - Regulatory Pathway (innovator/generic/biosimilar/hybrid)
+   - Primary Objective (pk_equivalence/confirmatory_efficacy/etc.)
+   - Design Pattern (canonical design from FDA/EMA guidance)
+   - Regulatory Rationale (WHAT/WHY/REGULATORY ALIGNMENT)
+3. Use the ACCEPTANCE CRITERIA section for statistical endpoints
+4. Use the PK SAMPLING SCHEDULE for bioequivalence/PK studies
+5. Reference the REGULATORY BASIS citations
+6. Include any WARNINGS AND CONSTRAINTS in appropriate sections
+7. DO NOT write "[DATA_NEEDED]" - use the provided regulatory rationale
+8. Design should be consistent with the regulatory pathway and objective
 
 ## REQUIRED SUBSECTIONS
 
 ### 9.1 Overall Design Description
-- Phase and design type
+- Phase and design type (use Phase Label from Engine if available)
+- Regulatory pathway and primary objective
 - Randomization scheme
 - Blinding approach
 - Number of arms
@@ -189,6 +197,7 @@ Using the data above, write a detailed Study Design section.
 ### 9.2 Study Schema
 - Visual description of study flow
 - Key timepoints
+- For PK studies: include sampling schedule
 
 ### 9.3 Randomization Procedures
 - Allocation ratio
@@ -202,17 +211,25 @@ Using the data above, write a detailed Study Design section.
 ### 9.5 Treatment Arms
 - Detailed description of each arm
 - Dosing regimens
+- For BE studies: Test vs Reference product
 
 ### 9.6 Study Duration
 - Screening period
 - Treatment period
+- Washout period (for crossover designs)
 - Follow-up period
 
 ### 9.7 Dose Modifications
 - Criteria for dose reduction
 - Discontinuation rules
 
-Base all decisions on the phase, indication, and compound characteristics.`,
+### 9.8 Acceptance Criteria
+- Use the ACCEPTANCE CRITERIA from data context
+- Include statistical margin and description
+- Reference regulatory guidance
+
+Base all decisions on the regulatory pathway, primary objective, and compound characteristics.
+Use the Regulatory Rationale to justify design choices.`,
 
   protocol_population: `# TASK: Write Study Population Section
 

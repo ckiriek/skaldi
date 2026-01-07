@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { enrichSynopsisParameters } from '@/lib/enrichment/synopsis-enricher'
+import { generateStudyDesignForComponent } from '@/lib/study-design'
 
 // Types will be imported from separate file
 export * from './data-aggregator.types'
@@ -16,7 +17,8 @@ import type {
   FAERSReport,
   FDALabel,
   PubMedArticle,
-  KnowledgeGraphSnapshot
+  KnowledgeGraphSnapshot,
+  EnrichedStudyDesign
 } from './data-aggregator.types'
 
 export class DataAggregator {
@@ -199,27 +201,34 @@ export class DataAggregator {
       ...project.design_json
     };
     
-    console.log(`📋 Enriched Study Design:`, {
+    console.log(`📋 Base Study Design:`, {
       compound: enrichedStudyDesign.compound,
       indication: enrichedStudyDesign.indication,
       phase: enrichedStudyDesign.phase,
       sponsor: enrichedStudyDesign.sponsor
     });
     
+    // =========================================================================
+    // STUDY DESIGN ENGINE v2.4 INTEGRATION
+    // Enrich with regulatory pathway, rationale, acceptance criteria, etc.
+    // This ensures consistency between UI (StudyDesignSuggestion) and documents
+    // =========================================================================
+    const engineEnrichedDesign = this.enrichWithStudyDesignEngine(enrichedStudyDesign, project)
+    
     // Enrich Synopsis parameters for Synopsis documents
     // This adds industry-standard values for screening, follow-up, power, etc.
-    if (documentType === 'Synopsis' && enrichedStudyDesign.indication && enrichedStudyDesign.phase) {
+    if (documentType === 'Synopsis' && engineEnrichedDesign.indication && engineEnrichedDesign.phase) {
       try {
-        const phaseNum = parseInt(String(enrichedStudyDesign.phase).replace(/\D/g, '')) || 2
+        const phaseNum = parseInt(String(engineEnrichedDesign.phase).replace(/\D/g, '')) || 2
         const synopsisParams = await enrichSynopsisParameters(
           projectId,
-          enrichedStudyDesign.compound,
-          enrichedStudyDesign.indication,
+          engineEnrichedDesign.compound,
+          engineEnrichedDesign.indication,
           phaseNum,
           project.design_json
         )
         // Attach to study design for context builder to use
-        ;(enrichedStudyDesign as any)._synopsisParams = synopsisParams
+        engineEnrichedDesign._synopsisParams = synopsisParams
         console.log(`📋 Synopsis parameters enriched. Sources: ${synopsisParams.sources.join(', ')}`)
       } catch (error) {
         console.warn(`[Data Aggregator] Synopsis enrichment failed:`, error)
@@ -233,7 +242,7 @@ export class DataAggregator {
       fdaLabels: labels,
       literature: lit,
       ragReferences: rag,
-      studyDesign: enrichedStudyDesign,
+      studyDesign: engineEnrichedDesign,
       studyFlow: studyFlow,
       relatedDocuments: relatedDocs, // Cross-reference with Synopsis, IB, etc.
       metadata: {
@@ -249,6 +258,118 @@ export class DataAggregator {
         }
       }
     };
+  }
+  
+  // ============================================================================
+  // STUDY DESIGN ENGINE INTEGRATION (v2.4)
+  // Enriches study design with Engine output for document generation consistency
+  // ============================================================================
+  
+  private enrichWithStudyDesignEngine(
+    baseDesign: any,
+    project: any
+  ): EnrichedStudyDesign {
+    // Determine product type from project data
+    let productType: 'generic' | 'innovator' | 'hybrid' = 'innovator'
+    const productTypeRaw = project.product_type || project.design_json?.product_type || ''
+    if (productTypeRaw.toLowerCase().includes('generic')) {
+      productType = 'generic'
+    } else if (productTypeRaw.toLowerCase().includes('hybrid') || productTypeRaw.toLowerCase().includes('505(b)(2)')) {
+      productType = 'hybrid'
+    }
+    
+    const compoundName = baseDesign.compound || project.compound_name || 'Unknown'
+    const indication = baseDesign.indication || project.indication
+    const phase = baseDesign.phase || project.phase
+    
+    // Extract drug characteristics from project data
+    const drugChars = {
+      halfLife: project.design_json?.half_life || project.design_json?.halfLife,
+      isNTI: project.design_json?.is_nti || project.design_json?.isNTI || false,
+      isHVD: project.design_json?.is_hvd || project.design_json?.isHVD || false,
+      hasFoodEffect: project.design_json?.has_food_effect || project.design_json?.hasFoodEffect || false
+    }
+    
+    // Extract formulation
+    const formulation = {
+      dosageForm: baseDesign.dosage_form || project.dosage_form,
+      route: baseDesign.route || project.route,
+      strength: baseDesign.strength || project.strength
+    }
+    
+    try {
+      // Call Study Design Engine v2.4
+      const engineOutput = generateStudyDesignForComponent(
+        productType,
+        compoundName,
+        formulation,
+        phase,  // stageHint
+        indication,
+        drugChars
+      )
+      
+      console.log(`🔧 Study Design Engine v2.4 applied:`)
+      console.log(`   Pathway: ${engineOutput.regulatoryPathway}`)
+      console.log(`   Objective: ${engineOutput.primaryObjective}`)
+      console.log(`   Pattern: ${engineOutput.designPattern || 'HUMAN_DECISION_REQUIRED'}`)
+      console.log(`   Phase: ${engineOutput.phaseLabel}`)
+      console.log(`   Confidence: ${engineOutput.confidence}%`)
+      
+      // Merge Engine output into enriched design
+      const enrichedDesign: EnrichedStudyDesign = {
+        ...baseDesign,
+        
+        // Engine metadata
+        _engine: {
+          version: '2.4',
+          configHash: engineOutput.configHash,
+          regulatoryPathway: engineOutput.regulatoryPathway,
+          primaryObjective: engineOutput.primaryObjective,
+          designPattern: engineOutput.designPattern,
+          phaseLabel: engineOutput.phaseLabel,
+          confidence: engineOutput.confidence,
+          isHumanDecisionRequired: engineOutput.isHumanDecisionRequired
+        },
+        
+        // Structured rationale for document generation
+        _rationale: engineOutput.structuredRationale,
+        
+        // Acceptance criteria
+        _acceptanceCriteria: engineOutput.acceptanceCriteria,
+        
+        // Sampling schedule
+        _sampling: engineOutput.sampling,
+        
+        // Warnings
+        _warnings: engineOutput.structuredWarnings,
+        
+        // Decision trace
+        _decisionTrace: engineOutput.decisionTrace,
+        
+        // Regulatory basis
+        _regulatoryBasis: engineOutput.regulatoryBasis
+      }
+      
+      // Override design parameters with Engine output if more specific
+      if (engineOutput.designPattern && !enrichedDesign.design_type) {
+        enrichedDesign.design_type = engineOutput.designType
+      }
+      if (engineOutput.blinding && !enrichedDesign.blinding) {
+        enrichedDesign.blinding = engineOutput.blinding
+      }
+      if (engineOutput.arms && !enrichedDesign.arms) {
+        enrichedDesign.arms = engineOutput.arms
+      }
+      if (engineOutput.population?.sampleSizeRange && !enrichedDesign.sample_size) {
+        enrichedDesign.sample_size = engineOutput.population.sampleSizeRange.recommended
+      }
+      
+      return enrichedDesign
+      
+    } catch (error) {
+      console.warn(`⚠️ Study Design Engine failed, using base design:`, error)
+      return baseDesign as EnrichedStudyDesign
+    }
   }
   
   // ============================================================================
