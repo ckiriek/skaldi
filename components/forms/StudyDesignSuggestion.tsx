@@ -1021,204 +1021,179 @@ function selectComparator(
 }
 
 // ============================================================================
-// CANONICAL DESIGN PATTERN LIBRARY
-// Fixed patterns - no generation, only selection
+// CANONICAL DESIGN PATTERN LIBRARY v2.0
+// Per VP CRO spec: Full metadata for filtering, guardrails, and rationale
 // ============================================================================
 
+// Pattern structure types
+type PatternStructure = 'crossover' | 'parallel' | 'sequential_cohorts' | 'observational'
+type RandomizationType = 'required' | 'optional' | 'none'
+type BlindingType = 'open-label' | 'single-blind' | 'double-blind' | 'optional'
+type ComparatorLogic = 'placebo' | 'active' | 'reference_drug' | 'reference_biologic' | 'placebo_or_active' | 'placebo_or_low_dose' | 'none'
+
 interface CanonicalDesignPattern {
-  pattern: DesignPatternType
+  // Identity
+  id: string
   name: string
+  
+  // Filtering metadata (for selectDesignPattern)
+  allowed_pathways: RegulatoryPathway[]
+  allowed_objectives: PrimaryObjective[]
+  
+  // Structure metadata (for guardrails)
+  structure: PatternStructure
+  randomization: RandomizationType
+  blinding: BlindingType
+  comparator_logic: ComparatorLogic
+  requires_interim: boolean
+  event_driven: boolean
+  
+  // Design details
   designType: 'crossover_2x2' | 'crossover_replicate' | 'parallel' | 'adaptive' | 'observational'
   arms: number
   periods: number
-  blinding: 'open-label' | 'single-blind' | 'double-blind'
   populationType: 'healthy_volunteers' | 'patients'
-  sampleSizeRange: { min: number; max: number; recommended: number }
-  sampleSizeRationale: string
+  typical_n_range: { min: number; max: number; recommended: number }
   durationWeeks: number
   dosingRegimen: 'single-dose' | 'multiple-dose' | 'steady-state'
+  
+  // Endpoints
   primaryEndpoints: string[]
   secondaryEndpoints: string[]
+  
+  // Acceptance
   acceptanceCriterion: string
   acceptanceMargin: string
+  
+  // Regulatory
   regulatoryBasis: string[]
+  notes_for_rationale: string  // Template for regulatory rationale
 }
 
-const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
+// 11 Canonical Patterns per VP CRO spec v1.0
+const CANONICAL_PATTERNS: Record<string, CanonicalDesignPattern> = {
   // ============================================================================
-  // INNOVATOR PATTERNS
+  // PATTERN 01 — SAD (Single Ascending Dose)
   // ============================================================================
-  sad_mad: {
-    pattern: 'sad_mad',
-    name: 'Randomized, Double-Blind, Placebo-Controlled, Single/Multiple Ascending Dose (SAD/MAD)',
-    designType: 'adaptive',
-    arms: 2, // Active + Placebo per cohort
-    periods: 1,
+  SAD: {
+    id: 'SAD',
+    name: 'Randomized, Double-Blind, Placebo-Controlled, Single Ascending Dose (SAD)',
+    
+    // Filtering metadata
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['pk_safety'],
+    
+    // Structure metadata (for guardrails)
+    structure: 'sequential_cohorts',
+    randomization: 'optional',
     blinding: 'double-blind',
+    comparator_logic: 'placebo',
+    requires_interim: false,
+    event_driven: false,
+    
+    // Design details
+    designType: 'adaptive',
+    arms: 2,
+    periods: 1,
     populationType: 'healthy_volunteers',
-    sampleSizeRange: { min: 24, max: 80, recommended: 48 },
-    sampleSizeRationale: 'SAD/MAD: 6-8 cohorts × 6-10 subjects per cohort (3:1 or 4:1 active:placebo)',
-    durationWeeks: 12,
+    typical_n_range: { min: 24, max: 48, recommended: 36 },
+    durationWeeks: 6,
     dosingRegimen: 'single-dose',
+    
+    // Endpoints
     primaryEndpoints: [
       'Safety and tolerability (AEs, SAEs, vital signs, ECG, laboratory)',
-      'Maximum Tolerated Dose (MTD) or Maximum Administered Dose (MAD)',
+      'Maximum Tolerated Dose (MTD)',
       'Pharmacokinetics (Cmax, AUC, t½, CL, Vd)'
     ],
     secondaryEndpoints: [
       'Dose-proportionality assessment',
-      'Preliminary PK/PD relationship',
-      'Food effect (if applicable)',
-      'Immunogenicity (for biologics)'
+      'Preliminary PK/PD relationship'
     ],
+    
+    // Acceptance
     acceptanceCriterion: 'Safety Review Committee approval for dose escalation',
     acceptanceMargin: 'No DLTs in ≥6 subjects at dose level; predefined stopping rules',
+    
+    // Regulatory
     regulatoryBasis: [
       'FDA Guidance: Estimating the Maximum Safe Starting Dose in Initial Clinical Trials (2005)',
-      'ICH M3(R2): Nonclinical Safety Studies for Human Pharmaceuticals',
-      'ICH S9: Nonclinical Evaluation for Anticancer Pharmaceuticals'
-    ]
+      'ICH M3(R2): Nonclinical Safety Studies for Human Pharmaceuticals'
+    ],
+    notes_for_rationale: 'Single ascending dose design is appropriate for first-in-human evaluation to characterize safety, tolerability, and initial pharmacokinetics under controlled exposure escalation.'
   },
-  
-  parallel_dose_ranging: {
-    pattern: 'parallel_dose_ranging',
-    name: 'Randomized, Double-Blind, Placebo-Controlled, Parallel-Group, Dose-Ranging',
-    designType: 'parallel',
-    arms: 4, // Placebo + 3 dose levels
-    periods: 1,
+
+  // ============================================================================
+  // PATTERN 02 — MAD (Multiple Ascending Dose)
+  // ============================================================================
+  MAD: {
+    id: 'MAD',
+    name: 'Randomized, Double-Blind, Placebo-Controlled, Multiple Ascending Dose (MAD)',
+    
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['pk_safety'],
+    
+    structure: 'sequential_cohorts',
+    randomization: 'optional',
     blinding: 'double-blind',
-    populationType: 'patients',
-    sampleSizeRange: { min: 100, max: 300, recommended: 200 },
-    sampleSizeRationale: 'Dose-ranging: ~50 patients per arm × 4 arms for dose-response modeling (MCP-Mod)',
+    comparator_logic: 'placebo',
+    requires_interim: false,
+    event_driven: false,
+    
+    designType: 'adaptive',
+    arms: 2,
+    periods: 1,
+    populationType: 'healthy_volunteers',
+    typical_n_range: { min: 40, max: 80, recommended: 56 },
     durationWeeks: 12,
     dosingRegimen: 'multiple-dose',
+    
     primaryEndpoints: [
-      'Dose-response relationship for efficacy endpoint',
-      'Target dose selection for Phase 3'
+      'Safety and tolerability under repeated dosing',
+      'Steady-state pharmacokinetics',
+      'Accumulation ratio'
     ],
     secondaryEndpoints: [
-      'Safety and tolerability by dose',
-      'PK/PD correlation',
-      'Biomarker response',
-      'Preliminary efficacy signals'
+      'Time to steady state',
+      'Exposure-related effects',
+      'Immunogenicity (for biologics)'
     ],
-    acceptanceCriterion: 'Statistically significant dose-response',
-    acceptanceMargin: 'MCP-Mod or Emax modeling; p < 0.05 for dose-response trend',
+    
+    acceptanceCriterion: 'Safety Review Committee approval for dose escalation',
+    acceptanceMargin: 'No DLTs; predefined stopping rules',
+    
     regulatoryBasis: [
-      'FDA Guidance: Dose-Response Information to Support Drug Registration (1994)',
-      'ICH E4: Dose-Response Information to Support Drug Registration',
-      'EMA Guideline on the Investigation of Drug Interactions'
-    ]
+      'FDA Guidance: Estimating the Maximum Safe Starting Dose in Initial Clinical Trials (2005)',
+      'ICH M3(R2): Nonclinical Safety Studies for Human Pharmaceuticals'
+    ],
+    notes_for_rationale: 'Multiple ascending dose studies allow evaluation of safety and pharmacokinetics under repeated dosing and support identification of exposure-related effects.'
   },
-  
-  adaptive_seamless: {
-    pattern: 'adaptive_seamless',
-    name: 'Adaptive Seamless Phase 2/3 Design with Interim Analysis',
-    designType: 'adaptive',
-    arms: 3, // Placebo + 2 doses (selected adaptively)
-    periods: 1,
-    blinding: 'double-blind',
-    populationType: 'patients',
-    sampleSizeRange: { min: 200, max: 600, recommended: 400 },
-    sampleSizeRationale: 'Seamless design: Phase 2 portion ~150, Phase 3 portion ~250-450; interim for dose selection',
-    durationWeeks: 24,
-    dosingRegimen: 'multiple-dose',
-    primaryEndpoints: [
-      'Phase 2: Dose selection based on efficacy/safety profile',
-      'Phase 3: Confirmatory efficacy at selected dose(s)'
-    ],
-    secondaryEndpoints: [
-      'Key secondary efficacy endpoints',
-      'Safety profile characterization',
-      'PK/PD in patient population',
-      'Biomarker validation'
-    ],
-    acceptanceCriterion: 'Pre-specified success criteria at interim and final',
-    acceptanceMargin: 'Interim: dose selection criteria; Final: p < 0.025 one-sided',
-    regulatoryBasis: [
-      'FDA Guidance: Adaptive Designs for Clinical Trials of Drugs and Biologics (2019)',
-      'EMA Reflection Paper on Methodological Issues in Confirmatory Clinical Trials with Adaptive Design',
-      'ICH E9(R1): Estimands and Sensitivity Analysis in Clinical Trials'
-    ]
-  },
-  
-  parallel_confirmatory: {
-    pattern: 'parallel_confirmatory',
-    name: 'Randomized, Double-Blind, Placebo/Active-Controlled, Parallel-Group, Pivotal',
-    designType: 'parallel',
-    arms: 2,
-    periods: 1,
-    blinding: 'double-blind',
-    populationType: 'patients',
-    sampleSizeRange: { min: 300, max: 3000, recommended: 500 },
-    sampleSizeRationale: 'Pivotal: Powered at 90% for clinically meaningful difference, α=0.025 one-sided',
-    durationWeeks: 24,
-    dosingRegimen: 'multiple-dose',
-    primaryEndpoints: [
-      'Regulatory-accepted primary efficacy endpoint',
-      'Clinically meaningful treatment difference vs control'
-    ],
-    secondaryEndpoints: [
-      'Key secondary efficacy endpoints (multiplicity-adjusted)',
-      'Safety profile characterization',
-      'Patient-reported outcomes (PROs)',
-      'Health economics and outcomes research (HEOR) data'
-    ],
-    acceptanceCriterion: 'Superiority or Non-Inferiority',
-    acceptanceMargin: 'p < 0.025 one-sided (or 0.05 two-sided) for primary endpoint',
-    regulatoryBasis: [
-      'FDA Guidance: Providing Clinical Evidence of Effectiveness (1998)',
-      'ICH E9: Statistical Principles for Clinical Trials',
-      'ICH E10: Choice of Control Group in Clinical Trials'
-    ]
-  },
-  
-  group_sequential: {
-    pattern: 'group_sequential',
-    name: 'Randomized, Double-Blind, Event-Driven, Group-Sequential Design',
-    designType: 'adaptive',
-    arms: 2,
-    periods: 1,
-    blinding: 'double-blind',
-    populationType: 'patients',
-    sampleSizeRange: { min: 500, max: 5000, recommended: 1500 },
-    sampleSizeRationale: 'Event-driven: Based on expected event rate; interim analyses at 50%, 75% of events',
-    durationWeeks: 52,
-    dosingRegimen: 'multiple-dose',
-    primaryEndpoints: [
-      'Time-to-event endpoint (e.g., PFS, OS, MACE)',
-      'Event-driven analysis with pre-specified number of events'
-    ],
-    secondaryEndpoints: [
-      'Secondary time-to-event endpoints',
-      'Response rate',
-      'Duration of response',
-      'Safety and tolerability'
-    ],
-    acceptanceCriterion: 'Group-sequential boundaries (O\'Brien-Fleming or similar)',
-    acceptanceMargin: 'Pre-specified alpha spending function; overall α=0.025 one-sided',
-    regulatoryBasis: [
-      'FDA Guidance: Adaptive Designs for Clinical Trials (2019)',
-      'ICH E9: Statistical Principles for Clinical Trials',
-      'FDA Guidance: Clinical Trial Endpoints for Approval of Cancer Drugs'
-    ]
-  },
-  
+
   // ============================================================================
-  // GENERIC PATTERNS
+  // PATTERN 03 — PK Crossover BE (Standard)
   // ============================================================================
-  crossover_2x2: {
-    pattern: 'crossover_2x2',
-    name: 'Randomized, Open-Label, Single-Dose, 2-Treatment, 2-Period, 2-Sequence Crossover',
+  PK_CROSSOVER_BE: {
+    id: 'PK_CROSSOVER_BE',
+    name: 'Randomized, Open-Label, Single-Dose, 2×2 Crossover Bioequivalence',
+    
+    allowed_pathways: ['generic'],
+    allowed_objectives: ['pk_equivalence'],
+    
+    structure: 'crossover',
+    randomization: 'required',
+    blinding: 'open-label',
+    comparator_logic: 'reference_drug',
+    requires_interim: false,
+    event_driven: false,
+    
     designType: 'crossover_2x2',
     arms: 2,
     periods: 2,
-    blinding: 'open-label',
     populationType: 'healthy_volunteers',
-    sampleSizeRange: { min: 24, max: 36, recommended: 30 },
-    sampleSizeRationale: 'Standard BE: Based on expected intra-subject CV of 20-25%',
+    typical_n_range: { min: 24, max: 48, recommended: 30 },
     durationWeeks: 4,
     dosingRegimen: 'single-dose',
+    
     primaryEndpoints: [
       'AUC0-t: Area under the concentration-time curve to last measurable concentration',
       'AUC0-∞: Area under the concentration-time curve extrapolated to infinity',
@@ -1229,27 +1204,43 @@ const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
       't½: Terminal elimination half-life',
       'Safety and tolerability'
     ],
+    
     acceptanceCriterion: 'Average Bioequivalence',
     acceptanceMargin: '90% CI of geometric mean ratio within 80.00-125.00% for AUC and Cmax',
+    
     regulatoryBasis: [
       'FDA Guidance: Bioequivalence Studies With Pharmacokinetic Endpoints for Drugs Submitted Under an ANDA (2021)',
       'FDA Guidance: Statistical Approaches to Establishing Bioequivalence (2001)',
       'EMA Guideline on the Investigation of Bioequivalence'
-    ]
+    ],
+    notes_for_rationale: 'A randomized crossover bioequivalence design is the regulatory standard for demonstrating pharmacokinetic equivalence between test and reference products.'
   },
-  
-  crossover_replicate: {
-    pattern: 'crossover_replicate',
-    name: 'Randomized, Open-Label, Single-Dose, 2-Treatment, 4-Period, Replicate Crossover',
+
+  // ============================================================================
+  // PATTERN 03b — PK Crossover BE (Replicate for HVD)
+  // ============================================================================
+  PK_CROSSOVER_BE_REPLICATE: {
+    id: 'PK_CROSSOVER_BE_REPLICATE',
+    name: 'Randomized, Open-Label, Single-Dose, 4-Period Replicate Crossover Bioequivalence',
+    
+    allowed_pathways: ['generic'],
+    allowed_objectives: ['pk_equivalence'],
+    
+    structure: 'crossover',
+    randomization: 'required',
+    blinding: 'open-label',
+    comparator_logic: 'reference_drug',
+    requires_interim: false,
+    event_driven: false,
+    
     designType: 'crossover_replicate',
     arms: 2,
     periods: 4,
-    blinding: 'open-label',
     populationType: 'healthy_volunteers',
-    sampleSizeRange: { min: 36, max: 48, recommended: 42 },
-    sampleSizeRationale: 'Replicate design for HVD: Allows reference-scaled approach; CV >30%',
+    typical_n_range: { min: 36, max: 48, recommended: 42 },
     durationWeeks: 8,
     dosingRegimen: 'single-dose',
+    
     primaryEndpoints: [
       'AUC0-t with reference-scaled average bioequivalence',
       'AUC0-∞ with reference-scaled average bioequivalence',
@@ -1260,30 +1251,42 @@ const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
       'Tmax, t½',
       'Safety and tolerability'
     ],
+    
     acceptanceCriterion: 'Reference-Scaled Average Bioequivalence',
     acceptanceMargin: 'Scaled 90% CI with point estimate constraint (0.80-1.25); σWR ≥ 0.294',
+    
     regulatoryBasis: [
       'FDA Guidance: Bioequivalence Studies With Pharmacokinetic Endpoints (2021)',
-      'FDA Draft Guidance: Bioequivalence Recommendations for Specific Products',
-      'FDA Guidance: Statistical Approaches to Establishing Bioequivalence'
-    ]
+      'FDA Draft Guidance: Bioequivalence Recommendations for Specific Products'
+    ],
+    notes_for_rationale: 'Replicate crossover design allows reference-scaled bioequivalence assessment for highly variable drugs where standard 80-125% limits may be too restrictive.'
   },
-  
+
   // ============================================================================
-  // BIOSIMILAR PATTERNS
+  // PATTERN 04 — PK Parallel Similarity (Biosimilar)
   // ============================================================================
-  parallel_3arm_pk: {
-    pattern: 'parallel_3arm_pk',
+  PK_PARALLEL_SIMILARITY: {
+    id: 'PK_PARALLEL_SIMILARITY',
     name: 'Randomized, Double-Blind, 3-Arm Parallel, Comparative PK Similarity Study',
-    designType: 'parallel',
-    arms: 3, // Biosimilar vs US-reference vs EU-reference
-    periods: 1,
+    
+    allowed_pathways: ['biosimilar'],
+    allowed_objectives: ['pk_similarity'],
+    
+    structure: 'parallel',
+    randomization: 'required',
     blinding: 'double-blind',
+    comparator_logic: 'reference_biologic',
+    requires_interim: false,
+    event_driven: false,
+    
+    designType: 'parallel',
+    arms: 3,
+    periods: 1,
     populationType: 'healthy_volunteers',
-    sampleSizeRange: { min: 150, max: 250, recommended: 200 },
-    sampleSizeRationale: 'Powered for PK equivalence: 90% CI within 80-125% for AUC and Cmax',
+    typical_n_range: { min: 150, max: 250, recommended: 200 },
     durationWeeks: 12,
     dosingRegimen: 'single-dose',
+    
     primaryEndpoints: [
       'AUC0-∞ ratio (biosimilar/reference) with 90% CI within 80-125%',
       'Cmax ratio (biosimilar/reference) with 90% CI within 80-125%'
@@ -1293,27 +1296,228 @@ const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
       'Safety and tolerability comparison',
       'PK parameter comparison (t½, CL, Vd)'
     ],
+    
     acceptanceCriterion: 'PK Biosimilarity',
     acceptanceMargin: '90% CI of geometric mean ratio within 80.00-125.00% for AUC and Cmax',
+    
     regulatoryBasis: [
       'FDA Guidance: Scientific Considerations in Demonstrating Biosimilarity (2015)',
       'FDA Guidance: Clinical Pharmacology Data to Support Biosimilarity (2016)',
       'EMA Guideline on Similar Biological Medicinal Products'
-    ]
+    ],
+    notes_for_rationale: 'Parallel-group comparative PK studies are appropriate for biologics where crossover designs are impractical due to long half-life or immunogenicity concerns.'
   },
-  
-  equivalence_rct: {
-    pattern: 'equivalence_rct',
-    name: 'Randomized, Double-Blind, Parallel-Group, Equivalence Trial',
+
+  // ============================================================================
+  // PATTERN 05 — Dose-Ranging Parallel
+  // ============================================================================
+  DOSE_RANGING_PARALLEL: {
+    id: 'DOSE_RANGING_PARALLEL',
+    name: 'Randomized, Double-Blind, Placebo-Controlled, Parallel-Group, Dose-Ranging',
+    
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['dose_selection'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'placebo_or_low_dose',
+    requires_interim: false,
+    event_driven: false,
+    
+    designType: 'parallel',
+    arms: 4,
+    periods: 1,
+    populationType: 'patients',
+    typical_n_range: { min: 100, max: 300, recommended: 200 },
+    durationWeeks: 12,
+    dosingRegimen: 'multiple-dose',
+    
+    primaryEndpoints: [
+      'Dose-response relationship for efficacy endpoint',
+      'Target dose selection for Phase 3'
+    ],
+    secondaryEndpoints: [
+      'Safety and tolerability by dose',
+      'PK/PD correlation',
+      'Biomarker response',
+      'Preliminary efficacy signals'
+    ],
+    
+    acceptanceCriterion: 'Statistically significant dose-response',
+    acceptanceMargin: 'MCP-Mod or Emax modeling; p < 0.05 for dose-response trend',
+    
+    regulatoryBasis: [
+      'FDA Guidance: Dose-Response Information to Support Drug Registration (1994)',
+      'ICH E4: Dose-Response Information to Support Drug Registration'
+    ],
+    notes_for_rationale: 'Parallel dose-ranging studies support characterization of the dose-response relationship and inform selection of doses for confirmatory trials.'
+  },
+
+  // ============================================================================
+  // PATTERN 06 — Adaptive Dose-Finding
+  // ============================================================================
+  ADAPTIVE_DOSE_FINDING: {
+    id: 'ADAPTIVE_DOSE_FINDING',
+    name: 'Adaptive Dose-Finding Design with Interim Analysis',
+    
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['dose_selection'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'placebo_or_low_dose',
+    requires_interim: true,
+    event_driven: false,
+    
+    designType: 'adaptive',
+    arms: 4,
+    periods: 1,
+    populationType: 'patients',
+    typical_n_range: { min: 120, max: 300, recommended: 200 },
+    durationWeeks: 16,
+    dosingRegimen: 'multiple-dose',
+    
+    primaryEndpoints: [
+      'Dose selection based on efficacy/safety profile at interim',
+      'Dose-response characterization'
+    ],
+    secondaryEndpoints: [
+      'Safety and tolerability by dose',
+      'PK/PD modeling',
+      'Biomarker response'
+    ],
+    
+    acceptanceCriterion: 'Pre-specified dose selection criteria at interim',
+    acceptanceMargin: 'Bayesian or frequentist dose-response modeling',
+    
+    regulatoryBasis: [
+      'FDA Guidance: Adaptive Designs for Clinical Trials of Drugs and Biologics (2019)',
+      'ICH E4: Dose-Response Information to Support Drug Registration'
+    ],
+    notes_for_rationale: 'Adaptive designs with pre-specified interim analyses allow efficient dose selection while maintaining statistical and regulatory rigor.'
+  },
+
+  // ============================================================================
+  // PATTERN 07 — Seamless Phase 2/3
+  // ============================================================================
+  SEAMLESS_PHASE_2_3: {
+    id: 'SEAMLESS_PHASE_2_3',
+    name: 'Adaptive Seamless Phase 2/3 Design with Interim Analysis',
+    
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['dose_selection', 'confirmatory_efficacy'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'placebo_or_active',
+    requires_interim: true,
+    event_driven: false,
+    
+    designType: 'adaptive',
+    arms: 3,
+    periods: 1,
+    populationType: 'patients',
+    typical_n_range: { min: 300, max: 800, recommended: 500 },
+    durationWeeks: 24,
+    dosingRegimen: 'multiple-dose',
+    
+    primaryEndpoints: [
+      'Phase 2: Dose selection based on efficacy/safety profile',
+      'Phase 3: Confirmatory efficacy at selected dose(s)'
+    ],
+    secondaryEndpoints: [
+      'Key secondary efficacy endpoints',
+      'Safety profile characterization',
+      'PK/PD in patient population',
+      'Biomarker validation'
+    ],
+    
+    acceptanceCriterion: 'Pre-specified success criteria at interim and final',
+    acceptanceMargin: 'Interim: dose selection criteria; Final: p < 0.025 one-sided',
+    
+    regulatoryBasis: [
+      'FDA Guidance: Adaptive Designs for Clinical Trials of Drugs and Biologics (2019)',
+      'EMA Reflection Paper on Methodological Issues in Confirmatory Clinical Trials with Adaptive Design',
+      'ICH E9(R1): Estimands and Sensitivity Analysis in Clinical Trials'
+    ],
+    notes_for_rationale: 'Seamless Phase 2/3 designs combine dose selection and confirmatory assessment, enabling accelerated development while preserving inferential integrity.'
+  },
+
+  // ============================================================================
+  // PATTERN 08 — Confirmatory RCT (Superiority)
+  // ============================================================================
+  CONFIRMATORY_RCT_SUPERIORITY: {
+    id: 'CONFIRMATORY_RCT_SUPERIORITY',
+    name: 'Randomized, Double-Blind, Placebo/Active-Controlled, Parallel-Group, Pivotal',
+    
+    allowed_pathways: ['innovator', 'hybrid'],
+    allowed_objectives: ['confirmatory_efficacy'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'placebo_or_active',
+    requires_interim: false,
+    event_driven: false,
+    
     designType: 'parallel',
     arms: 2,
     periods: 1,
-    blinding: 'double-blind',
     populationType: 'patients',
-    sampleSizeRange: { min: 300, max: 800, recommended: 500 },
-    sampleSizeRationale: 'Equivalence design: Powered to exclude clinically meaningful difference at pre-specified margin',
+    typical_n_range: { min: 300, max: 3000, recommended: 500 },
     durationWeeks: 24,
     dosingRegimen: 'multiple-dose',
+    
+    primaryEndpoints: [
+      'Regulatory-accepted primary efficacy endpoint',
+      'Clinically meaningful treatment difference vs control'
+    ],
+    secondaryEndpoints: [
+      'Key secondary efficacy endpoints (multiplicity-adjusted)',
+      'Safety profile characterization',
+      'Patient-reported outcomes (PROs)',
+      'Health economics and outcomes research (HEOR) data'
+    ],
+    
+    acceptanceCriterion: 'Superiority',
+    acceptanceMargin: 'p < 0.025 one-sided (or 0.05 two-sided) for primary endpoint',
+    
+    regulatoryBasis: [
+      'FDA Guidance: Providing Clinical Evidence of Effectiveness (1998)',
+      'ICH E9: Statistical Principles for Clinical Trials',
+      'ICH E10: Choice of Control Group in Clinical Trials'
+    ],
+    notes_for_rationale: 'Randomized controlled trials are the standard for demonstrating superiority of an investigational product over placebo or active control.'
+  },
+
+  // ============================================================================
+  // PATTERN 09 — Confirmatory RCT (Equivalence / Non-Inferiority)
+  // ============================================================================
+  CONFIRMATORY_RCT_EQUIVALENCE: {
+    id: 'CONFIRMATORY_RCT_EQUIVALENCE',
+    name: 'Randomized, Double-Blind, Parallel-Group, Equivalence/Non-Inferiority Trial',
+    
+    allowed_pathways: ['biosimilar'],
+    allowed_objectives: ['clinical_equivalence'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'reference_biologic',
+    requires_interim: false,
+    event_driven: false,
+    
+    designType: 'parallel',
+    arms: 2,
+    periods: 1,
+    populationType: 'patients',
+    typical_n_range: { min: 300, max: 800, recommended: 500 },
+    durationWeeks: 24,
+    dosingRegimen: 'multiple-dose',
+    
     primaryEndpoints: [
       'Clinical efficacy endpoint with equivalence margin',
       'Treatment difference with 95% CI within equivalence bounds'
@@ -1324,61 +1528,90 @@ const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
       'PK/PD in patient population',
       'Switching study (if applicable)'
     ],
-    acceptanceCriterion: 'Clinical Equivalence',
+    
+    acceptanceCriterion: 'Clinical Equivalence or Non-Inferiority',
     acceptanceMargin: '95% CI of treatment difference within pre-specified equivalence margin (±δ)',
+    
     regulatoryBasis: [
       'FDA Guidance: Scientific Considerations in Demonstrating Biosimilarity (2015)',
-      'FDA Guidance: Considerations in Demonstrating Interchangeability (2019)',
-      'EMA Guideline on Similar Biological Medicinal Products Containing Biotechnology-Derived Proteins'
-    ]
+      'FDA Guidance: Non-Inferiority Clinical Trials to Establish Effectiveness (2016)',
+      'EMA Guideline on Similar Biological Medicinal Products'
+    ],
+    notes_for_rationale: 'Equivalence or non-inferiority trials are required to confirm clinical similarity between biosimilar and reference products.'
   },
-  
-  non_inferiority_rct: {
-    pattern: 'non_inferiority_rct',
-    name: 'Randomized, Double-Blind, Parallel-Group, Non-Inferiority Trial',
-    designType: 'parallel',
+
+  // ============================================================================
+  // PATTERN 10 — Event-Driven Confirmatory Trial
+  // ============================================================================
+  EVENT_DRIVEN_CONFIRMATORY: {
+    id: 'EVENT_DRIVEN_CONFIRMATORY',
+    name: 'Randomized, Double-Blind, Event-Driven, Group-Sequential Design',
+    
+    allowed_pathways: ['innovator'],
+    allowed_objectives: ['confirmatory_efficacy'],
+    
+    structure: 'parallel',
+    randomization: 'required',
+    blinding: 'double-blind',
+    comparator_logic: 'placebo_or_active',
+    requires_interim: true,
+    event_driven: true,
+    
+    designType: 'adaptive',
     arms: 2,
     periods: 1,
-    blinding: 'double-blind',
     populationType: 'patients',
-    sampleSizeRange: { min: 400, max: 1000, recommended: 600 },
-    sampleSizeRationale: 'Non-inferiority: Powered to exclude inferiority at pre-specified margin with 90% power',
-    durationWeeks: 24,
+    typical_n_range: { min: 500, max: 5000, recommended: 1500 },
+    durationWeeks: 52,
     dosingRegimen: 'multiple-dose',
+    
     primaryEndpoints: [
-      'Clinical efficacy endpoint with non-inferiority margin',
-      'Lower bound of 95% CI above -δ (non-inferiority margin)'
+      'Time-to-event endpoint (e.g., PFS, OS, MACE)',
+      'Event-driven analysis with pre-specified number of events'
     ],
     secondaryEndpoints: [
-      'Safety profile comparison',
-      'Immunogenicity',
-      'Quality of life measures',
-      'Healthcare resource utilization'
+      'Secondary time-to-event endpoints',
+      'Response rate',
+      'Duration of response',
+      'Safety and tolerability'
     ],
-    acceptanceCriterion: 'Non-Inferiority',
-    acceptanceMargin: 'Lower bound of 95% CI for treatment difference > -δ (non-inferiority margin)',
+    
+    acceptanceCriterion: 'Group-sequential boundaries (O\'Brien-Fleming or similar)',
+    acceptanceMargin: 'Pre-specified alpha spending function; overall α=0.025 one-sided',
+    
     regulatoryBasis: [
-      'FDA Guidance: Non-Inferiority Clinical Trials to Establish Effectiveness (2016)',
-      'ICH E10: Choice of Control Group in Clinical Trials',
-      'EMA Guideline on the Choice of Non-Inferiority Margin'
-    ]
+      'FDA Guidance: Adaptive Designs for Clinical Trials (2019)',
+      'ICH E9: Statistical Principles for Clinical Trials',
+      'FDA Guidance: Clinical Trial Endpoints for Approval of Cancer Drugs'
+    ],
+    notes_for_rationale: 'Event-driven designs ensure adequate statistical power for time-to-event endpoints and are commonly used in cardiovascular and oncology indications.'
   },
-  
+
   // ============================================================================
-  // POST-MARKETING PATTERNS
+  // PATTERN 11 — Observational Registry / RWE
   // ============================================================================
-  registry_observational: {
-    pattern: 'registry_observational',
+  OBSERVATIONAL_REGISTRY: {
+    id: 'OBSERVATIONAL_REGISTRY',
     name: 'Post-Marketing Observational Registry / Real-World Evidence Study',
+    
+    allowed_pathways: ['post_marketing'],
+    allowed_objectives: ['long_term_safety', 'safety_surveillance', 'effectiveness_rwe'],
+    
+    structure: 'observational',
+    randomization: 'none',
+    blinding: 'open-label',
+    comparator_logic: 'none',
+    requires_interim: false,
+    event_driven: false,
+    
     designType: 'observational',
     arms: 1,
     periods: 1,
-    blinding: 'open-label',
     populationType: 'patients',
-    sampleSizeRange: { min: 1000, max: 10000, recommended: 3000 },
-    sampleSizeRationale: 'Post-marketing: Rule of 3 for rare AE detection (n=3000 for 1/1000 events with 95% CI)',
+    typical_n_range: { min: 1000, max: 10000, recommended: 3000 },
     durationWeeks: 52,
     dosingRegimen: 'multiple-dose',
+    
     primaryEndpoints: [
       'Long-term safety profile in real-world population',
       'Rare adverse event detection and characterization',
@@ -1398,12 +1631,203 @@ const CANONICAL_PATTERNS: Record<DesignPatternType, CanonicalDesignPattern> = {
       'FDA Guidance: Best Practices for Conducting Pharmacoepidemiologic Safety Studies (2013)',
       'ICH E2E: Pharmacovigilance Planning',
       'FDA Guidance: Real-World Evidence Program Framework (2018)'
-    ]
+    ],
+    notes_for_rationale: 'Post-marketing observational studies support long-term safety monitoring and real-world effectiveness assessment without interventional assignment.'
   }
 }
 
 // ============================================================================
-// MAIN ENGINE FUNCTION - Generates complete study design
+// STEP 3: SELECT DESIGN PATTERN (with filtering by metadata)
+// ============================================================================
+
+function selectDesignPatternV2(
+  pathway: RegulatoryPathway,
+  objective: PrimaryObjective,
+  drugChars: { isHVD?: boolean; isNTI?: boolean }
+): { pattern: CanonicalDesignPattern; patternId: string } | null {
+  // Filter patterns by allowed_pathways and allowed_objectives
+  const candidates = Object.entries(CANONICAL_PATTERNS).filter(([_, p]) => 
+    p.allowed_pathways.includes(pathway) && 
+    p.allowed_objectives.includes(objective)
+  )
+  
+  if (candidates.length === 0) {
+    return null
+  }
+  
+  // For generic + HVD, prefer replicate design
+  if (pathway === 'generic' && drugChars.isHVD) {
+    const replicate = candidates.find(([id]) => id === 'PK_CROSSOVER_BE_REPLICATE')
+    if (replicate) {
+      return { pattern: replicate[1], patternId: replicate[0] }
+    }
+  }
+  
+  // For innovator dose_selection, prefer adaptive if available
+  if (pathway === 'innovator' && objective === 'dose_selection') {
+    const adaptive = candidates.find(([id]) => id === 'ADAPTIVE_DOSE_FINDING' || id === 'SEAMLESS_PHASE_2_3')
+    if (adaptive) {
+      return { pattern: adaptive[1], patternId: adaptive[0] }
+    }
+  }
+  
+  // Default: return first matching pattern
+  return { pattern: candidates[0][1], patternId: candidates[0][0] }
+}
+
+// ============================================================================
+// STEP 3.5: APPLY GUARDRAILS AND FALLBACK (per VP CRO spec)
+// ============================================================================
+
+interface GuardrailResult {
+  passed: boolean
+  violation?: string
+  fallbackPatternId?: string
+}
+
+function applyGuardrailsAndFallback(
+  patternId: string,
+  pattern: CanonicalDesignPattern,
+  pathway: RegulatoryPathway,
+  objective: PrimaryObjective
+): GuardrailResult {
+  // GUARDRAIL 1: Crossover not allowed for confirmatory efficacy
+  if (pattern.structure === 'crossover' && objective === 'confirmatory_efficacy') {
+    return {
+      passed: false,
+      violation: 'Crossover design not permitted for confirmatory efficacy studies',
+      fallbackPatternId: 'CONFIRMATORY_RCT_SUPERIORITY'
+    }
+  }
+  
+  // GUARDRAIL 2: Superiority claims not allowed for biosimilars
+  if (pathway === 'biosimilar' && pattern.acceptanceCriterion === 'Superiority') {
+    return {
+      passed: false,
+      violation: 'Superiority claims not permitted for biosimilar pathway',
+      fallbackPatternId: 'CONFIRMATORY_RCT_EQUIVALENCE'
+    }
+  }
+  
+  // GUARDRAIL 3: Adaptive design requires interim analysis
+  if (pattern.designType === 'adaptive' && !pattern.requires_interim && pattern.id !== 'SAD' && pattern.id !== 'MAD') {
+    return {
+      passed: false,
+      violation: 'Adaptive design requires pre-specified interim analysis',
+      fallbackPatternId: pathway === 'innovator' ? 'CONFIRMATORY_RCT_SUPERIORITY' : undefined
+    }
+  }
+  
+  // GUARDRAIL 4: Generic cannot have confirmatory efficacy objective
+  if (pathway === 'generic' && objective === 'confirmatory_efficacy') {
+    return {
+      passed: false,
+      violation: 'Generic pathway cannot have confirmatory efficacy objective',
+      fallbackPatternId: 'PK_CROSSOVER_BE'
+    }
+  }
+  
+  // GUARDRAIL 5: Biosimilar cannot have dose_selection objective
+  if (pathway === 'biosimilar' && objective === 'dose_selection') {
+    return {
+      passed: false,
+      violation: 'Biosimilar pathway does not require dose selection studies',
+      fallbackPatternId: 'PK_PARALLEL_SIMILARITY'
+    }
+  }
+  
+  // GUARDRAIL 6: Post-marketing must use observational design
+  if (pathway === 'post_marketing' && pattern.structure !== 'observational') {
+    return {
+      passed: false,
+      violation: 'Post-marketing studies should use observational design',
+      fallbackPatternId: 'OBSERVATIONAL_REGISTRY'
+    }
+  }
+  
+  // All guardrails passed
+  return { passed: true }
+}
+
+// Fallback policy: fail-soft → fail-hard
+function applyFallback(
+  guardrailResult: GuardrailResult,
+  pathway: RegulatoryPathway
+): { pattern: CanonicalDesignPattern; patternId: string; warning: string } {
+  if (guardrailResult.fallbackPatternId && CANONICAL_PATTERNS[guardrailResult.fallbackPatternId]) {
+    return {
+      pattern: CANONICAL_PATTERNS[guardrailResult.fallbackPatternId],
+      patternId: guardrailResult.fallbackPatternId,
+      warning: `Guardrail: ${guardrailResult.violation}. Fallback to ${guardrailResult.fallbackPatternId}.`
+    }
+  }
+  
+  // Fail-hard: no valid fallback, use safest default per pathway
+  const safeDefaults: Record<RegulatoryPathway, string> = {
+    'innovator': 'CONFIRMATORY_RCT_SUPERIORITY',
+    'generic': 'PK_CROSSOVER_BE',
+    'biosimilar': 'PK_PARALLEL_SIMILARITY',
+    'hybrid': 'CONFIRMATORY_RCT_SUPERIORITY',
+    'post_marketing': 'OBSERVATIONAL_REGISTRY'
+  }
+  
+  const fallbackId = safeDefaults[pathway]
+  return {
+    pattern: CANONICAL_PATTERNS[fallbackId],
+    patternId: fallbackId,
+    warning: `Guardrail: ${guardrailResult.violation}. Human decision required - using safe default ${fallbackId}.`
+  }
+}
+
+// ============================================================================
+// STEP 4: BUILD REGULATORY RATIONALE (from pattern.notes_for_rationale + context)
+// ============================================================================
+
+function buildRegulatoryRationaleV2(
+  pattern: CanonicalDesignPattern,
+  pathway: RegulatoryPathway,
+  objective: PrimaryObjective,
+  isHVD: boolean,
+  isNTI: boolean,
+  indication?: string
+): string {
+  const parts: string[] = []
+  
+  // Start with pattern's template rationale
+  parts.push(pattern.notes_for_rationale)
+  
+  // Add pathway-specific context
+  switch (pathway) {
+    case 'generic':
+      parts.push('This design meets FDA ANDA requirements under 505(j).')
+      if (isHVD) parts.push('Reference-scaled approach applied for highly variable drug.')
+      if (isNTI) parts.push('Tightened bioequivalence limits (90-111%) applied for narrow therapeutic index.')
+      break
+    case 'biosimilar':
+      parts.push('This design supports the totality of evidence approach required under 351(k).')
+      break
+    case 'innovator':
+      parts.push('This design aligns with FDA/EMA expectations for NDA/MAA submission.')
+      break
+    case 'hybrid':
+      parts.push('This design leverages FDA findings for the reference product under 505(b)(2).')
+      break
+    case 'post_marketing':
+      parts.push('This design fulfills post-marketing commitment (PMC/PMR) requirements.')
+      break
+  }
+  
+  // Add indication context if available
+  if (indication && (objective === 'confirmatory_efficacy' || objective === 'clinical_equivalence')) {
+    parts.push(`Endpoints selected are appropriate for ${indication}.`)
+  }
+  
+  return parts.join(' ')
+}
+
+// ============================================================================
+// MAIN ENGINE FUNCTION v2.0 - Per VP CRO spec
+// Flow: Pathway → Objective → Pattern → Guardrails → Phase → Rationale
 // ============================================================================
 
 function generateStudyDesign(
@@ -1420,44 +1844,68 @@ function generateStudyDesign(
   // Step 2: Infer primary objective
   const objective = inferPrimaryObjective(pathway, stageHint)
   
-  // Step 3: Get drug characteristics
+  // Step 2.5: Get drug characteristics
   const isHVD = drugChars?.isHVD || isKnownHVD(compoundName)
   const isNTI = drugChars?.isNTI || isKnownNTI(compoundName)
   const halfLife = drugChars?.halfLife || getKnownHalfLife(compoundName)
   
-  // Step 4: Select design pattern
-  let designPattern: DesignPatternType
-  try {
-    designPattern = selectDesignPattern(pathway, objective, { isHVD, isNTI })
-  } catch (error) {
-    // Guardrail triggered - fall back to safe default
-    console.error('Design Engine Guardrail:', error)
-    designPattern = pathway === 'generic' ? 'crossover_2x2' : 'parallel_confirmatory'
+  // Step 3: Select design pattern (using metadata filtering)
+  let patternResult = selectDesignPatternV2(pathway, objective, { isHVD, isNTI })
+  let guardrailWarning: string | undefined
+  
+  if (!patternResult) {
+    // No matching pattern - use safe default
+    const safeDefaults: Record<RegulatoryPathway, string> = {
+      'innovator': 'CONFIRMATORY_RCT_SUPERIORITY',
+      'generic': 'PK_CROSSOVER_BE',
+      'biosimilar': 'PK_PARALLEL_SIMILARITY',
+      'hybrid': 'CONFIRMATORY_RCT_SUPERIORITY',
+      'post_marketing': 'OBSERVATIONAL_REGISTRY'
+    }
+    const fallbackId = safeDefaults[pathway]
+    patternResult = { pattern: CANONICAL_PATTERNS[fallbackId], patternId: fallbackId }
+    guardrailWarning = `No matching pattern for ${pathway}/${objective}. Using safe default.`
   }
   
-  // Step 5: Get canonical pattern
-  const pattern = CANONICAL_PATTERNS[designPattern]
+  // Step 3.5: Apply guardrails and fallback (per VP CRO spec)
+  const guardrailResult = applyGuardrailsAndFallback(
+    patternResult.patternId,
+    patternResult.pattern,
+    pathway,
+    objective
+  )
   
-  // Step 6: Derive phase label
+  let pattern = patternResult.pattern
+  let patternId = patternResult.patternId
+  
+  if (!guardrailResult.passed) {
+    // Guardrail triggered - apply fallback
+    const fallback = applyFallback(guardrailResult, pathway)
+    pattern = fallback.pattern
+    patternId = fallback.patternId
+    guardrailWarning = fallback.warning
+  }
+  
+  // Step 4: Derive phase label (OUTPUT, not input)
   const phaseLabel = derivePhaseLabel(pathway, objective)
   
-  // Step 7: Select comparator
+  // Step 5: Select comparator
   const comparator = selectComparator(pathway, objective)
   
-  // Step 8: Calculate washout for crossover designs
-  const washoutDays = designPattern.includes('crossover') 
+  // Step 6: Calculate washout for crossover designs
+  const washoutDays = pattern.structure === 'crossover'
     ? Math.max(Math.ceil(halfLife * 5 / 24), 7)
     : 0
   
-  // Step 9: Adjust sample size for NTI
-  let sampleSize = { ...pattern.sampleSizeRange }
-  let sampleSizeRationale = pattern.sampleSizeRationale
+  // Step 7: Adjust sample size for NTI
+  let sampleSize = { ...pattern.typical_n_range }
+  let sampleSizeRationale = `Based on ${pattern.id} design requirements`
   if (isNTI && pathway === 'generic') {
     sampleSize = { min: 36, max: 48, recommended: 42 }
     sampleSizeRationale = 'Increased sample size for NTI drug with tighter acceptance criteria (90-111%)'
   }
   
-  // Step 10: Build sampling schedule for PK studies
+  // Step 8: Build sampling schedule for PK studies
   let samplingSchedule: string[] = []
   if (objective === 'pk_equivalence' || objective === 'pk_similarity' || objective === 'pk_safety') {
     if (halfLife <= 4) {
@@ -1469,7 +1917,7 @@ function generateStudyDesign(
     }
   }
   
-  // Step 11: Build acceptance criteria for NTI
+  // Step 9: Build acceptance criteria for NTI
   let acceptanceCriteria = {
     criterion: pattern.acceptanceCriterion,
     margin: pattern.acceptanceMargin,
@@ -1483,10 +1931,13 @@ function generateStudyDesign(
     }
   }
   
-  // Step 12: Build warnings
+  // Step 10: Build warnings
   const warnings: string[] = []
+  if (guardrailWarning) {
+    warnings.push(guardrailWarning)
+  }
   if (isHVD) {
-    warnings.push('Highly Variable Drug (CV >30%): Reference-scaled approach may be required')
+    warnings.push('Highly Variable Drug (CV >30%): Reference-scaled approach applied')
   }
   if (isNTI) {
     warnings.push('Narrow Therapeutic Index: Tightened BE limits (90-111%) and additional safety monitoring required')
@@ -1497,12 +1948,12 @@ function generateStudyDesign(
   if (objective === 'confirmatory_efficacy') {
     warnings.push('Pivotal study: Pre-specify multiplicity adjustment; consider global regulatory requirements')
   }
-  if (designPattern === 'adaptive_seamless') {
+  if (pattern.requires_interim) {
     warnings.push('Adaptive design: Requires pre-specified adaptation rules and independent DMC')
   }
   
-  // Step 13: Build regulatory rationale
-  const regulatoryRationale = buildRegulatoryRationale(pathway, objective, designPattern, isHVD, isNTI)
+  // Step 11: Build regulatory rationale (from pattern.notes_for_rationale + context)
+  const regulatoryRationale = buildRegulatoryRationaleV2(pattern, pathway, objective, isHVD, isNTI, indication)
   
   // Step 14: Determine conditions (fasting/fed)
   const conditions = {
@@ -1514,14 +1965,14 @@ function generateStudyDesign(
   return {
     regulatoryPathway: pathway,
     primaryObjective: objective,
-    designPattern,
+    designPattern: patternId as DesignPatternType,
     phaseLabel,
     designName: pattern.name,
     designType: pattern.designType as StudyDesignOutput['designType'],
     arms: pattern.arms,
     periods: pattern.periods,
     sequences: pattern.periods, // For crossover
-    blinding: pattern.blinding,
+    blinding: pattern.blinding === 'optional' ? 'double-blind' : pattern.blinding,
     comparatorType: comparator.type,
     comparatorDescription: comparator.description,
     population: {
