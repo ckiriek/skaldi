@@ -108,99 +108,209 @@ interface StudyDesignSuggestionProps {
 }
 
 // ============================================================================
-// Known Drug Characteristics Database
+// Drug Characteristics Database + Heuristics
 // ============================================================================
 
 // Highly Variable Drugs (CV > 30%) - require replicate design or reference-scaled approach
+// Extended list based on FDA BE guidance and published literature
 const KNOWN_HVD_DRUGS = new Set([
+  // Biguanides
   'metformin',
-  'verapamil',
-  'propranolol',
-  'carbamazepine',
-  'cyclosporine',
-  'tacrolimus',
-  'sirolimus',
-  'ondansetron',
-  'naproxen',
-  'ibuprofen',
-  'diclofenac',
-  'piroxicam',
-  'nifedipine',
-  'felodipine',
-  'amlodipine',
-  'simvastatin',
-  'atorvastatin',
-  'lovastatin',
-  'pravastatin',
-  'rosuvastatin',
-  'omeprazole',
-  'esomeprazole',
-  'lansoprazole',
-  'pantoprazole',
-  'rabeprazole',
+  // Beta-blockers (lipophilic)
+  'propranolol', 'carvedilol', 'labetalol', 'nebivolol',
+  // Calcium channel blockers (dihydropyridines)
+  'nifedipine', 'felodipine', 'amlodipine', 'nicardipine', 'nimodipine', 'nisoldipine',
+  // Calcium channel blockers (non-dihydropyridines)
+  'verapamil', 'diltiazem',
+  // Statins (all have high first-pass metabolism)
+  'simvastatin', 'atorvastatin', 'lovastatin', 'pravastatin', 'rosuvastatin', 'fluvastatin', 'pitavastatin',
+  // Proton pump inhibitors
+  'omeprazole', 'esomeprazole', 'lansoprazole', 'pantoprazole', 'rabeprazole', 'dexlansoprazole',
+  // NSAIDs
+  'naproxen', 'ibuprofen', 'diclofenac', 'piroxicam', 'meloxicam', 'celecoxib', 'indomethacin',
+  // Immunosuppressants
+  'cyclosporine', 'tacrolimus', 'sirolimus', 'everolimus', 'mycophenolate',
+  // Anticonvulsants
+  'carbamazepine', 'oxcarbazepine', 'topiramate', 'levetiracetam',
+  // Antiemetics
+  'ondansetron', 'granisetron', 'dolasetron',
+  // Antifungals (azoles)
+  'itraconazole', 'ketoconazole', 'fluconazole', 'voriconazole', 'posaconazole',
+  // Antivirals
+  'ritonavir', 'lopinavir', 'atazanavir', 'darunavir', 'efavirenz', 'nevirapine',
+  // Antipsychotics
+  'quetiapine', 'olanzapine', 'risperidone', 'aripiprazole', 'ziprasidone',
+  // Benzodiazepines
+  'midazolam', 'triazolam', 'alprazolam',
+  // Opioids
+  'fentanyl', 'oxycodone', 'hydrocodone', 'morphine', 'tramadol', 'buprenorphine',
+  // Erectile dysfunction
+  'sildenafil', 'tadalafil', 'vardenafil',
+  // Migraine
+  'sumatriptan', 'rizatriptan', 'zolmitriptan',
+  // Antibiotics (macrolides)
+  'azithromycin', 'clarithromycin', 'erythromycin',
+  // Fluoroquinolones
+  'ciprofloxacin', 'levofloxacin', 'moxifloxacin',
 ])
 
 // Narrow Therapeutic Index Drugs - require tighter BE limits (90-111%)
+// Based on FDA NTI guidance and clinical practice
 const KNOWN_NTI_DRUGS = new Set([
-  'warfarin',
-  'digoxin',
+  // Anticoagulants
+  'warfarin', 'dabigatran', 'rivaroxaban', 'apixaban', 'edoxaban',
+  // Cardiac glycosides
+  'digoxin', 'digitoxin',
+  // Mood stabilizers
   'lithium',
-  'phenytoin',
-  'carbamazepine',
-  'valproic acid',
-  'theophylline',
-  'aminophylline',
-  'cyclosporine',
-  'tacrolimus',
-  'sirolimus',
-  'levothyroxine',
-  'liothyronine',
+  // Anticonvulsants
+  'phenytoin', 'carbamazepine', 'valproic acid', 'valproate', 'phenobarbital', 'primidone',
+  // Bronchodilators
+  'theophylline', 'aminophylline',
+  // Immunosuppressants
+  'cyclosporine', 'tacrolimus', 'sirolimus', 'everolimus',
+  // Thyroid hormones
+  'levothyroxine', 'liothyronine',
+  // Antiarrhythmics
+  'amiodarone', 'flecainide', 'propafenone', 'quinidine', 'procainamide', 'disopyramide',
+  // Aminoglycosides
+  'gentamicin', 'tobramycin', 'amikacin', 'vancomycin',
+  // Antineoplastics
+  'methotrexate', 'mercaptopurine', 'azathioprine',
+  // Clozapine
+  'clozapine',
 ])
 
-// Drug-specific half-lives (hours)
+// Drug class patterns for heuristic detection
+const HVD_CLASS_PATTERNS = [
+  /statin$/i,           // All statins
+  /prazole$/i,          // All PPIs
+  /azole$/i,            // Azole antifungals
+  /triptan$/i,          // Triptans
+  /navir$/i,            // HIV protease inhibitors
+  /vir$/i,              // Many antivirals
+  /dipine$/i,           // Dihydropyridine CCBs
+]
+
+const NTI_CLASS_PATTERNS = [
+  /thyroxine$/i,        // Thyroid hormones
+  /phylline$/i,         // Xanthines
+  /glycoside/i,         // Cardiac glycosides
+  /xaban$/i,            // DOACs
+]
+
+// Drug-specific half-lives (hours) - expanded
 const KNOWN_HALF_LIVES: Record<string, number> = {
+  // Biguanides
   'metformin': 6.2,
-  'allopurinol': 2, // parent; oxypurinol ~18-30h
-  'warfarin': 40,
-  'digoxin': 36,
-  'atorvastatin': 14,
-  'simvastatin': 3,
-  'omeprazole': 1,
-  'amlodipine': 35,
-  'lisinopril': 12,
-  'losartan': 2,
-  'metoprolol': 3.5,
-  'carvedilol': 7,
-  'furosemide': 2,
-  'hydrochlorothiazide': 10,
-  'gabapentin': 6,
-  'pregabalin': 6,
-  'sertraline': 26,
-  'fluoxetine': 72,
-  'escitalopram': 27,
-  'duloxetine': 12,
-  'tramadol': 6,
-  'oxycodone': 4.5,
-  'morphine': 3,
-  'fentanyl': 4,
+  // Statins
+  'atorvastatin': 14, 'simvastatin': 3, 'rosuvastatin': 19, 'pravastatin': 2, 'lovastatin': 3, 'fluvastatin': 3,
+  // PPIs
+  'omeprazole': 1, 'esomeprazole': 1.5, 'lansoprazole': 1.5, 'pantoprazole': 1, 'rabeprazole': 1,
+  // CCBs
+  'amlodipine': 35, 'nifedipine': 2, 'felodipine': 11, 'verapamil': 6, 'diltiazem': 4,
+  // Beta-blockers
+  'metoprolol': 3.5, 'propranolol': 4, 'atenolol': 7, 'carvedilol': 7, 'bisoprolol': 11, 'nebivolol': 12,
+  // ACE inhibitors
+  'lisinopril': 12, 'enalapril': 11, 'ramipril': 15, 'captopril': 2, 'perindopril': 10,
+  // ARBs
+  'losartan': 2, 'valsartan': 6, 'irbesartan': 12, 'candesartan': 9, 'telmisartan': 24, 'olmesartan': 13,
+  // Diuretics
+  'furosemide': 2, 'hydrochlorothiazide': 10, 'spironolactone': 1.5, 'indapamide': 14,
+  // Anticoagulants
+  'warfarin': 40, 'rivaroxaban': 7, 'apixaban': 12, 'dabigatran': 14, 'edoxaban': 10,
+  // Cardiac
+  'digoxin': 36, 'amiodarone': 58,
+  // Anticonvulsants
+  'phenytoin': 22, 'carbamazepine': 16, 'valproic acid': 12, 'levetiracetam': 7, 'lamotrigine': 25, 'topiramate': 21,
+  // Thyroid
+  'levothyroxine': 168, 'liothyronine': 24,
+  // Antidepressants
+  'sertraline': 26, 'fluoxetine': 72, 'escitalopram': 27, 'citalopram': 35, 'paroxetine': 21,
+  'venlafaxine': 5, 'duloxetine': 12, 'bupropion': 21, 'mirtazapine': 26,
+  // Antipsychotics
+  'quetiapine': 6, 'olanzapine': 30, 'risperidone': 20, 'aripiprazole': 75, 'haloperidol': 18,
+  // Anxiolytics
+  'alprazolam': 11, 'lorazepam': 12, 'diazepam': 43, 'clonazepam': 30,
+  // Opioids
+  'tramadol': 6, 'oxycodone': 4.5, 'morphine': 3, 'fentanyl': 4, 'hydrocodone': 4, 'codeine': 3,
+  // Antibiotics
+  'amoxicillin': 1.5, 'azithromycin': 68, 'ciprofloxacin': 4, 'levofloxacin': 7, 'doxycycline': 18,
+  // NSAIDs
+  'ibuprofen': 2, 'naproxen': 14, 'diclofenac': 2, 'celecoxib': 11, 'meloxicam': 20,
+  // Diabetes
+  'glipizide': 4, 'glyburide': 10, 'glimepiride': 5, 'sitagliptin': 12, 'linagliptin': 12,
+  'empagliflozin': 12, 'dapagliflozin': 13, 'canagliflozin': 11,
+  // Immunosuppressants
+  'cyclosporine': 8, 'tacrolimus': 12, 'sirolimus': 62, 'mycophenolate': 17,
+  // Misc
+  'allopurinol': 2, 'gabapentin': 6, 'pregabalin': 6, 'montelukast': 5,
 }
 
-// Check if drug is HVD
+// ============================================================================
+// Drug Characteristic Detection Functions
+// ============================================================================
+
+// Check if drug is HVD - uses database + class heuristics
 function isKnownHVD(compoundName: string): boolean {
   const normalized = compoundName.toLowerCase().trim()
-  return KNOWN_HVD_DRUGS.has(normalized)
+  
+  // First check explicit database
+  if (KNOWN_HVD_DRUGS.has(normalized)) return true
+  
+  // Then check class patterns (e.g., any drug ending in -statin is HVD)
+  for (const pattern of HVD_CLASS_PATTERNS) {
+    if (pattern.test(normalized)) return true
+  }
+  
+  return false
 }
 
-// Check if drug is NTI
+// Check if drug is NTI - uses database + class heuristics
 function isKnownNTI(compoundName: string): boolean {
   const normalized = compoundName.toLowerCase().trim()
-  return KNOWN_NTI_DRUGS.has(normalized)
+  
+  // First check explicit database
+  if (KNOWN_NTI_DRUGS.has(normalized)) return true
+  
+  // Then check class patterns
+  for (const pattern of NTI_CLASS_PATTERNS) {
+    if (pattern.test(normalized)) return true
+  }
+  
+  return false
 }
 
-// Get known half-life
-function getKnownHalfLife(compoundName: string): number | undefined {
+// Estimate half-life for unknown drugs based on class
+function estimateHalfLife(compoundName: string): number {
   const normalized = compoundName.toLowerCase().trim()
-  return KNOWN_HALF_LIVES[normalized]
+  
+  // Check explicit database first
+  if (KNOWN_HALF_LIVES[normalized]) {
+    return KNOWN_HALF_LIVES[normalized]
+  }
+  
+  // Class-based estimates
+  if (/statin$/i.test(normalized)) return 8      // Statins: 2-19h, use median
+  if (/prazole$/i.test(normalized)) return 1.5   // PPIs: short half-life
+  if (/sartan$/i.test(normalized)) return 8      // ARBs: 2-24h
+  if (/pril$/i.test(normalized)) return 10       // ACE inhibitors
+  if (/olol$/i.test(normalized)) return 6        // Beta-blockers
+  if (/dipine$/i.test(normalized)) return 10     // CCBs
+  if (/floxacin$/i.test(normalized)) return 6    // Fluoroquinolones
+  if (/mycin$/i.test(normalized)) return 12      // Aminoglycosides/macrolides
+  if (/azole$/i.test(normalized)) return 24      // Azole antifungals
+  if (/xaban$/i.test(normalized)) return 10      // DOACs
+  if (/gliptin$/i.test(normalized)) return 12    // DPP-4 inhibitors
+  if (/gliflozin$/i.test(normalized)) return 12  // SGLT2 inhibitors
+  
+  // Default for unknown drugs
+  return 8
+}
+
+// Get half-life - uses database first, then class-based estimation
+function getKnownHalfLife(compoundName: string): number {
+  return estimateHalfLife(compoundName)
 }
 
 // ============================================================================
