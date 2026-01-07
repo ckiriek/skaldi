@@ -182,22 +182,95 @@ const KNOWN_NTI_DRUGS = new Set([
 ])
 
 // Drug class patterns for heuristic detection
+// Based on INN stem nomenclature (WHO INN Programme)
 const HVD_CLASS_PATTERNS = [
-  /statin$/i,           // All statins
-  /prazole$/i,          // All PPIs
-  /azole$/i,            // Azole antifungals
-  /triptan$/i,          // Triptans
-  /navir$/i,            // HIV protease inhibitors
-  /vir$/i,              // Many antivirals
+  // Cardiovascular
+  /statin$/i,           // HMG-CoA reductase inhibitors (statins)
   /dipine$/i,           // Dihydropyridine CCBs
+  /sartan$/i,           // ARBs (some are HVD)
+  
+  // GI
+  /prazole$/i,          // Proton pump inhibitors
+  
+  // Anti-infectives
+  /azole$/i,            // Azole antifungals
+  /navir$/i,            // HIV protease inhibitors
+  /vir$/i,              // Antivirals (broad)
+  /cycline$/i,          // Tetracyclines
+  
+  // CNS
+  /triptan$/i,          // 5-HT1 agonists (migraine)
+  /etine$/i,            // SSRIs (fluoxetine, paroxetine, sertraline ends differently)
+  /oxetine$/i,          // SSRIs/SNRIs (fluoxetine, duloxetine, atomoxetine)
+  /apin$/i,             // Atypical antipsychotics (olanzapine, clozapine, quetiapine)
+  /done$/i,             // Antipsychotics (risperidone, paliperidone, ziprasidone)
+  
+  // Metabolic
+  /glutide$/i,          // GLP-1 receptor agonists (semaglutide, liraglutide, tirzepatide)
+  /natide$/i,           // GLP-1 agonists (exenatide)
+  /gliflozin$/i,        // SGLT2 inhibitors
+  
+  // Biologics (generally HVD due to immunogenicity variability)
+  /mab$/i,              // Monoclonal antibodies (all -mab)
+  /cept$/i,             // Receptor-Fc fusion proteins (etanercept, abatacept)
+  /kinra$/i,            // IL-1 receptor antagonists (anakinra)
+  /ase$/i,              // Enzymes (alteplase, but be careful - broad pattern)
 ]
 
 const NTI_CLASS_PATTERNS = [
+  // Thyroid
   /thyroxine$/i,        // Thyroid hormones
-  /phylline$/i,         // Xanthines
+  
+  // Respiratory
+  /phylline$/i,         // Xanthines (theophylline, aminophylline)
+  
+  // Cardiac
   /glycoside/i,         // Cardiac glycosides
-  /xaban$/i,            // DOACs
+  
+  // Anticoagulants
+  /xaban$/i,            // Direct factor Xa inhibitors (DOACs)
+  /gatran$/i,           // Direct thrombin inhibitors (dabigatran)
+  
+  // Immunosuppressants
+  /limus$/i,            // mTOR/calcineurin inhibitors (sirolimus, tacrolimus, everolimus)
+  /sporin$/i,           // Cyclosporins
+  
+  // Antiepileptics
+  /toin$/i,             // Hydantoins (phenytoin)
+  
+  // Antiarrhythmics
+  /arone$/i,            // Class III antiarrhythmics (amiodarone, dronedarone)
+  
+  // Aminoglycosides
+  /micin$/i,            // Aminoglycosides (gentamicin, tobramycin, amikacin)
+  
+  // Glycopeptides
+  /mycin$/i,            // Some are NTI (vancomycin)
 ]
+
+// Biologic-specific patterns (special handling for mAbs)
+const BIOLOGIC_PATTERNS = [
+  /mab$/i,              // Monoclonal antibodies
+  /cept$/i,             // Fusion proteins
+  /kinra$/i,            // IL antagonists
+  /ase$/i,              // Enzymes (be careful)
+  /glutide$/i,          // GLP-1 agonists
+  /natide$/i,           // Peptides
+]
+
+// Checkpoint inhibitor patterns (anti-PD-1, anti-PD-L1, anti-CTLA-4)
+const CHECKPOINT_INHIBITOR_DRUGS = new Set([
+  // Anti-PD-1
+  'pembrolizumab', 'nivolumab', 'cemiplimab', 'dostarlimab', 'retifanlimab',
+  // Anti-PD-L1
+  'atezolizumab', 'durvalumab', 'avelumab',
+  // Anti-CTLA-4
+  'ipilimumab', 'tremelimumab',
+  // Anti-LAG-3
+  'relatlimab',
+  // Bispecifics
+  'tebentafusp',
+])
 
 // Drug-specific half-lives (hours) - expanded
 const KNOWN_HALF_LIVES: Record<string, number> = {
@@ -243,8 +316,85 @@ const KNOWN_HALF_LIVES: Record<string, number> = {
   'empagliflozin': 12, 'dapagliflozin': 13, 'canagliflozin': 11,
   // Immunosuppressants
   'cyclosporine': 8, 'tacrolimus': 12, 'sirolimus': 62, 'mycophenolate': 17,
-  // Misc
+  // Misc small molecules
   'allopurinol': 2, 'gabapentin': 6, 'pregabalin': 6, 'montelukast': 5,
+  
+  // ============================================================================
+  // BIOLOGICS - half-lives in DAYS (converted to hours for consistency)
+  // ============================================================================
+  
+  // GLP-1 Receptor Agonists
+  'semaglutide': 168,        // 7 days (weekly)
+  'tirzepatide': 120,        // 5 days
+  'liraglutide': 13,         // 13 hours (daily)
+  'dulaglutide': 120,        // 5 days (weekly)
+  'exenatide': 2.4,          // 2.4 hours (immediate release)
+  'lixisenatide': 3,         // 3 hours
+  
+  // Checkpoint Inhibitors (anti-PD-1, anti-PD-L1, anti-CTLA-4)
+  'pembrolizumab': 552,      // 23 days
+  'nivolumab': 624,          // 26 days
+  'atezolizumab': 624,       // 26 days
+  'durvalumab': 408,         // 17 days
+  'avelumab': 144,           // 6 days
+  'ipilimumab': 360,         // 15 days
+  'cemiplimab': 504,         // 21 days
+  'tremelimumab': 528,       // 22 days
+  
+  // TNF Inhibitors
+  'adalimumab': 336,         // 14 days
+  'infliximab': 216,         // 9 days
+  'etanercept': 102,         // 4.3 days
+  'golimumab': 336,          // 14 days
+  'certolizumab': 336,       // 14 days
+  
+  // IL Inhibitors
+  'ustekinumab': 720,        // 30 days (IL-12/23)
+  'secukinumab': 624,        // 26 days (IL-17A)
+  'ixekizumab': 312,         // 13 days (IL-17A)
+  'risankizumab': 672,       // 28 days (IL-23)
+  'guselkumab': 408,         // 17 days (IL-23)
+  'tildrakizumab': 552,      // 23 days (IL-23)
+  'dupilumab': 480,          // 20 days (IL-4/13)
+  'tocilizumab': 312,        // 13 days (IL-6)
+  'sarilumab': 240,          // 10 days (IL-6)
+  'anakinra': 6,             // 6 hours (IL-1)
+  'canakinumab': 624,        // 26 days (IL-1β)
+  
+  // Anti-CD20
+  'rituximab': 528,          // 22 days
+  'ocrelizumab': 624,        // 26 days
+  'ofatumumab': 384,         // 16 days
+  'obinutuzumab': 672,       // 28 days
+  
+  // Anti-HER2
+  'trastuzumab': 672,        // 28 days
+  'pertuzumab': 408,         // 17 days
+  'trastuzumab emtansine': 96, // 4 days (ADC)
+  
+  // Anti-VEGF
+  'bevacizumab': 480,        // 20 days
+  'ranibizumab': 216,        // 9 days
+  'aflibercept': 144,        // 6 days
+  
+  // Anti-EGFR
+  'cetuximab': 168,          // 7 days
+  'panitumumab': 180,        // 7.5 days
+  
+  // JAK Inhibitors (small molecules but often grouped with biologics)
+  'tofacitinib': 3,          // 3 hours
+  'baricitinib': 12,         // 12 hours
+  'upadacitinib': 9,         // 9 hours
+  'ruxolitinib': 3,          // 3 hours
+  
+  // Other mAbs
+  'omalizumab': 624,         // 26 days (anti-IgE)
+  'mepolizumab': 480,        // 20 days (anti-IL-5)
+  'benralizumab': 360,       // 15 days (anti-IL-5R)
+  'vedolizumab': 624,        // 26 days (anti-integrin)
+  'natalizumab': 264,        // 11 days (anti-integrin)
+  'eculizumab': 264,         // 11 days (anti-C5)
+  'denosumab': 624,          // 26 days (anti-RANKL)
 }
 
 // ============================================================================
@@ -290,22 +440,79 @@ function estimateHalfLife(compoundName: string): number {
     return KNOWN_HALF_LIVES[normalized]
   }
   
-  // Class-based estimates
+  // ============================================================================
+  // BIOLOGICS - typically long half-lives (days to weeks)
+  // ============================================================================
+  if (/mab$/i.test(normalized)) return 480       // mAbs: ~20 days median
+  if (/cept$/i.test(normalized)) return 240      // Fusion proteins: ~10 days
+  if (/glutide$/i.test(normalized)) return 120   // GLP-1 agonists: ~5 days
+  if (/natide$/i.test(normalized)) return 3      // Short peptides: ~3 hours
+  if (/kinra$/i.test(normalized)) return 6       // IL-1Ra: ~6 hours
+  
+  // ============================================================================
+  // SMALL MOLECULES - Class-based estimates
+  // ============================================================================
+  
+  // Cardiovascular
   if (/statin$/i.test(normalized)) return 8      // Statins: 2-19h, use median
-  if (/prazole$/i.test(normalized)) return 1.5   // PPIs: short half-life
   if (/sartan$/i.test(normalized)) return 8      // ARBs: 2-24h
   if (/pril$/i.test(normalized)) return 10       // ACE inhibitors
   if (/olol$/i.test(normalized)) return 6        // Beta-blockers
   if (/dipine$/i.test(normalized)) return 10     // CCBs
+  if (/xaban$/i.test(normalized)) return 10      // DOACs
+  if (/gatran$/i.test(normalized)) return 14     // Direct thrombin inhibitors
+  
+  // GI
+  if (/prazole$/i.test(normalized)) return 1.5   // PPIs: short half-life
+  if (/tidine$/i.test(normalized)) return 2.5    // H2 blockers
+  
+  // Anti-infectives
   if (/floxacin$/i.test(normalized)) return 6    // Fluoroquinolones
   if (/mycin$/i.test(normalized)) return 12      // Aminoglycosides/macrolides
+  if (/cycline$/i.test(normalized)) return 12    // Tetracyclines
+  if (/cillin$/i.test(normalized)) return 1      // Penicillins
   if (/azole$/i.test(normalized)) return 24      // Azole antifungals
-  if (/xaban$/i.test(normalized)) return 10      // DOACs
+  if (/navir$/i.test(normalized)) return 6       // HIV protease inhibitors
+  if (/vir$/i.test(normalized)) return 8         // Antivirals general
+  
+  // CNS
+  if (/etine$/i.test(normalized)) return 24      // SSRIs
+  if (/oxetine$/i.test(normalized)) return 24    // SSRIs/SNRIs
+  if (/apin$/i.test(normalized)) return 12       // Atypical antipsychotics
+  if (/done$/i.test(normalized)) return 20       // Antipsychotics
+  if (/pam$/i.test(normalized)) return 20        // Benzodiazepines
+  if (/lam$/i.test(normalized)) return 12        // Benzodiazepines
+  if (/triptan$/i.test(normalized)) return 3     // Triptans
+  
+  // Metabolic
   if (/gliptin$/i.test(normalized)) return 12    // DPP-4 inhibitors
   if (/gliflozin$/i.test(normalized)) return 12  // SGLT2 inhibitors
+  if (/glitazone$/i.test(normalized)) return 5   // Thiazolidinediones
+  
+  // Immunosuppressants
+  if (/limus$/i.test(normalized)) return 40      // mTOR/calcineurin inhibitors
+  if (/sporin$/i.test(normalized)) return 8      // Cyclosporins
+  
+  // JAK inhibitors
+  if (/tinib$/i.test(normalized)) return 6       // Kinase inhibitors (JAK, TKI)
   
   // Default for unknown drugs
   return 8
+}
+
+// Check if drug is a biologic (affects study design)
+function isBiologic(compoundName: string): boolean {
+  const normalized = compoundName.toLowerCase().trim()
+  
+  // Check checkpoint inhibitors first
+  if (CHECKPOINT_INHIBITOR_DRUGS.has(normalized)) return true
+  
+  // Check biologic patterns
+  for (const pattern of BIOLOGIC_PATTERNS) {
+    if (pattern.test(normalized)) return true
+  }
+  
+  return false
 }
 
 // Get half-life - uses database first, then class-based estimation
