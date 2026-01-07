@@ -1,0 +1,83 @@
+# Study Design Engine - Implementation Notes
+# This file documents key implementation rules for the engine
+
+implementation_rules:
+  - rule: "Do not output a 'safe default' pattern when HUMAN_DECISION_REQUIRED"
+    action: "Set designPattern=null and phaseLabel=null"
+    
+  - rule: "Record versions in decisionTrace as the first entry (step 0)"
+    format: "engine=X.X, patterns=X.X, guardrails=X.X, fallback=X.X"
+    
+  - rule: "If selected pattern violates HARD_STOP guardrail"
+    action: "Attempt fallback in configured order for pathway:objective"
+    
+  - rule: "If no fallback passes guardrails"
+    action: "Output HUMAN_DECISION_REQUIRED warning and leave pattern unset"
+    
+  - rule: "Do not store sensitive compound names in decisionTrace"
+    action: "Use compound_id or normalized identifier instead"
+
+output_contract:
+  required_fields:
+    - regulatoryPathway
+    - primaryObjective
+    - designPattern        # null if HUMAN_DECISION_REQUIRED
+    - designSummary        # null if HUMAN_DECISION_REQUIRED
+    - phaseLabel           # null if HUMAN_DECISION_REQUIRED
+    - regulatoryRationale  # 3-layer format: WHAT + WHY + REG + Assumptions
+    - warnings             # array, includes HUMAN_DECISION_REQUIRED if applicable
+    - decisionTrace        # array, starts with versions
+
+golden_test_cases:
+  - id: TC-001
+    scenario: "Generic HVD=true"
+    expected_pattern: PK_CROSSOVER_BE_REPLICATE
+    expected_trace: "boosted by HVD rule"
+    
+  - id: TC-002
+    scenario: "Generic NTI=true"
+    expected_warning: "Tightened BE limits (90-111%)"
+    
+  - id: TC-003
+    scenario: "Generic halfLife long (>24h)"
+    expected_warning: "Washout operational risk"
+    
+  - id: TC-004
+    scenario: "Biosimilar + confirmatory"
+    expected_pattern: CONFIRMATORY_RCT_EQUIVALENCE
+    must_not_have: "superiority"
+    
+  - id: TC-005
+    scenario: "Biosimilar + dose_selection"
+    expected_result: HUMAN_DECISION_REQUIRED
+    expected_pattern: null
+    
+  - id: TC-006
+    scenario: "Innovator pk_safety"
+    expected_pattern: SAD or MAD
+    
+  - id: TC-007
+    scenario: "Innovator confirmatory + time-to-event"
+    expected_pattern: EVENT_DRIVEN_CONFIRMATORY
+    
+  - id: TC-008
+    scenario: "Innovator confirmatory + open-label constraint"
+    expected_warning: "open-label confirmatory"
+    
+  - id: TC-009
+    scenario: "Post-marketing"
+    expected_pattern: OBSERVATIONAL_REGISTRY
+    
+  - id: TC-010
+    scenario: "Pattern violates guardrail"
+    expected_trace: "fallback required"
+    expected_rationale_contains: "adjusted due to guardrail"
+    
+  - id: TC-011
+    scenario: "No valid fallback"
+    expected_result: HUMAN_DECISION_REQUIRED
+    expected_pattern: null
+    
+  - id: TC-012
+    scenario: "Fallback occurred"
+    expected_rationale_contains: "adjusted due to guardrail"

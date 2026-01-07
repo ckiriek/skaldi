@@ -1,0 +1,50 @@
+# Study Design Engine - Fallback Order v2.0
+# CRO-realistic: standard first, fancy later
+# HUMAN_DECISION_REQUIRED = no valid pattern, set designPattern=null
+
+fallback_order:
+  # Innovator pathways
+  "innovator:pk_safety":
+    - SAD
+    - MAD
+
+  "innovator:dose_selection":
+    - DOSE_RANGING_PARALLEL      # Standard first
+    - ADAPTIVE_DOSE_FINDING      # Adaptive second (requires interim)
+    - SEAMLESS_PHASE_2_3         # Only if confirmatory component needed
+
+  "innovator:confirmatory_efficacy":
+    - CONFIRMATORY_RCT_SUPERIORITY
+    - EVENT_DRIVEN_CONFIRMATORY  # If time-to-event endpoint
+
+  # Generic pathways
+  "generic:pk_equivalence":
+    - PK_CROSSOVER_BE            # Standard 2x2
+    - PK_CROSSOVER_BE_REPLICATE  # Boosted for HVD by drug_characteristics
+
+  # Biosimilar pathways
+  "biosimilar:pk_similarity":
+    - PK_PARALLEL_SIMILARITY
+
+  "biosimilar:clinical_equivalence":
+    - CONFIRMATORY_RCT_EQUIVALENCE
+
+  # Post-marketing pathways
+  "post_marketing:long_term_safety":
+    - OBSERVATIONAL_REGISTRY
+
+  "post_marketing:effectiveness":
+    - OBSERVATIONAL_REGISTRY
+
+  # Hybrid - explicit human decision until patterns are added
+  "hybrid:pk_equivalence":
+    - HUMAN_DECISION_REQUIRED
+
+  "hybrid:confirmatory_efficacy":
+    - CONFIRMATORY_RCT_SUPERIORITY
+    - HUMAN_DECISION_REQUIRED
+
+# Notes for implementers:
+# - If all patterns in fallback_order fail guardrails -> HUMAN_DECISION_REQUIRED
+# - HUMAN_DECISION_REQUIRED means: designPattern=null, phaseLabel=null
+# - Never output a "safe default" as a real choice

@@ -1,0 +1,150 @@
+# Study Design Engine - Guardrails v1.0
+# Data-driven rules: HARD_STOP (blocked) vs SOFT_WARNING (allowed with warning)
+
+rules:
+  # ============================================================================
+  # HARD_STOP GUARDRAILS - Must fallback or block
+  # ============================================================================
+
+  - id: GR-001
+    version: "1.0"
+    severity: HARD_STOP
+    action: FALLBACK
+    match:
+      objective: [confirmatory_efficacy]
+      structure: [crossover]
+    message: "Crossover designs are not acceptable for confirmatory efficacy objectives. Applying fallback."
+    trace_note: "Blocked crossover for confirmatory efficacy - fallback required."
+    fallback_hint:
+      strategy: use_fallback_order_for_pathway_objective
+
+  - id: GR-002
+    version: "1.0"
+    severity: HARD_STOP
+    action: FALLBACK
+    match:
+      pathway: [biosimilar]
+      patternTags: [superiority]
+    message: "Biosimilar programs cannot use superiority confirmatory patterns. Applying fallback."
+    trace_note: "Blocked superiority in biosimilar pathway - fallback required."
+    fallback_hint:
+      strategy: use_fallback_order_for_pathway_objective
+
+  - id: GR-003
+    version: "1.0"
+    severity: HARD_STOP
+    action: BLOCK
+    match:
+      pathway: [generic]
+      objective: [confirmatory_efficacy]
+    message: "Generic pathway with confirmatory efficacy objective is not valid. Human decision required."
+    trace_note: "Invalid combination: generic + confirmatory_efficacy - blocked."
+    fallback_hint:
+      strategy: use_specific_patterns
+      patterns: []
+
+  - id: GR-004
+    version: "1.0"
+    severity: HARD_STOP
+    action: BLOCK
+    match:
+      pathway: [biosimilar]
+      objective: [dose_selection]
+    message: "Biosimilar pathway with dose selection objective is not applicable. Human decision required."
+    trace_note: "Invalid combination: biosimilar + dose_selection - blocked."
+    fallback_hint:
+      strategy: use_specific_patterns
+      patterns: []
+
+  - id: GR-005
+    version: "1.0"
+    severity: HARD_STOP
+    action: FALLBACK
+    match:
+      pathway: [post_marketing]
+      structure: [parallel, crossover, sequential_cohorts]
+    message: "Post-marketing pathway requires observational design. Applying fallback."
+    trace_note: "Non-observational design blocked for post-marketing - fallback required."
+    fallback_hint:
+      strategy: use_specific_patterns
+      patterns: [OBSERVATIONAL_REGISTRY]
+
+  - id: GR-006
+    version: "1.0"
+    severity: HARD_STOP
+    action: FALLBACK
+    match:
+      patternTags: [adaptive]
+      constraints_requires_interim: true
+    message: "Adaptive pattern requires interim analysis plan. If interim is not available, applying fallback."
+    trace_note: "Adaptive pattern requires interim - fallback if interim unavailable."
+    fallback_hint:
+      strategy: use_fallback_order_for_pathway_objective
+
+  - id: GR-007
+    version: "1.0"
+    severity: HARD_STOP
+    action: FALLBACK
+    match:
+      pathway: [innovator]
+      patternId: [PK_CROSSOVER_BE, PK_CROSSOVER_BE_REPLICATE]
+    message: "BE crossover design not appropriate for innovator pathway. Applying fallback."
+    trace_note: "Blocked BE design for innovator - fallback required."
+    fallback_hint:
+      strategy: use_specific_patterns
+      patterns: [SAD]
+
+  # ============================================================================
+  # SOFT_WARNING GUARDRAILS - Allowed but flagged
+  # ============================================================================
+
+  - id: GR-101
+    version: "1.0"
+    severity: SOFT_WARNING
+    action: WARN
+    match:
+      objective: [confirmatory_efficacy]
+      blinding: [open_label]
+    message: "Open-label confirmatory trials increase bias risk. Consider blinding or robust mitigation."
+    trace_note: "Soft warning: open-label confirmatory."
+
+  - id: GR-102
+    version: "1.0"
+    severity: SOFT_WARNING
+    action: WARN
+    match:
+      n_range_ratio_gt: 3
+    message: "Wide sample size range indicates higher uncertainty. Consider refining assumptions or endpoints."
+    trace_note: "Soft warning: N range wide (>3x spread)."
+
+  - id: GR-103
+    version: "1.0"
+    severity: SOFT_WARNING
+    action: WARN
+    match:
+      pathway: [generic]
+      patternTags: [be]
+      drug_isHVD: true
+      patternId_not: [PK_CROSSOVER_BE_REPLICATE]
+    message: "For highly variable drugs, a replicate BE design may be preferred."
+    trace_note: "Soft preference: replicate BE for HVD when applicable."
+
+  - id: GR-104
+    version: "1.0"
+    severity: SOFT_WARNING
+    action: WARN
+    match:
+      pathway: [generic]
+      drug_isNTI: true
+    message: "Narrow therapeutic index drug detected. Tightened BE limits (90-111%) and additional safety monitoring required."
+    trace_note: "Soft warning: NTI drug - tightened acceptance criteria."
+
+  - id: GR-105
+    version: "1.0"
+    severity: SOFT_WARNING
+    action: WARN
+    match:
+      pathway: [generic]
+      drug_halfLifeHours_gte: 24
+    message: "Long half-life drug detected. Washout period may be operationally challenging for crossover design."
+    trace_note: "Soft warning: long T1/2 - washout operational risk."

@@ -1,0 +1,13 @@
+# Study Design Engine - Version Configuration
+# All versions must be updated when corresponding configs change
+
+engineVersion: "2.3"
+patternsVersion: "1.0"
+guardrailsVersion: "1.0"
+fallbackVersion: "2.0"
+
+# Changelog:
+# v2.3 - Data-driven architecture with YAML configs
+# v2.2 - Added decision_trace, hard/soft guardrails
+# v2.1 - VP CRO spec implementation
+# v2.0 - Objective-driven architecture

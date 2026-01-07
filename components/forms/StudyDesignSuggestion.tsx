@@ -37,6 +37,7 @@ import {
 import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { generateStudyDesignForComponent, type ComponentStudyDesignOutput } from '@/lib/study-design'
 
 // ============================================================================
 // TYPES - Study Design Engine v2.0
@@ -205,8 +206,52 @@ interface StudyDesignOutput {
 }
 
 // Legacy interface for backward compatibility
-interface StudyDesign extends Omit<StudyDesignOutput, 'regulatoryPathway' | 'primaryObjective' | 'designPattern' | 'phaseLabel' | 'comparatorType' | 'comparatorDescription' | 'regulatoryRationale'> {
-  designType: 'crossover_2x2' | 'crossover_replicate' | 'parallel' | 'adaptive'
+interface StudyDesign {
+  designType: 'crossover_2x2' | 'crossover_replicate' | 'parallel' | 'adaptive' | 'observational'
+  designName: string
+  arms: number
+  periods: number
+  sequences: number
+  blinding: 'open-label' | 'single-blind' | 'double-blind'
+  population: {
+    type: 'healthy_volunteers' | 'patients'
+    description: string
+    sampleSizeRange: { min: number; max: number; recommended: number }
+    sampleSizeRationale: string
+  }
+  duration: {
+    screeningDays: number
+    treatmentDays: number
+    washoutDays: number
+    followUpDays: number
+    totalWeeks: number
+  }
+  dosing: {
+    regimen: 'single-dose' | 'multiple-dose' | 'steady-state'
+    description: string
+  }
+  conditions: {
+    fasting: boolean
+    fed: boolean
+    fedDescription?: string
+  }
+  sampling: {
+    schedule: string[]
+    totalSamples: number
+    rationale: string
+  }
+  endpoints: {
+    primary: string[]
+    secondary: string[]
+  }
+  acceptanceCriteria: {
+    criterion: string
+    margin: string
+    description: string
+  }
+  regulatoryBasis: string[]
+  warnings: string[]
+  confidence: number
 }
 
 interface StudyDesignSuggestionProps {
@@ -2321,10 +2366,10 @@ function calculateConfidence(
 // LEGACY ADAPTER - Converts new output to old StudyDesign interface
 // ============================================================================
 
-function convertToLegacyDesign(output: StudyDesignOutput): StudyDesign {
+function convertToLegacyDesign(output: ComponentStudyDesignOutput): StudyDesign {
   return {
-    designType: output.designType === 'observational' ? 'parallel' : output.designType as StudyDesign['designType'],
-    designName: output.designName,
+    designType: output.designType,
+    designName: output.designName || 'Study Design',
     arms: output.arms,
     periods: output.periods,
     sequences: output.sequences,
@@ -2956,13 +3001,13 @@ export function StudyDesignSuggestion({
     (productType === 'hybrid' && !!formulation?.dosageForm)
   )
   
-  // Generate design using new objective-driven engine v2.0
+  // Generate design using new data-driven engine v2.3
   // Phase is used as HINT for development stage, not as design driver
   const designOutput = useMemo(() => {
     if (!shouldShow) return null
     
     try {
-      return generateStudyDesign(
+      return generateStudyDesignForComponent(
         productType,
         compoundName,
         formulation || {},
