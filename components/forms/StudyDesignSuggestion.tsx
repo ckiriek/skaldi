@@ -181,71 +181,207 @@ const KNOWN_NTI_DRUGS = new Set([
   'clozapine',
 ])
 
+// ============================================================================
 // Drug class patterns for heuristic detection
 // Based on INN stem nomenclature (WHO INN Programme)
+// Source: https://www.who.int/teams/health-product-and-policy-standards/inn
+// ============================================================================
+
 const HVD_CLASS_PATTERNS = [
-  // Cardiovascular
-  /statin$/i,           // HMG-CoA reductase inhibitors (statins)
-  /dipine$/i,           // Dihydropyridine CCBs
-  /sartan$/i,           // ARBs (some are HVD)
+  // ============================================================================
+  // CARDIOVASCULAR
+  // ============================================================================
+  /statin$/i,           // HMG-CoA reductase inhibitors (atorvastatin, simvastatin)
+  /dipine$/i,           // Dihydropyridine CCBs (amlodipine, nifedipine)
+  /sartan$/i,           // ARBs (losartan, valsartan) - some are HVD
+  /fibrate$/i,          // Fibrates (fenofibrate, gemfibrozil)
   
-  // GI
-  /prazole$/i,          // Proton pump inhibitors
+  // ============================================================================
+  // GASTROINTESTINAL
+  // ============================================================================
+  /prazole$/i,          // Proton pump inhibitors (omeprazole, pantoprazole)
+  /setron$/i,           // 5-HT3 antagonists/antiemetics (ondansetron, granisetron)
   
-  // Anti-infectives
-  /azole$/i,            // Azole antifungals
-  /navir$/i,            // HIV protease inhibitors
-  /vir$/i,              // Antivirals (broad)
-  /cycline$/i,          // Tetracyclines
+  // ============================================================================
+  // ANTI-INFECTIVES
+  // ============================================================================
+  /azole$/i,            // Azole antifungals (fluconazole, itraconazole)
+  /navir$/i,            // HIV protease inhibitors (ritonavir, lopinavir)
+  /vir$/i,              // Antivirals broad (acyclovir, valacyclovir)
+  /cycline$/i,          // Tetracyclines (doxycycline, minocycline)
+  /cillin$/i,           // Penicillins (amoxicillin, ampicillin)
+  /sporin$/i,           // Cephalosporins (cefixime) - note: also matches cyclosporin
   
-  // CNS
-  /triptan$/i,          // 5-HT1 agonists (migraine)
-  /etine$/i,            // SSRIs (fluoxetine, paroxetine, sertraline ends differently)
+  // ============================================================================
+  // CNS - ANTIDEPRESSANTS
+  // ============================================================================
+  /etine$/i,            // SSRIs (fluoxetine, paroxetine)
   /oxetine$/i,          // SSRIs/SNRIs (fluoxetine, duloxetine, atomoxetine)
+  /aline$/i,            // SNRIs (venlafaxine, desvenlafaxine)
+  /ipramine$/i,         // Tricyclics (imipramine, clomipramine)
+  /ptyline$/i,          // Tricyclics (amitriptyline, nortriptyline)
+  
+  // ============================================================================
+  // CNS - ANTIPSYCHOTICS
+  // ============================================================================
   /apin$/i,             // Atypical antipsychotics (olanzapine, clozapine, quetiapine)
   /done$/i,             // Antipsychotics (risperidone, paliperidone, ziprasidone)
+  /peridol$/i,          // Butyrophenones (haloperidol, droperidol)
   
-  // Metabolic
+  // ============================================================================
+  // CNS - ANXIOLYTICS/SEDATIVES
+  // ============================================================================
+  /azepam$/i,           // Benzodiazepines (diazepam, lorazepam, clonazepam)
+  /zolam$/i,            // Benzodiazepines (alprazolam, triazolam, midazolam)
+  /pidem$/i,            // Z-drugs (zolpidem)
+  /clone$/i,            // Z-drugs (zopiclone, eszopiclone)
+  
+  // ============================================================================
+  // CNS - ANTICONVULSANTS
+  // ============================================================================
+  /bamate$/i,           // Carbamates (felbamate, meprobamate)
+  /etam$/i,             // Racetams (levetiracetam, brivaracetam)
+  
+  // ============================================================================
+  // CNS - MIGRAINE/PAIN
+  // ============================================================================
+  /triptan$/i,          // 5-HT1 agonists (sumatriptan, rizatriptan)
+  /gepant$/i,           // CGRP antagonists (ubrogepant, rimegepant)
+  
+  // ============================================================================
+  // CNS - OPIOIDS
+  // ============================================================================
+  /adol$/i,             // Tramadol-like (tramadol, tapentadol)
+  /codone$/i,           // Opioids (oxycodone, hydrocodone)
+  /morphone$/i,         // Opioids (hydromorphone, oxymorphone)
+  
+  // ============================================================================
+  // METABOLIC/ENDOCRINE
+  // ============================================================================
   /glutide$/i,          // GLP-1 receptor agonists (semaglutide, liraglutide, tirzepatide)
   /natide$/i,           // GLP-1 agonists (exenatide)
-  /gliflozin$/i,        // SGLT2 inhibitors
+  /gliflozin$/i,        // SGLT2 inhibitors (empagliflozin, dapagliflozin)
+  /gliptin$/i,          // DPP-4 inhibitors (sitagliptin, linagliptin)
+  /glitazone$/i,        // Thiazolidinediones (pioglitazone, rosiglitazone)
   
-  // Biologics (generally HVD due to immunogenicity variability)
+  // ============================================================================
+  // CORTICOSTEROIDS (variable absorption)
+  // ============================================================================
+  /sone$/i,             // Corticosteroids (prednisone, dexamethasone, hydrocortisone)
+  /solone$/i,           // Corticosteroids (prednisolone, methylprednisolone)
+  /nide$/i,             // Inhaled corticosteroids (budesonide, fluticasone - partial)
+  
+  // ============================================================================
+  // ANTIHISTAMINES
+  // ============================================================================
+  /tadine$/i,           // H1 antihistamines (loratadine, desloratadine)
+  /astine$/i,           // H1 antihistamines (cetirizine - partial, bilastine)
+  /zine$/i,             // Older antihistamines (promethazine, hydroxyzine)
+  
+  // ============================================================================
+  // RESPIRATORY
+  // ============================================================================
+  /terol$/i,            // Beta-2 agonists (salbutamol/albuterol, formoterol, salmeterol)
+  /lukast$/i,           // Leukotriene antagonists (montelukast, zafirlukast)
+  
+  // ============================================================================
+  // MUSCULOSKELETAL
+  // ============================================================================
+  /coxib$/i,            // COX-2 inhibitors (celecoxib, etoricoxib)
+  /profen$/i,           // Propionic acid NSAIDs (ibuprofen, naproxen - partial)
+  
+  // ============================================================================
+  // UROLOGY
+  // ============================================================================
+  /afil$/i,             // PDE5 inhibitors (sildenafil, tadalafil, vardenafil)
+  /osin$/i,             // Alpha-blockers (tamsulosin, alfuzosin, doxazosin)
+  
+  // ============================================================================
+  // BIOLOGICS (generally HVD due to immunogenicity variability)
+  // ============================================================================
   /mab$/i,              // Monoclonal antibodies (all -mab)
   /cept$/i,             // Receptor-Fc fusion proteins (etanercept, abatacept)
   /kinra$/i,            // IL-1 receptor antagonists (anakinra)
   /ase$/i,              // Enzymes (alteplase, but be careful - broad pattern)
+  /ermin$/i,            // Growth factors (epoetin - partial)
+  
+  // ============================================================================
+  // INSULINS
+  // ============================================================================
+  /sulin$/i,            // All insulins (insulin glargine, insulin lispro, insulin aspart)
 ]
 
 const NTI_CLASS_PATTERNS = [
-  // Thyroid
-  /thyroxine$/i,        // Thyroid hormones
+  // ============================================================================
+  // THYROID
+  // ============================================================================
+  /thyroxine$/i,        // Thyroid hormones (levothyroxine, liothyronine)
   
-  // Respiratory
+  // ============================================================================
+  // RESPIRATORY
+  // ============================================================================
   /phylline$/i,         // Xanthines (theophylline, aminophylline)
   
-  // Cardiac
-  /glycoside/i,         // Cardiac glycosides
+  // ============================================================================
+  // CARDIAC
+  // ============================================================================
+  /glycoside/i,         // Cardiac glycosides (digoxin, digitoxin)
   
-  // Anticoagulants
-  /xaban$/i,            // Direct factor Xa inhibitors (DOACs)
+  // ============================================================================
+  // ANTICOAGULANTS
+  // ============================================================================
+  /xaban$/i,            // Direct factor Xa inhibitors (rivaroxaban, apixaban, edoxaban)
   /gatran$/i,           // Direct thrombin inhibitors (dabigatran)
+  /parin$/i,            // Heparins (heparin, enoxaparin, dalteparin, tinzaparin)
   
-  // Immunosuppressants
+  // ============================================================================
+  // IMMUNOSUPPRESSANTS
+  // ============================================================================
   /limus$/i,            // mTOR/calcineurin inhibitors (sirolimus, tacrolimus, everolimus)
-  /sporin$/i,           // Cyclosporins
+  /sporine$/i,          // Cyclosporins (cyclosporine) - more specific than /sporin/
   
-  // Antiepileptics
-  /toin$/i,             // Hydantoins (phenytoin)
+  // ============================================================================
+  // ANTIEPILEPTICS
+  // ============================================================================
+  /toin$/i,             // Hydantoins (phenytoin, fosphenytoin)
+  /barbital$/i,         // Barbiturates (phenobarbital, pentobarbital)
+  /suximide$/i,         // Succinimides (ethosuximide)
   
-  // Antiarrhythmics
+  // ============================================================================
+  // ANTIARRHYTHMICS
+  // ============================================================================
   /arone$/i,            // Class III antiarrhythmics (amiodarone, dronedarone)
+  /cainide$/i,          // Class IC antiarrhythmics (flecainide, propafenone - partial)
+  /ilide$/i,            // Class III antiarrhythmics (dofetilide, ibutilide)
   
-  // Aminoglycosides
-  /micin$/i,            // Aminoglycosides (gentamicin, tobramycin, amikacin)
+  // ============================================================================
+  // AMINOGLYCOSIDES (nephro/ototoxic)
+  // ============================================================================
+  /micin$/i,            // Aminoglycosides (gentamicin, tobramycin, amikacin, streptomycin)
   
-  // Glycopeptides
-  /mycin$/i,            // Some are NTI (vancomycin)
+  // ============================================================================
+  // GLYCOPEPTIDES
+  // ============================================================================
+  /mycin$/i,            // Vancomycin, teicoplanin (also matches macrolides - be careful)
+  
+  // ============================================================================
+  // ANTINEOPLASTICS (many are NTI)
+  // ============================================================================
+  /mustine$/i,          // Nitrogen mustards (cyclophosphamide - partial, chlorambucil)
+  /platin$/i,           // Platinum compounds (cisplatin, carboplatin, oxaliplatin)
+  /rubicin$/i,          // Anthracyclines (doxorubicin, daunorubicin, epirubicin)
+  /taxel$/i,            // Taxanes (paclitaxel, docetaxel)
+  /tinib$/i,            // Kinase inhibitors (imatinib, erlotinib) - some are NTI
+  
+  // ============================================================================
+  // LOCAL ANESTHETICS (toxicity risk)
+  // ============================================================================
+  /caine$/i,            // Local anesthetics (lidocaine, bupivacaine, ropivacaine)
+  
+  // ============================================================================
+  // LITHIUM
+  // ============================================================================
+  /lithium/i,           // Lithium salts
 ]
 
 // Biologic-specific patterns (special handling for mAbs)
@@ -475,12 +611,27 @@ function estimateHalfLife(compoundName: string): number {
   if (/navir$/i.test(normalized)) return 6       // HIV protease inhibitors
   if (/vir$/i.test(normalized)) return 8         // Antivirals general
   
-  // CNS
+  // CNS - Antidepressants
   if (/etine$/i.test(normalized)) return 24      // SSRIs
   if (/oxetine$/i.test(normalized)) return 24    // SSRIs/SNRIs
+  if (/ipramine$/i.test(normalized)) return 18   // Tricyclics
+  if (/ptyline$/i.test(normalized)) return 20    // Tricyclics
+  
+  // CNS - Antipsychotics
   if (/apin$/i.test(normalized)) return 12       // Atypical antipsychotics
   if (/done$/i.test(normalized)) return 20       // Antipsychotics
-  if (/pam$/i.test(normalized)) return 20        // Benzodiazepines
+  if (/peridol$/i.test(normalized)) return 18    // Butyrophenones
+  
+  // CNS - Anxiolytics/Sedatives
+  if (/azepam$/i.test(normalized)) return 30     // Benzodiazepines (long-acting)
+  if (/zolam$/i.test(normalized)) return 12      // Benzodiazepines (short-acting)
+  if (/pidem$/i.test(normalized)) return 2.5     // Z-drugs
+  if (/clone$/i.test(normalized)) return 5       // Z-drugs
+  
+  // CNS - Opioids
+  if (/adol$/i.test(normalized)) return 6        // Tramadol-like
+  if (/codone$/i.test(normalized)) return 4      // Oxycodone, hydrocodone
+  if (/morphone$/i.test(normalized)) return 3    // Hydromorphone, oxymorphone
   if (/lam$/i.test(normalized)) return 12        // Benzodiazepines
   if (/triptan$/i.test(normalized)) return 3     // Triptans
   
@@ -493,8 +644,62 @@ function estimateHalfLife(compoundName: string): number {
   if (/limus$/i.test(normalized)) return 40      // mTOR/calcineurin inhibitors
   if (/sporin$/i.test(normalized)) return 8      // Cyclosporins
   
-  // JAK inhibitors
+  // JAK inhibitors / Kinase inhibitors
   if (/tinib$/i.test(normalized)) return 6       // Kinase inhibitors (JAK, TKI)
+  
+  // ============================================================================
+  // NEW CLASSES
+  // ============================================================================
+  
+  // Corticosteroids
+  if (/sone$/i.test(normalized)) return 3        // Prednisone, dexamethasone (short)
+  if (/solone$/i.test(normalized)) return 3      // Prednisolone, methylprednisolone
+  if (/nide$/i.test(normalized)) return 3        // Budesonide (topical/inhaled)
+  
+  // Antihistamines
+  if (/tadine$/i.test(normalized)) return 12     // Loratadine, desloratadine
+  if (/astine$/i.test(normalized)) return 10     // Bilastine, cetirizine
+  if (/zine$/i.test(normalized)) return 8        // Promethazine, hydroxyzine
+  
+  // Respiratory
+  if (/terol$/i.test(normalized)) return 5       // Beta-2 agonists (variable)
+  if (/lukast$/i.test(normalized)) return 5      // Leukotriene antagonists
+  if (/phylline$/i.test(normalized)) return 8    // Theophylline
+  
+  // Insulins
+  if (/sulin$/i.test(normalized)) return 1.5     // Rapid-acting default (variable by type)
+  
+  // Anticoagulants
+  if (/parin$/i.test(normalized)) return 4       // Heparins (LMWH ~4h)
+  
+  // Antineoplastics
+  if (/platin$/i.test(normalized)) return 30     // Platinum compounds
+  if (/rubicin$/i.test(normalized)) return 30    // Anthracyclines
+  if (/taxel$/i.test(normalized)) return 20      // Taxanes
+  
+  // Local anesthetics
+  if (/caine$/i.test(normalized)) return 2       // Lidocaine, bupivacaine
+  
+  // Barbiturates
+  if (/barbital$/i.test(normalized)) return 80   // Phenobarbital (long)
+  
+  // Antiemetics
+  if (/setron$/i.test(normalized)) return 6      // 5-HT3 antagonists
+  
+  // Fibrates
+  if (/fibrate$/i.test(normalized)) return 20    // Fenofibrate, gemfibrozil
+  
+  // PDE5 inhibitors
+  if (/afil$/i.test(normalized)) return 4        // Sildenafil, tadalafil (variable)
+  
+  // Alpha-blockers
+  if (/osin$/i.test(normalized)) return 10       // Tamsulosin, doxazosin
+  
+  // CGRP antagonists
+  if (/gepant$/i.test(normalized)) return 6      // Ubrogepant, rimegepant
+  
+  // Bisphosphonates
+  if (/dronate$/i.test(normalized)) return 10000 // Very long (bone retention)
   
   // Default for unknown drugs
   return 8
