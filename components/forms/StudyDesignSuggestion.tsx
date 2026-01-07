@@ -204,14 +204,24 @@ function getKnownHalfLife(compoundName: string): number | undefined {
 }
 
 // ============================================================================
-// BE Design Rules Engine
+// BE Design Rules Engine (for Generic products)
 // ============================================================================
 
 function generateBEDesign(
   compoundName: string,
   formulation: { dosageForm?: string; route?: string; strength?: string },
-  characteristics: DrugCharacteristics
+  characteristics: DrugCharacteristics,
+  phase: string = 'Phase 1'
 ): StudyDesign {
+  // For Generic: Phase selection affects study type
+  // Phase 1: Standard fasting BE (primary study)
+  // Phase 2: Not typical for generics, but could be dose-finding for complex generics
+  // Phase 3: Fed study, special populations (renal/hepatic), or additional PK studies
+  // Phase 4: Post-marketing surveillance, real-world evidence
+  const isPhase1 = phase === 'Phase 1'
+  const isPhase3 = phase === 'Phase 3'
+  const isPhase4 = phase === 'Phase 4'
+  
   const isOral = formulation.route?.toUpperCase() === 'ORAL' || 
                  formulation.dosageForm?.toLowerCase().includes('tablet') ||
                  formulation.dosageForm?.toLowerCase().includes('capsule')
@@ -296,6 +306,25 @@ function generateBEDesign(
     acceptanceDescription = 'Reference-scaled approach for highly variable drugs (CV >30%)'
   }
   
+  // Phase-specific adjustments
+  let phaseNote = ''
+  if (isPhase1) {
+    phaseNote = 'Primary fasting BE study'
+  } else if (isPhase3) {
+    // Phase 3 for generic = Fed study or special populations
+    phaseNote = 'Fed-state BE study or special population PK'
+  } else if (isPhase4) {
+    // Phase 4 = Post-marketing, different design
+    designType = 'parallel'
+    designName = 'Post-Marketing Surveillance / Real-World Evidence Study'
+    periods = 1
+    sampleSizeMin = 100
+    sampleSizeMax = 500
+    sampleSizeRecommended = 200
+    sampleSizeRationale = 'Post-marketing surveillance requires larger sample for safety signal detection'
+    phaseNote = 'Post-marketing safety surveillance'
+  }
+  
   // Warnings
   const warnings: string[] = []
   if (isNTI) {
@@ -304,8 +333,15 @@ function generateBEDesign(
   if (isHVD) {
     warnings.push('Highly Variable Drug may require replicate design and reference-scaled analysis')
   }
-  if (hasFoodEffect) {
+  if (hasFoodEffect && !isPhase4) {
     warnings.push('Food effect study may be required based on RLD labeling')
+  }
+  if (isPhase3) {
+    warnings.push('Consider fed-state study if RLD label indicates food effect')
+    warnings.push('Special population studies (renal/hepatic impairment) may be required')
+  }
+  if (isPhase4) {
+    warnings.push('Post-marketing study - focus on real-world safety and effectiveness')
   }
   
   return {
@@ -372,6 +408,386 @@ function generateBEDesign(
 }
 
 // ============================================================================
+// Innovator Design Rules Engine
+// ============================================================================
+
+function generateInnovatorDesign(
+  compoundName: string,
+  indication: string | undefined,
+  phase: string = 'Phase 2'
+): StudyDesign {
+  const isPhase1 = phase === 'Phase 1'
+  const isPhase2 = phase === 'Phase 2'
+  const isPhase3 = phase === 'Phase 3'
+  const isPhase4 = phase === 'Phase 4'
+  
+  let designType: StudyDesign['designType'] = 'parallel'
+  let designName = ''
+  let arms = 2
+  let periods = 1
+  let sequences = 1
+  let blinding: StudyDesign['blinding'] = 'double-blind'
+  let populationType: 'healthy_volunteers' | 'patients' = 'patients'
+  let populationDescription = ''
+  let sampleSizeMin = 100
+  let sampleSizeMax = 300
+  let sampleSizeRecommended = 150
+  let sampleSizeRationale = ''
+  let dosingRegimen: 'single-dose' | 'multiple-dose' | 'steady-state' = 'multiple-dose'
+  let durationWeeks = 12
+  let primaryEndpoints: string[] = []
+  let secondaryEndpoints: string[] = []
+  let acceptanceCriterion = ''
+  let acceptanceMargin = ''
+  let regulatoryBasis: string[] = []
+  let warnings: string[] = []
+  let confidence = 75
+  
+  if (isPhase1) {
+    // Phase 1: Safety, tolerability, PK, MTD
+    designName = 'Randomized, Double-Blind, Placebo-Controlled, Single/Multiple Ascending Dose (SAD/MAD)'
+    designType = 'adaptive'
+    arms = 2 // Active + Placebo per cohort
+    blinding = 'double-blind'
+    populationType = 'healthy_volunteers'
+    populationDescription = 'Healthy adult volunteers, 18-55 years, for SAD/MAD dose-escalation'
+    sampleSizeMin = 24
+    sampleSizeMax = 80
+    sampleSizeRecommended = 48
+    sampleSizeRationale = 'Typical Phase 1 SAD/MAD: 6-8 cohorts × 6-10 subjects per cohort (including placebo)'
+    dosingRegimen = 'single-dose'
+    durationWeeks = 8
+    primaryEndpoints = [
+      'Safety and tolerability (AEs, SAEs, vital signs, ECG, laboratory)',
+      'Maximum Tolerated Dose (MTD)',
+      'Pharmacokinetics (Cmax, AUC, t½, CL, Vd)'
+    ]
+    secondaryEndpoints = [
+      'Dose-proportionality assessment',
+      'Preliminary PK/PD relationship',
+      'Food effect (if applicable)'
+    ]
+    acceptanceCriterion = 'Safety Review Committee approval for dose escalation'
+    acceptanceMargin = 'No DLTs in ≥6 subjects at dose level'
+    regulatoryBasis = [
+      'FDA Guidance: Estimating the Maximum Safe Starting Dose in Initial Clinical Trials (2005)',
+      'ICH M3(R2): Nonclinical Safety Studies for Human Pharmaceuticals',
+      'FDA Guidance: Safety Testing of Drug Metabolites (2020)'
+    ]
+    warnings = [
+      'Sentinel dosing recommended for first-in-human studies',
+      'Data Safety Monitoring Board (DSMB) required',
+      'Consider adaptive design for dose-escalation efficiency'
+    ]
+    confidence = 85
+    
+  } else if (isPhase2) {
+    // Phase 2: Efficacy signal, dose-finding
+    designName = 'Randomized, Double-Blind, Placebo-Controlled, Parallel-Group, Dose-Ranging'
+    designType = 'parallel'
+    arms = 4 // Placebo + 3 dose levels
+    blinding = 'double-blind'
+    populationType = 'patients'
+    populationDescription = `Patients with ${indication || '[indication]'}, meeting inclusion criteria`
+    sampleSizeMin = 100
+    sampleSizeMax = 300
+    sampleSizeRecommended = 200
+    sampleSizeRationale = 'Phase 2 dose-ranging: ~50 patients per arm × 4 arms for dose-response modeling'
+    dosingRegimen = 'multiple-dose'
+    durationWeeks = 12
+    primaryEndpoints = [
+      'Preliminary efficacy endpoint (disease-specific)',
+      'Dose-response relationship'
+    ]
+    secondaryEndpoints = [
+      'Safety and tolerability',
+      'PK/PD correlation',
+      'Biomarker response',
+      'Quality of life measures'
+    ]
+    acceptanceCriterion = 'Statistically significant dose-response'
+    acceptanceMargin = 'p < 0.05 for primary endpoint vs placebo'
+    regulatoryBasis = [
+      'FDA Guidance: Dose-Response Information to Support Drug Registration (1994)',
+      'ICH E4: Dose-Response Information to Support Drug Registration',
+      'FDA Guidance: Adaptive Designs for Clinical Trials (2019)'
+    ]
+    warnings = [
+      'Consider adaptive design for dose selection',
+      'Interim analysis may allow early termination for futility',
+      'Biomarker-driven enrichment may improve efficiency'
+    ]
+    confidence = 70
+    
+  } else if (isPhase3) {
+    // Phase 3: Confirmatory, pivotal
+    designName = 'Randomized, Double-Blind, Placebo/Active-Controlled, Parallel-Group, Pivotal'
+    designType = 'parallel'
+    arms = 2
+    blinding = 'double-blind'
+    populationType = 'patients'
+    populationDescription = `Patients with ${indication || '[indication]'}, broad inclusion for generalizability`
+    sampleSizeMin = 300
+    sampleSizeMax = 3000
+    sampleSizeRecommended = 500
+    sampleSizeRationale = 'Pivotal Phase 3: Powered at 90% for clinically meaningful difference, α=0.05 two-sided'
+    dosingRegimen = 'multiple-dose'
+    durationWeeks = 24
+    primaryEndpoints = [
+      'Regulatory-accepted primary efficacy endpoint',
+      'Clinically meaningful treatment difference'
+    ]
+    secondaryEndpoints = [
+      'Key secondary efficacy endpoints',
+      'Safety profile characterization',
+      'Patient-reported outcomes (PROs)',
+      'Health economics data'
+    ]
+    acceptanceCriterion = 'Superiority or Non-Inferiority'
+    acceptanceMargin = 'p < 0.025 one-sided (or 0.05 two-sided) for primary endpoint'
+    regulatoryBasis = [
+      'FDA Guidance: Providing Clinical Evidence of Effectiveness for Human Drug and Biological Products (1998)',
+      'ICH E9: Statistical Principles for Clinical Trials',
+      'ICH E10: Choice of Control Group in Clinical Trials'
+    ]
+    warnings = [
+      'Two adequate and well-controlled trials typically required for NDA',
+      'Pre-specify multiplicity adjustment for secondary endpoints',
+      'Consider global regulatory requirements (FDA, EMA, PMDA)'
+    ]
+    confidence = 80
+    
+  } else if (isPhase4) {
+    // Phase 4: Post-marketing
+    designName = 'Post-Marketing Observational / Registry Study'
+    designType = 'parallel'
+    arms = 1
+    blinding = 'open-label'
+    populationType = 'patients'
+    populationDescription = 'Real-world patient population in clinical practice'
+    sampleSizeMin = 1000
+    sampleSizeMax = 10000
+    sampleSizeRecommended = 3000
+    sampleSizeRationale = 'Post-marketing: Large sample for rare AE detection (rule of 3: n=3000 for 1/1000 events)'
+    dosingRegimen = 'multiple-dose'
+    durationWeeks = 52
+    primaryEndpoints = [
+      'Long-term safety profile',
+      'Rare adverse event detection',
+      'Real-world effectiveness'
+    ]
+    secondaryEndpoints = [
+      'Drug utilization patterns',
+      'Healthcare resource utilization',
+      'Patient adherence and persistence',
+      'Comparative effectiveness'
+    ]
+    acceptanceCriterion = 'Safety signal detection'
+    acceptanceMargin = 'Descriptive statistics, no formal hypothesis testing'
+    regulatoryBasis = [
+      'FDA Guidance: Postmarketing Studies and Clinical Trials (2011)',
+      'FDA Guidance: Best Practices for Conducting and Reporting Pharmacoepidemiologic Safety Studies (2013)',
+      'ICH E2E: Pharmacovigilance Planning'
+    ]
+    warnings = [
+      'May be required as post-marketing commitment (PMC/PMR)',
+      'Consider registry-based or EHR-based design',
+      'REMS may require additional safety monitoring'
+    ]
+    confidence = 90
+  }
+  
+  return {
+    designType,
+    designName,
+    arms,
+    periods,
+    sequences,
+    blinding,
+    population: {
+      type: populationType,
+      description: populationDescription,
+      sampleSizeRange: { min: sampleSizeMin, max: sampleSizeMax, recommended: sampleSizeRecommended },
+      sampleSizeRationale
+    },
+    duration: {
+      screeningDays: 28,
+      treatmentDays: durationWeeks * 7,
+      washoutDays: 0,
+      followUpDays: 28,
+      totalWeeks: durationWeeks + 8
+    },
+    dosing: {
+      regimen: dosingRegimen,
+      description: `${dosingRegimen === 'single-dose' ? 'Single' : 'Multiple'} dose administration of ${compoundName}`
+    },
+    conditions: {
+      fasting: false,
+      fed: false
+    },
+    sampling: {
+      schedule: isPhase1 ? ['Pre-dose', '0.5h', '1h', '2h', '4h', '8h', '12h', '24h', '48h', '72h'] : [],
+      totalSamples: isPhase1 ? 10 : 0,
+      rationale: isPhase1 ? 'Intensive PK sampling for first-in-human characterization' : 'Sparse PK sampling if applicable'
+    },
+    endpoints: {
+      primary: primaryEndpoints,
+      secondary: secondaryEndpoints
+    },
+    acceptanceCriteria: {
+      criterion: acceptanceCriterion,
+      margin: acceptanceMargin,
+      description: ''
+    },
+    regulatoryBasis,
+    warnings,
+    confidence
+  }
+}
+
+// ============================================================================
+// Hybrid/Biosimilar Design Rules Engine
+// ============================================================================
+
+function generateHybridDesign(
+  compoundName: string,
+  formulation: { dosageForm?: string; route?: string; strength?: string },
+  phase: string = 'Phase 1'
+): StudyDesign {
+  const isPhase1 = phase === 'Phase 1'
+  const isPhase3 = phase === 'Phase 3'
+  
+  // Biosimilar typically needs: Comparative PK (Phase 1) + Clinical similarity (Phase 3)
+  if (isPhase1) {
+    return {
+      designType: 'parallel',
+      designName: 'Randomized, Double-Blind, 3-Arm Parallel, Comparative PK Study',
+      arms: 3, // Biosimilar vs US-reference vs EU-reference
+      periods: 1,
+      sequences: 3,
+      blinding: 'double-blind',
+      population: {
+        type: 'healthy_volunteers',
+        description: 'Healthy adult volunteers, 18-55 years, matched for weight/BMI',
+        sampleSizeRange: { min: 150, max: 250, recommended: 200 },
+        sampleSizeRationale: 'Powered for PK equivalence with 90% CI within 80-125% for AUC and Cmax'
+      },
+      duration: {
+        screeningDays: 28,
+        treatmentDays: 1,
+        washoutDays: 0,
+        followUpDays: 56,
+        totalWeeks: 12
+      },
+      dosing: {
+        regimen: 'single-dose',
+        description: `Single dose of ${compoundName} biosimilar vs reference products`
+      },
+      conditions: {
+        fasting: true,
+        fed: false
+      },
+      sampling: {
+        schedule: ['Pre-dose', '0.5h', '1h', '2h', '4h', '8h', '12h', '24h', '48h', '72h', '7d', '14d', '21d'],
+        totalSamples: 13,
+        rationale: 'Intensive PK sampling to characterize absorption and elimination'
+      },
+      endpoints: {
+        primary: [
+          'AUC0-∞ ratio (biosimilar/reference) with 90% CI within 80-125%',
+          'Cmax ratio (biosimilar/reference) with 90% CI within 80-125%'
+        ],
+        secondary: [
+          'Immunogenicity: Anti-Drug Antibodies (ADA) incidence',
+          'Safety and tolerability comparison',
+          'PK parameter comparison (t½, CL, Vd)'
+        ]
+      },
+      acceptanceCriteria: {
+        criterion: 'PK Biosimilarity',
+        margin: '90% CI of geometric mean ratio within 80.00-125.00% for AUC and Cmax',
+        description: 'FDA/EMA biosimilar PK equivalence criteria'
+      },
+      regulatoryBasis: [
+        'FDA Guidance: Scientific Considerations in Demonstrating Biosimilarity (2015)',
+        'FDA Guidance: Clinical Pharmacology Data to Support Biosimilarity (2016)',
+        'EMA Guideline on Similar Biological Medicinal Products (2014)'
+      ],
+      warnings: [
+        'Three-arm design required for global submission (US + EU reference)',
+        'Immunogenicity assessment critical for biologics',
+        'Consider switching study design for interchangeability'
+      ],
+      confidence: 85
+    }
+  } else {
+    // Phase 3: Clinical similarity study
+    return {
+      designType: 'parallel',
+      designName: 'Randomized, Double-Blind, Parallel-Group, Clinical Equivalence Study',
+      arms: 2,
+      periods: 1,
+      sequences: 2,
+      blinding: 'double-blind',
+      population: {
+        type: 'patients',
+        description: 'Patients with approved indication, on stable background therapy',
+        sampleSizeRange: { min: 300, max: 600, recommended: 450 },
+        sampleSizeRationale: 'Powered for equivalence margin of ±15% for primary efficacy endpoint'
+      },
+      duration: {
+        screeningDays: 28,
+        treatmentDays: 168, // 24 weeks
+        washoutDays: 0,
+        followUpDays: 28,
+        totalWeeks: 28
+      },
+      dosing: {
+        regimen: 'multiple-dose',
+        description: `${compoundName} biosimilar vs reference product per approved dosing`
+      },
+      conditions: {
+        fasting: false,
+        fed: false
+      },
+      sampling: {
+        schedule: ['Week 0', 'Week 4', 'Week 8', 'Week 12', 'Week 16', 'Week 20', 'Week 24'],
+        totalSamples: 7,
+        rationale: 'Efficacy and safety assessments at regular intervals'
+      },
+      endpoints: {
+        primary: [
+          'Clinical efficacy endpoint (e.g., ACR20 for RA, PASI75 for psoriasis)',
+          'Equivalence margin typically ±15%'
+        ],
+        secondary: [
+          'Immunogenicity: ADA incidence and titer',
+          'Immunogenicity: Neutralizing antibodies',
+          'Safety profile comparison',
+          'PK trough concentrations'
+        ]
+      },
+      acceptanceCriteria: {
+        criterion: 'Clinical Equivalence',
+        margin: '95% CI of treatment difference within ±15% equivalence margin',
+        description: 'Clinical similarity demonstration per FDA/EMA guidance'
+      },
+      regulatoryBasis: [
+        'FDA Guidance: Scientific Considerations in Demonstrating Biosimilarity (2015)',
+        'FDA Guidance: Considerations in Demonstrating Interchangeability (2019)',
+        'EMA Guideline on Similar Biological Medicinal Products Containing Biotechnology-Derived Proteins'
+      ],
+      warnings: [
+        'Sensitive patient population required to detect differences',
+        'Immunogenicity follow-up typically 52 weeks',
+        'Consider switching sub-study for interchangeability designation'
+      ],
+      confidence: 80
+    }
+  }
+}
+
+// ============================================================================
 // Component
 // ============================================================================
 
@@ -388,13 +804,28 @@ export function StudyDesignSuggestion({
   const [copied, setCopied] = useState(false)
   
   // Check if we should show the component
-  const shouldShow = productType === 'generic' && !!formulation?.dosageForm
+  // Generic: needs formulation selected
+  // Innovator: needs compound name
+  // Hybrid: needs formulation selected
+  const shouldShow = (
+    (productType === 'generic' && !!formulation?.dosageForm) ||
+    (productType === 'innovator' && !!compoundName && compoundName.length >= 3) ||
+    (productType === 'hybrid' && !!formulation?.dosageForm)
+  )
   
-  // Generate design - always call useMemo (React hooks rule)
+  // Generate design based on product type - always call useMemo (React hooks rule)
   const design = useMemo(() => {
     if (!shouldShow) return null
-    return generateBEDesign(compoundName, formulation!, drugCharacteristics)
-  }, [compoundName, formulation, drugCharacteristics, shouldShow])
+    
+    if (productType === 'generic') {
+      return generateBEDesign(compoundName, formulation!, drugCharacteristics, phase)
+    } else if (productType === 'innovator') {
+      return generateInnovatorDesign(compoundName, indication, phase)
+    } else if (productType === 'hybrid') {
+      return generateHybridDesign(compoundName, formulation!, phase)
+    }
+    return null
+  }, [compoundName, formulation, drugCharacteristics, shouldShow, phase, productType, indication])
   
   // Early return AFTER all hooks
   if (!shouldShow || !design) {
