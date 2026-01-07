@@ -206,3 +206,29 @@ export interface DrugCharacteristics {
   hasFoodEffect?: boolean
   isModifiedRelease?: boolean
 }
+
+// Context flags for engine decisions (per VP CRO spec)
+export interface ContextFlags {
+  interimAvailable?: boolean      // Can interim analysis be performed?
+  eventDrivenEndpoint?: boolean   // Is primary endpoint time-to-event?
+  hasBlindingConstraint?: boolean // Is open-label required?
+  acceleratedProgram?: boolean    // Is this an accelerated development?
+}
+
+// Structured rationale for Audit Drawer (per VP CRO spec)
+export interface StructuredRationale {
+  what: string           // Layer 1: What was selected
+  why: string            // Layer 2: Why it fits objective
+  regulatory: string     // Layer 3: Regulatory alignment
+  assumptions: string[]  // Key assumptions
+  notes: string[]        // Drug characteristic notes (HVD, NTI, etc.)
+  fallbackNote?: string  // If pattern was adjusted
+}
+
+// Warning with severity for Audit Drawer
+export interface StructuredWarning {
+  severity: 'HARD' | 'SOFT'
+  message: string
+  implication?: string   // Brief impact description
+  ruleId?: string        // Guardrail rule ID if applicable
+}

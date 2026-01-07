@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { generateStudyDesignForComponent, type ComponentStudyDesignOutput } from '@/lib/study-design'
+import { AuditDrawer } from './AuditDrawer'
 
 // ============================================================================
 // TYPES - Study Design Engine v2.0
@@ -3120,10 +3121,18 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
             variant="outline" 
             className={cn(
               "text-xs",
-              design.confidence >= 90 ? "border-green-500 text-green-600" : "border-yellow-500 text-yellow-600"
+              designOutput?.isHumanDecisionRequired 
+                ? "border-red-500 text-red-600"
+                : design.confidence >= 90 
+                  ? "border-green-500 text-green-600" 
+                  : "border-yellow-500 text-yellow-600"
             )}
           >
-            {design.confidence >= 90 ? 'High Confidence' : 'Review Recommended'}
+            {designOutput?.isHumanDecisionRequired 
+              ? 'Human Review Required'
+              : design.confidence >= 90 
+                ? 'High Confidence' 
+                : 'Review Recommended'}
           </Badge>
           {isExpanded ? (
             <ChevronUp className="h-4 w-4 text-muted-foreground" />
@@ -3136,8 +3145,25 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
       {/* Content */}
       {isExpanded && (
         <div className="px-4 pb-4 space-y-4">
-          {/* Regulatory Rationale - NEW in v2.0 */}
-          {designOutput?.regulatoryRationale && (
+          {/* Human Decision Required Banner */}
+          {designOutput?.isHumanDecisionRequired && (
+            <div className="p-3 rounded-lg bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800">
+              <div className="flex items-start gap-2">
+                <AlertTriangle className="h-4 w-4 text-red-500 mt-0.5 flex-shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-700 dark:text-red-400">
+                    Human Decision Required
+                  </p>
+                  <p className="text-xs text-red-600 dark:text-red-300 mt-1">
+                    This scenario is outside the current canonical pattern library. Please review manually before proceeding.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {/* Regulatory Rationale */}
+          {designOutput?.regulatoryRationale && !designOutput?.isHumanDecisionRequired && (
             <div className="p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
               <div className="flex items-start gap-2">
                 <Info className="h-4 w-4 text-blue-500 mt-0.5 flex-shrink-0" />
@@ -3286,8 +3312,25 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
           
           {/* Actions */}
           <div className="flex items-center justify-between pt-3 border-t border-border mt-2">
-            <div className="text-[10px] text-muted-foreground">
-              Generated based on FDA BE guidance • {isKnownHVD(compoundName) ? 'HVD detected' : ''} {isKnownNTI(compoundName) ? 'NTI detected' : ''}
+            <div className="flex items-center gap-2">
+              {designOutput && (
+                <AuditDrawer
+                  pathway={designOutput.regulatoryPathway}
+                  objective={designOutput.primaryObjective}
+                  pattern={designOutput.designPattern}
+                  patternTitle={designOutput.designName}
+                  phaseLabel={designOutput.phaseLabel}
+                  confidence={designOutput.confidence}
+                  rationale={designOutput.structuredRationale}
+                  warnings={designOutput.structuredWarnings}
+                  isHumanDecisionRequired={designOutput.isHumanDecisionRequired}
+                  decisionTrace={designOutput.decisionTrace}
+                  configHash={designOutput.configHash}
+                />
+              )}
+              <span className="text-[10px] text-muted-foreground">
+                {isKnownHVD(compoundName) ? 'HVD • ' : ''}{isKnownNTI(compoundName) ? 'NTI • ' : ''}v2.3
+              </span>
             </div>
             <div className="flex gap-2">
               <Button
@@ -3300,16 +3343,16 @@ ${design.regulatoryBasis.map(r => `- ${r}`).join('\n')}
                 {copied ? (
                   <>
                     <Check className="h-3 w-3 mr-1.5" />
-                    Copied to Clipboard
+                    Copied
                   </>
                 ) : (
                   <>
                     <Copy className="h-3 w-3 mr-1.5" />
-                    Copy Summary
+                    Copy
                   </>
                 )}
               </Button>
-              {onAcceptDesign && (
+              {onAcceptDesign && !designOutput?.isHumanDecisionRequired && (
                 <Button
                   type="button"
                   size="sm"

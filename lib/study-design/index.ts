@@ -16,4 +16,4 @@ export {
 
 // Component adapter for backward compatibility
 export { generateStudyDesignForComponent } from './adapter'
-export type { ComponentStudyDesignOutput } from './adapter'
+export type { ComponentStudyDesignOutput, AuditWarning, AuditRationale } from './adapter'

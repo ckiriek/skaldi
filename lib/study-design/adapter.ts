@@ -5,10 +5,31 @@ import {
   StudyDesignOutput as EngineOutput,
   DesignPattern,
   RegulatoryPathway,
-  PrimaryObjective
+  PrimaryObjective,
+  StructuredRationale,
+  StructuredWarning
 } from './types'
 
 import { generateStudyDesign as engineGenerateStudyDesign, DESIGN_PATTERNS } from './engine'
+import { generateConfigHash } from './config-loader'
+
+// Structured warning for Audit Drawer
+export interface AuditWarning {
+  severity: 'HARD' | 'SOFT'
+  message: string
+  implication?: string
+  ruleId?: string
+}
+
+// Structured rationale for Audit Drawer
+export interface AuditRationale {
+  what: string
+  why: string
+  regulatory: string
+  assumptions: string[]
+  notes: string[]
+  fallbackNote?: string
+}
 
 // Component-expected output format (legacy compatibility)
 export interface ComponentStudyDesignOutput {
@@ -72,6 +93,12 @@ export interface ComponentStudyDesignOutput {
   warnings: string[]
   confidence: number
   decisionTrace: Array<{ step: string; action?: string; result: string }>
+  
+  // Audit Drawer fields (per VP CRO spec)
+  structuredRationale: AuditRationale
+  structuredWarnings: AuditWarning[]
+  isHumanDecisionRequired: boolean
+  configHash: string
 }
 
 // Map pattern structure to legacy design type
@@ -133,6 +160,95 @@ function buildPopulationDescription(
     return 'Real-world patient population receiving treatment per standard clinical practice'
   }
   return 'Adult patients meeting protocol-defined inclusion/exclusion criteria'
+}
+
+// Parse rationale string into structured format for Audit Drawer
+function parseRationale(
+  rationale: string,
+  pattern: DesignPattern | null,
+  drugChars?: { isHVD?: boolean; isNTI?: boolean; halfLife?: number },
+  pathway?: string
+): AuditRationale {
+  // Default structure
+  const result: AuditRationale = {
+    what: '',
+    why: '',
+    regulatory: '',
+    assumptions: [],
+    notes: []
+  }
+  
+  // Parse WHAT/WHY/REG from rationale string
+  const whatMatch = rationale.match(/WHAT:\s*([^W]+?)(?=WHY:|$)/i)
+  const whyMatch = rationale.match(/WHY:\s*([^R]+?)(?=REG:|$)/i)
+  const regMatch = rationale.match(/REG:\s*([^A]+?)(?=Assumptions:|Note:|$)/i)
+  const assumptionsMatch = rationale.match(/Assumptions:\s*(.+?)(?=Note:|$)/i)
+  const noteMatch = rationale.match(/Note:\s*(.+)$/i)
+  
+  if (whatMatch) result.what = whatMatch[1].trim()
+  if (whyMatch) result.why = whyMatch[1].trim()
+  if (regMatch) result.regulatory = regMatch[1].trim()
+  if (assumptionsMatch) {
+    result.assumptions = assumptionsMatch[1].split(';').map(s => s.trim()).filter(Boolean)
+  }
+  if (noteMatch) {
+    result.fallbackNote = noteMatch[1].trim()
+  }
+  
+  // Use pattern rationale if parsing failed
+  if (!result.what && pattern) {
+    result.what = pattern.rationale.what
+    result.why = pattern.rationale.why
+    result.regulatory = pattern.rationale.reg
+    result.assumptions = pattern.rationale.assumptions || []
+  }
+  
+  // Add drug characteristic notes
+  if (drugChars?.isHVD && pathway === 'generic') {
+    result.notes.push('HVD detected - replicate design preferred to estimate within-subject variability.')
+  }
+  if (drugChars?.isNTI && pathway === 'generic') {
+    result.notes.push('NTI drug - tightened BE limits (90.00-111.11%) applied per FDA guidance.')
+  }
+  if (drugChars?.halfLife && drugChars.halfLife >= 24) {
+    result.notes.push(`Long half-life (${drugChars.halfLife}h) - washout period may be operationally challenging.`)
+  }
+  
+  return result
+}
+
+// Convert warnings to structured format for Audit Drawer
+function parseWarnings(warnings: string[]): AuditWarning[] {
+  return warnings.map(warning => {
+    // Detect HARD warnings
+    const isHard = warning.includes('HUMAN_DECISION_REQUIRED') ||
+                   warning.includes('HARD_STOP') ||
+                   warning.includes('blocked') ||
+                   warning.includes('not valid') ||
+                   warning.includes('not applicable')
+    
+    // Extract rule ID if present
+    const ruleMatch = warning.match(/GR-\d+/)
+    
+    // Determine implication
+    let implication: string | undefined
+    if (warning.includes('HUMAN_DECISION_REQUIRED')) {
+      implication = 'Manual review required before proceeding'
+    } else if (warning.includes('bias risk')) {
+      implication = 'Potential bias in efficacy assessment'
+    } else if (warning.includes('operational')) {
+      implication = 'Operational complexity may increase'
+    } else if (warning.includes('tightened')) {
+      implication = 'Stricter acceptance criteria apply'
+    }
+    
+    return {
+      severity: isHard ? 'HARD' : 'SOFT',
+      message: warning,
+      implication,
+      ruleId: ruleMatch?.[0]
+    }
+  })
 }
 
 // Main adapter function
@@ -295,6 +411,18 @@ export function generateStudyDesignForComponent(
   // Build duration
   const durationWeeks = pattern?.typical_n_range.unit === 'patients' ? 12 : 4
   
+  // Parse structured data for Audit Drawer
+  const structuredRationale = parseRationale(
+    engineOutput.regulatoryRationale,
+    pattern,
+    drugChars,
+    engineOutput.regulatoryPathway
+  )
+  const structuredWarnings = parseWarnings(engineOutput.warnings)
+  const isHumanDecisionRequired = engineOutput.warnings.some(w => w.includes('HUMAN_DECISION_REQUIRED')) ||
+                                   engineOutput.designPattern === null
+  const configHash = generateConfigHash()
+  
   return {
     regulatoryPathway: engineOutput.regulatoryPathway,
     primaryObjective: engineOutput.primaryObjective,
@@ -342,6 +470,12 @@ export function generateStudyDesignForComponent(
     regulatoryRationale: engineOutput.regulatoryRationale,
     warnings: engineOutput.warnings,
     confidence: engineOutput.confidence,
-    decisionTrace: engineOutput.decisionTrace
+    decisionTrace: engineOutput.decisionTrace,
+    
+    // Audit Drawer fields
+    structuredRationale,
+    structuredWarnings,
+    isHumanDecisionRequired,
+    configHash
   }
 }

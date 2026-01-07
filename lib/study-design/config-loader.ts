@@ -650,3 +650,198 @@ export function getFallbackOrder(pathway: RegulatoryPathway, objective: PrimaryO
 export function getVersionString(): string {
   return `engine=${ENGINE_VERSIONS.engineVersion}, patterns=${ENGINE_VERSIONS.patternsVersion}, guardrails=${ENGINE_VERSIONS.guardrailsVersion}, fallback=${ENGINE_VERSIONS.fallbackVersion}`
 }
+
+// ============================================================================
+// CONFIG VALIDATION - Per VP CRO spec: fail hard on invalid config
+// ============================================================================
+
+interface ValidationError {
+  type: 'error' | 'warning'
+  message: string
+  location: string
+}
+
+// Generate config hash for audit trail reproducibility
+export function generateConfigHash(): string {
+  const configData = JSON.stringify({
+    patterns: Object.keys(DESIGN_PATTERNS).sort(),
+    guardrails: GUARDRAIL_RULES.map(r => r.id).sort(),
+    fallback: Object.keys(FALLBACK_ORDER).sort()
+  })
+  
+  // Simple hash function (djb2)
+  let hash = 5381
+  for (let i = 0; i < configData.length; i++) {
+    hash = ((hash << 5) + hash) + configData.charCodeAt(i)
+    hash = hash & hash // Convert to 32bit integer
+  }
+  return Math.abs(hash).toString(16).substring(0, 8)
+}
+
+// Valid enum values
+const VALID_PATHWAYS: RegulatoryPathway[] = ['innovator', 'generic', 'biosimilar', 'hybrid', 'post_marketing']
+const VALID_OBJECTIVES: PrimaryObjective[] = [
+  'pk_safety', 'pk_equivalence', 'pk_similarity', 'dose_selection',
+  'confirmatory_efficacy', 'clinical_equivalence', 'long_term_safety', 'effectiveness'
+]
+const VALID_STRUCTURES = ['sequential_cohorts', 'parallel', 'crossover', 'observational']
+const VALID_TAGS = ['standard_of_care', 'regulatory_standard', 'event_driven', 'adaptive', 'seamless', 'be', 'rwe', 'biosimilar_only', 'superiority']
+
+export function validateConfigs(): { valid: boolean; errors: ValidationError[] } {
+  const errors: ValidationError[] = []
+  
+  // 1. Check unique pattern IDs
+  const patternIds = Object.keys(DESIGN_PATTERNS)
+  const uniqueIds = new Set(patternIds)
+  if (uniqueIds.size !== patternIds.length) {
+    errors.push({
+      type: 'error',
+      message: 'Duplicate pattern IDs detected',
+      location: 'patterns'
+    })
+  }
+  
+  // 2. Validate each pattern
+  for (const [id, pattern] of Object.entries(DESIGN_PATTERNS)) {
+    // Check pathways are valid
+    for (const pathway of pattern.allowed_pathways) {
+      if (!VALID_PATHWAYS.includes(pathway)) {
+        errors.push({
+          type: 'error',
+          message: `Unknown pathway "${pathway}" in pattern ${id}`,
+          location: `patterns.${id}.allowed_pathways`
+        })
+      }
+    }
+    
+    // Check objectives are valid
+    for (const objective of pattern.allowed_objectives) {
+      if (!VALID_OBJECTIVES.includes(objective)) {
+        errors.push({
+          type: 'error',
+          message: `Unknown objective "${objective}" in pattern ${id}`,
+          location: `patterns.${id}.allowed_objectives`
+        })
+      }
+    }
+    
+    // Check structure is valid
+    if (!VALID_STRUCTURES.includes(pattern.summary.structure)) {
+      errors.push({
+        type: 'error',
+        message: `Unknown structure "${pattern.summary.structure}" in pattern ${id}`,
+        location: `patterns.${id}.summary.structure`
+      })
+    }
+    
+    // Check tags are valid
+    for (const tag of pattern.tags) {
+      if (!VALID_TAGS.includes(tag)) {
+        errors.push({
+          type: 'warning',
+          message: `Unknown tag "${tag}" in pattern ${id}`,
+          location: `patterns.${id}.tags`
+        })
+      }
+    }
+    
+    // Sanity check: biosimilar patterns should have biosimilar_only tag
+    if (pattern.allowed_pathways.includes('biosimilar') && 
+        pattern.allowed_pathways.length === 1 &&
+        !pattern.tags.includes('biosimilar_only')) {
+      errors.push({
+        type: 'warning',
+        message: `Biosimilar-only pattern ${id} missing "biosimilar_only" tag`,
+        location: `patterns.${id}.tags`
+      })
+    }
+  }
+  
+  // 3. Validate guardrail rules
+  const guardrailIds = new Set<string>()
+  for (const rule of GUARDRAIL_RULES) {
+    if (guardrailIds.has(rule.id)) {
+      errors.push({
+        type: 'error',
+        message: `Duplicate guardrail ID "${rule.id}"`,
+        location: 'guardrails'
+      })
+    }
+    guardrailIds.add(rule.id)
+    
+    // Check pathway enums in match
+    if (rule.match.pathway) {
+      for (const pathway of rule.match.pathway) {
+        if (!VALID_PATHWAYS.includes(pathway)) {
+          errors.push({
+            type: 'error',
+            message: `Unknown pathway "${pathway}" in guardrail ${rule.id}`,
+            location: `guardrails.${rule.id}.match.pathway`
+          })
+        }
+      }
+    }
+    
+    // Check objective enums in match
+    if (rule.match.objective) {
+      for (const objective of rule.match.objective) {
+        if (!VALID_OBJECTIVES.includes(objective)) {
+          errors.push({
+            type: 'error',
+            message: `Unknown objective "${objective}" in guardrail ${rule.id}`,
+            location: `guardrails.${rule.id}.match.objective`
+          })
+        }
+      }
+    }
+    
+    // Check pattern IDs in match exist
+    if (rule.match.patternId) {
+      for (const patternId of rule.match.patternId) {
+        if (!DESIGN_PATTERNS[patternId]) {
+          errors.push({
+            type: 'error',
+            message: `Unknown pattern ID "${patternId}" in guardrail ${rule.id}`,
+            location: `guardrails.${rule.id}.match.patternId`
+          })
+        }
+      }
+    }
+    
+    // Check fallback hint patterns exist
+    if (rule.fallback_hint?.patterns) {
+      for (const patternId of rule.fallback_hint.patterns) {
+        if (patternId !== 'HUMAN_DECISION_REQUIRED' && !DESIGN_PATTERNS[patternId]) {
+          errors.push({
+            type: 'error',
+            message: `Unknown fallback pattern "${patternId}" in guardrail ${rule.id}`,
+            location: `guardrails.${rule.id}.fallback_hint.patterns`
+          })
+        }
+      }
+    }
+  }
+  
+  // 4. Validate fallback order
+  for (const [key, patterns] of Object.entries(FALLBACK_ORDER)) {
+    for (const patternId of patterns) {
+      if (patternId !== 'HUMAN_DECISION_REQUIRED' && !DESIGN_PATTERNS[patternId]) {
+        errors.push({
+          type: 'error',
+          message: `Unknown pattern "${patternId}" in fallback order for ${key}`,
+          location: `fallback.${key}`
+        })
+      }
+    }
+  }
+  
+  const hasErrors = errors.some(e => e.type === 'error')
+  
+  return { valid: !hasErrors, errors }
+}
+
+// Get version string with config hash for trace
+export function getVersionStringWithHash(): string {
+  const hash = generateConfigHash()
+  return `engine=${ENGINE_VERSIONS.engineVersion}, patterns=${ENGINE_VERSIONS.patternsVersion}, guardrails=${ENGINE_VERSIONS.guardrailsVersion}, fallback=${ENGINE_VERSIONS.fallbackVersion}, hash=${hash}`
+}

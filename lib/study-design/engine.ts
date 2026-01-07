@@ -21,7 +21,7 @@ import {
   FALLBACK_ORDER,
   getPattern,
   getFallbackOrder,
-  getVersionString
+  getVersionStringWithHash
 } from './config-loader'
 
 // ============================================================================
@@ -453,10 +453,10 @@ export function generateStudyDesign(
   // Initialize decision trace
   const decisionTrace: DecisionTraceEntry[] = []
   
-  // Step 0: Record versions
+  // Step 0: Record versions with config hash
   decisionTrace.push({
     step: '0. versions',
-    result: getVersionString()
+    result: getVersionStringWithHash()
   })
   
   // Step 1: Infer regulatory pathway
